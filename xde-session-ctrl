@@ -1,0 +1,87 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+    if $running_under_some_shell;
+
+
+=head1 NAME
+
+ xde-session-ctrl - control a running xde-session
+
+=head1 SYNOPSIS
+
+ xde-session-ctrl [ OPTIONS ] [ DESKTOP ]
+
+=head1 DESCRIPTION
+
+Depending on the arguments provided, B<xde-session-ctrl>, will perform actions
+against a running L<xde-session(1)> session manager.
+
+=head1 ARGUMENTS
+
+=head2 [ I<DESKTOP> ]
+
+The optional I<DESKTOP> argument specifies a desktop environment (window
+manager) to switch to.  When unspecified, the current desktop environment is
+assumed.  This form of the command is intended on being used in window manager,
+panel menus, or from desktop links to switch the window manager and desktop
+environment in use.
+
+Case is not significant, but lower case is preferred.  Current fully supported
+window managers with integrated desktop environments are detailed in section
+L</DESKTOPS>.
+
+=head1 COMMAND OPTIONS
+
+=over
+
+=item B<--help>, B<-h>
+
+=item B<--test>
+
+=item [ B<--restart>, B<-r> ]
+
+=back
+
+=head1 OPTIONS
+
+=over
+
+=item B<--display>, B<-d> I<DISPLAY>
+
+=item B<--desktop>, B<-e> I<DESKTOP>
+
+
+=item B<--session>, B<--nosession>
+
+Specifies whether L<xde-session(1)> is to manage the new session or not.  The
+default for I<DESKTOP> specifications that contain the word C<session> is to not
+manage the new session.  Otherwise, the default is to manage the new session.
+
+=back
+
+=head1 DESKTOPS
+
+=over
+
+=item B<fluxbox>
+
+=item B<blackbox>
+
+=item B<wmaker>
+
+=item B<icewm>
+
+=item B<icewm-session>
+
+=item B<openbox>
+
+=item B<openbox-session>
+
+=item B<lxde>
+
+=back
+
+=cut
+

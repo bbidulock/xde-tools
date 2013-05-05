@@ -1,0 +1,437 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+    if $running_under_some_shell;
+
+
+use Getopt::Long;
+use strict;
+use warnings;
+
+=head1 NAME
+
+xde-theme - set themes for the X Desktop Environment
+
+=head1 SYNOPSIS
+
+B<xde-theme> [I<OPTIONS>] [I<THEME>]
+
+=head1 DESCRIPTION
+
+B<xde-theme> is responsible for setting a new them in an XDE session,
+modifying configuration files as necessary, and restarting applications
+that depend on those configuration files.
+
+=cut
+
+my $DISPLAY = $ENV{DISPLAY} if $ENV{DISPLAY};
+
+my $HOME = $ENV{HOME} if $ENV{HOME};
+$HOME = '~' unless $HOME;
+$ENV{HOME} = $HOME if $HOME;
+
+my $XDG_CONFIG_HOME = $ENV{XDG_CONFIG_HOME} if $ENV{XDG_CONFIG_HOME};
+$XDG_CONFIG_HOME = "$HOME/.config" unless $XDG_CONFIG_HOME;
+$ENV{XDG_CONFIG_HOME} = $XDG_CONFIG_HOME if $XDG_CONFIG_HOME;
+
+my $XDG_CONFIG_DIRS = $ENV{XDG_CONFIG_DIRS} if $ENV{XDG_CONFIG_DIRS};
+$XDG_CONFIG_DIRS = "/etc/xdg" unless $XDG_CONFIG_DIRS;
+$XDG_CONFIG_DIRS = join(':','/etc/xdg/xde',$XDG_CONFIG_DIRS)
+    unless ":$XDG_CONFIG_DIRS:" =~ m{:/etc/xdg/xde:};
+$ENV{XDG_CONFIG_DIRS} = $XDG_CONFIG_DIRS if $XDG_CONFIG_DIRS;
+
+my @XDG_CONFIG_DIRS = split(/:/,join(':',$XDG_CONFIG_HOME,$XDG_CONFIG_DIRS));
+
+my $XDG_DATA_HOME = $ENV{XDG_DATA_HOME} if $ENV{XDG_DATA_HOME};
+$XDG_DATA_HOME = "$HOME/.local/share" unless $XDG_DATA_HOME;
+$ENV{XDG_DATA_HOME} = $XDG_DATA_HOME if $XDG_DATA_HOME;
+
+my $XDG_DATA_DIRS = $ENV{XDG_DATA_DIRS} if $ENV{XDG_DATA_DIRS};
+$XDG_DATA_DIRS = "/usr/local/share:/usr/share" unless $XDG_DATA_DIRS;
+$XDG_DATA_DIRS = join(':','/usr/share/xde',$XDG_DATA_DIRS)
+    unless ":$XDG_DATA_DIRS:" =~ m{:/usr/share/xde:};
+$ENV{XDG_DATA_DIRS} = $XDG_DATA_DIRS if $XDG_DATA_DIRS;
+
+my @XDG_DATA_DIRS = split(/:/,join(':',$XDG_DATA_HOME,$XDG_DATA_DIRS));
+
+my $XDG_CURRENT_DESKTOP = $ENV{XDG_CURRENT_DESKTOP} if $ENV{XDG_CURRENT_DESKTOP};
+my $DESKTOP_SESSION = $ENV{DESKTOP_SESSION} if $ENV{DESKTOP_SESSION};
+my $FBXDG_DE = $ENV{FBXDG_DE} if $ENV{FBXDG_DE};
+
+my $XDE_SESSION = $ENV{XDE_SESSION} if $ENV{XDE_SESSION};
+$XDE_SESSION = $XDG_CURRENT_DESKTOP unless $XDE_SESSION;
+$XDE_SESSION = $DESKTOP_SESSION	    unless $XDE_SESSION;
+$XDE_SESSION = $FBXDG_DE	    unless $XDE_SESSION;
+$XDE_SESSION = ''		    unless $XDE_SESSION;
+
+=head1 OPTIONS
+
+B<xde-theme> uses L<Getopt::Long(3pm)> to parse options, so abbreviated
+or single-dash long options are recognized when not ambiguous.
+B<xde-startup> recognizes the following options:
+
+=over
+
+=item B<--help>, B<-h>
+
+Print usage and default information and exit.
+
+=item B<--verbose>, B<-v>
+
+Print debugging information to standard error during execution.
+
+=item B<--theme>, B<-t> I<THEME>
+
+Alternate way of specifying the theme.  Themes specified with B<-t>
+override one specified as an argument.
+
+=item B<--session>, B<-s> I<SESSION>
+
+Specifies the XDE session.  May be one of C<FLUXBOX>, C<BLACKBOX>,
+C<OPENBOX>, C<ICEWM>, C<FVWM> or C<WMAKER>.  The option argument is case
+insensitive.  When unspecified, environment variables will be used to
+determin the window manager being used.  Other methods for detecting the
+running window manager are possible but none of which are effective
+before the window manager is started on the X Display.
+
+=item B<--monitor>, B<-m>
+
+Do not exit, but, rather, monitor for changes to the settings using the
+B<XSETTINGS> protocol on the X Display and respond accordingly.
+
+=back
+
+=cut
+
+my %ops = (
+    help    => '',
+    verbose => '',
+    theme   => '',
+    session => $XDE_SESSION,
+    monitor => '',
+);
+
+my $syntax = GetOptions( \%ops,
+    'help|h',
+    'verbose|v',
+    'theme|t=s',
+    'monitor|m',
+);
+
+if (scalar(@ARGV) == 1) {
+    $ops{theme} = shift @ARGV unless $ops{theme};
+}
+if (not $syntax or $ops{help}) {
+    show_usage($syntax ? 0 : 2);
+}
+unless ($ops{theme} or $ops{monitor}) {
+    print STDERR "THEME must be specified!\n\n";
+    show_usage(2);
+}
+
+sub show_usage {
+    my $rc = shift;
+    print STDERR<<END_USAGE
+USAGE:
+    xde-theme [OPTIONS] [THEME]
+
+ARGUMENTS:
+    THEME
+        Specifies the theme name to set.
+
+OPTIONS:
+    --help, -h
+        Prints this usage and defaults information and exits.
+
+    --verbose, -v
+        Print debugging information to standard error while operating.
+
+    --vendor, -V VENDOR
+        Specify the vendor string for branding.
+
+    --session, -s SESSION
+        Specifies the session in effect.  May be one of FLUXBOX,
+        BLACKBOX, OPENBOX, ICEWM, FVWM, WMAKER.  The argument is case
+        insensitive.
+
+    --theme, -t THEME
+        An alternate way of specifying the THEME argument.
+
+ENVIRONMENT:
+    XDG_VENDOR_ID, XDG_MENU_PREFIX
+        Interpreted in the absense of the --vendor option.  Set to the
+        --vendor option when specified.
+
+    XDG_CURRENT_DESKTOP, DESKTOP_SESSION, FBXDG_DE, XDE_SESSION
+        Use to determine the window manager being used by the session in
+        the absense of the --session option.  Other ways of detecting
+        the window manager in use are possible; however, none of them
+        work I<before> the window manager is started.
+
+END_USAGE
+}
+
+=head1 ARGUMENTS
+
+B<xde-theme> recognizes the following arguments:
+
+=over
+
+=item I<THEME>
+
+The theme name to set.  This argument is overridden by the B<--theme>
+option.  The theme name to set may also be determined from the X Display
+using the B<XSETTINGS> protocol; however, that method is only used when
+the B<--monitor> option is specified or implied.  Not specifying a
+I<THEME> as an argument or as an option implies the B<--monitor> option.
+
+=back
+
+=cut
+
+
+=head1 WINDOW MANAGERS
+
+The window manager is specified using the B<--session> option, or
+environment variables (see L</ENVIRONMENT>).  The actions performed by
+B<xde-theme> depend on the target window manager.  Those actions are as
+follows:
+
+=over
+
+=item I<Fluxbox>
+
+L<fluxbox(1)> normally looks for system style files in the
+F</usr/share/fluxbox/styles> directory, and for user style files in the
+F<$HOME/.fluxbox/styles> directory.
+
+=cut
+
+sub theme_fluxbox {
+}
+
+=item I<Blackbox>
+
+L<blackbox(1)> normally looks for system style files in the
+F</usr/share/blackbox/styles> directory, and for user style files in the
+F<$HOME/.blackbox/styles> directory.
+
+=cut
+
+sub theme_blackbox {
+}
+
+=item I<Openbox>
+
+L<openbox(1)> looks for theme files in
+F<@XDG_DATA_DIRS/themes/$THEME/openbox-3> where C<$THEME> is the theme
+name.  User theme files in F<$XDG_DATA_HOME/themes> overrides those in
+the F<$XDG_DATA_DIRS> path.
+
+=cut
+
+sub theme_openbox {
+}
+
+=item I<IceWM>
+
+L<icewm(1)> looks for system theme files in F</usr/share/icewm/themes>
+and user theme files in F<$HOME/.icewm/themes> or in
+F<$ICEWM_PRIVCFG/themes> when B<ICEWM_PRIVCFG> is defined.
+
+=cut
+
+sub theme_icewm {
+}
+
+=item I<FVWM>
+
+=cut
+
+sub theme_fvwm {
+}
+
+=item I<WindowMaker>
+
+=cut
+
+sub theme_wmaker {
+}
+
+=back
+
+=cut
+
+=head1 UTILITIES
+
+B<xde-theme> also considers themes for the following LXDE and other
+utilities:
+
+=over
+
+=item L<lxpanel(1)>
+
+L<lxpanel(1)> contains style information in its panel configuration
+files that are located in the F<$XDG_CONFIG_HOME/lxpanel/$PROFILE/panels>
+directory.  After changing style information in this file, L<lxpanel(1)>
+can be restarted using the L<lxpanelctl(1)> command as follows:
+
+ lxpanelctl restart
+
+Style options are as follows:
+
+ Global {
+     edge=top
+     allign=center
+     margin=0
+     widthtype=percent
+     width=100
+     height=20
+     transparent=1
+     tintcolor=#000000
+     alpha=255
+     autohide=0
+     heightwhenhidden=2
+     setdocktype=1
+     setpartialstrut=1
+     usefontcolor=1
+     fontsize=9
+     fontcolor=#ffffff
+     usefontsize=1
+     background=0
+     backgroundfile=/usr/share/fluxbox/styles/Unexicon/pixmaps/highlight_select.xpm
+     iconsize=16
+     loglevel=2
+ }
+ Plugin {
+     type = menu
+     image=/u2/code/xde-tools/xde-tools/pixmaps/start.xpm
+     ...
+ }
+ Plugin {
+     type = monitors
+     Config {
+         DisplayCPU=1
+         DisplayRAM=1
+         CPUColor=#FF0000
+         RAMColor=#0000FF
+     }
+ }
+
+=cut
+
+sub theme_lxpanel {
+}
+
+=item L<pcmanfm(1)>
+
+L<pcmanfm(1)> contains style information in its configuration
+files that are located in F<$XDG_CONFIG_HOME/pcmanfm/pcmanfm.conf>.
+After changing style information in this file, L<pcmanfm(1)> must be
+restarted.  When only the wallpapers are being changed, the
+L<pcmanfm(1)> command with the B<-w> option can be used to change the
+background on all desktops (or if configured, the current desktop).
+
+Style options are all contained in the F<pcmanfm.conf> keyfiles in the
+C<desktop> section:
+
+ [desktop]
+ wallpaper_mode=1
+ wallpaper_common=0
+ wallpapers_configured=6
+ wallpaper0=/usr/share/unexicon/images/penguins_inarow2.jpg
+ wallpaper1=/usr/share/unexicon/images/penguins_inflight.jpg
+ wallpaper2=/usr/share/unexicon/images/penguins_busy.jpg
+ wallpaper3=/usr/share/unexicon/images/penguins_jumping.jpg
+ wallpaper4=/usr/share/unexicon/images/penguins_pair.jpg
+ wallpaper5=/usr/share/unexicon/images/antartica.jpg
+ desktop_bg=#000000
+ desktop_fg=#ffffff
+ desktop_shadow=#000000
+ desktop_font=Liberation Sans 9
+ show_wm_menu=1
+ sort_type=0
+ sort_by=7
+
+Wallpapers are normally handled by the L<xde-setbg(1p)> tool from the
+XDE suite.  So, the only items of concern at the desktop font, font
+color and shadow color.  Note also that C<desktop_bg> will be used as a
+solid color for desktops that have no defined wallpaper.
+
+We are only really using L<pcmanfm(1)> on the desktop for I<OPENBOX> to
+simulate I<LXDE> (and optionally for I<FVWM>).  We normally use
+L<idesk(1)> on the other window managers.  On I<WindowMaker> we normally
+do not run a desktop (the clip is sufficient).
+
+=cut
+
+sub theme_pcmanfm {
+}
+
+=item L<idesk(1)>
+
+There is very little style information used in an idesk configuration
+file, however, there is the following:
+
+ table Config
+   FontName: Liberation Sans
+   FontSize: 9
+   FontColor: #FFFFFF
+   ToolTip.FontSize: 9
+   ToolTip.FontName: Liberation Sans
+   ToolTip.ForeColor: #000000
+   ToolTip.BackColor: #e0e0e0
+   ToolTip.CaptionOnHover: true
+   ToolTip.CaptionPlacement: Right
+   Locked: false
+   Transparency: 20
+   HighContrast: false
+   Shadow: true
+   ShadowColor: #000000
+   ShadowX: 1
+   ShadowY: 1 
+   Bold: true
+   ClickDelay: 200
+   IconSnap: true
+   SnapWidth: 80
+   SnapHeight: 64
+   SnapOrigin: TopLeft
+   SnapShadow: true
+   SnapShadowTrans: 20
+   CaptionOnHover: false
+   CaptionPlacement: bottom
+   FillStyle: fillinvert
+   Background.Delay: 0
+   Background.Source: None
+   Background.File: None 
+   Background.Mode: Center 
+   Background.Color: #C2CCFF
+ end
+ 
+ table Actions
+   Lock: control right doubleClk
+   Reload: middle doubleClk
+   Drag: left hold
+   EndDrag: left singleClk
+   Execute[0]: left doubleClk
+   Execute[1]: right doubleClk
+ end
+ 
+
+=cut
+
+sub theme_idesk {
+}
+
+=item L<xde-traymenu(1p)>
+
+L<xde-traymenu(1p)> is capable of monitoring for the theme changes
+signalled by B<xde-theme> using the B<XSETTINGS> protocol and changing
+its own theme accordingly.
+
+=cut
+
+=back
+
+=cut

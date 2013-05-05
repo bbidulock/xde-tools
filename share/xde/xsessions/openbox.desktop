@@ -1,0 +1,11 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=Openbox
+Comment=Log in using the Openbox window manager
+Exec=xde-startup openbox
+TryExec=/usr/bin/openbox
+Icon=archlinux-wm-openbox
+Type=XSession
+
+[Window Manager]
+SessionManaged=false

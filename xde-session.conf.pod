@@ -1,0 +1,7 @@
+=pod
+
+=head1 NAME
+
+ xde-session.conf - xde-session configuration file
+
+=cut

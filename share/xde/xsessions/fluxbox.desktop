@@ -1,0 +1,12 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=Fluxbox
+Comment=Highly configurable and low resource X11 Window manager
+Exec=xde-session fluxbox
+Terminal=False
+TryExec=/usr/bin/startfluxbox
+Type=Application
+Icon=archlinux-wm-fluxbox
+
+[Window Manager]
+SessionManaged=true

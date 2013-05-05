@@ -1,0 +1,85 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+    if $running_under_some_shell;
+
+use Getopt::Long;
+use GLib qw(TRUE FALSE);
+use Gtk2;
+use Gtk2::Unique;
+use strict;
+use warnings;
+
+use constant {
+    COMMAND_SESSION => 1,
+    COMMAND_EDITOR  => 2,
+    COMMAND_MENUBLD => 3,
+    COMMAND_CONTROL => 4,
+    COMMAND_LOGOUT  => 5,
+    COMMAND_EXECUTE => 6,
+};
+
+Gtk2->init;
+
+my $unique = Gtk2::UniqueApp->new(
+	'com.unexicon.xde-session', undef,
+	'xde-session' => &COMMAND_SESSION,
+	'xde-session-edit' => &COMMAND_EDITOR,
+	'xde-session-menu' => &COMMAND_MENUBLD,
+	'xde-session-ctrl' => &COMMAND_CONTROL,
+	'xde-session-logout' => &COMMAND_LOGOUT,
+	'xde-session-run' => &COMMAND_EXECUTE,
+);
+
+if ($unique->is_running) {
+    $unique->send_message_by_name('xde-session-edit'=>text=>join('|',$0,@ARGV));
+    print STDERR "Executing command $0 on running instance...\n";
+    exit(0);
+}
+
+print STDERR "No running instance of FBSESSION, command ignored...\n";
+exit(1);
+
+=pod
+
+=head1 NAME
+
+ xde-session-edit - launch the editor from a running xde-session instance
+
+=head1 SYNOPSIS
+
+ xde-session-edit [ OPTIONS ]
+
+=head1 DESCRIPTION
+
+B<xde-session-edit> is a command that causes a running instance of L<xde-ession(1)>
+to launch the session editor.  The session editor is consistent with the
+behaviour of L<lxsession(1)>, except that L<lxsession-edit(1)> takes no
+arguments and launches a separate browser.
+
+=head1 COMMAND OPTIONS
+
+Only one of the following command options can be specified per invocation.
+
+=over
+
+=item B<--autostart-menu>, B<-a>
+
+Launch the autostart editor.  The autostart editor can be used to edit the XDG
+autostart applications that are started on boot.  The editor also gives the
+option to add (any) new autostart applications that are contained in
+C<XDG_CONFIG_DIRS>, C<XDG_DATA_DIRS> or C<XDG_DATA_HOME>.  Modified items are
+stored in C<XDG_CONFIG_HOME> (typically F<$HOME/.config/autostart>).  The editor
+also gives the option to start or stop these applications directly from the
+editor.
+
+=back
+
+=head1 DIFFERENCES FROM LXSESSION-EDIT
+
+L<lxsession-edit(1)>, the second most poorly documented program in the world,
+
+=cut
+
+

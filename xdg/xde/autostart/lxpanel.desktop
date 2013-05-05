@@ -1,0 +1,13 @@
+[Desktop Entry]
+Encoding=UTF-8
+Type=Application
+Name=LXDE Panel
+GenericName=lxpanel 0.5.12
+Comment=Panel for XDG compliant desktop.
+Icon=lxpanel
+Exec=/usr/bin/lxpanel -p FLUXBOX
+TryExec=/usr/bin/lxpanel
+Terminal=false
+Categories=LXDE;System;Utility;
+OnlyShowIn=FLUXBOX;
+StartupNotify=false

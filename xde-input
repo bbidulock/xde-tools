@@ -1,0 +1,282 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+    if $running_under_some_shell;
+
+
+=head1 NAME
+
+xde-input - X settings for the X Desktop Environment
+
+=head1 SYNOPSIS
+
+B<xde-input> [I<OPTIONS>]
+
+=head1 DESCRIPTION
+
+B<xde-input> is a X Display settings tool for the X Desktop Environment.
+It can be used to set initial X Display settings from a configuration
+file, or can launch a dialogue to interactively set X Desktop input
+settings.  The settings that can be set are those that can normally be
+performed with L<xset(1)>, and are as follows:
+
+=over
+
+=item I<Keyboard Control>
+
+Setting the keyboard I<LEDS> on or off.  The I<Keyclick> volume and
+whether key clicks are on or off.  The I<Bell> volume, pitch and
+duration.  Whether the I<Bell> is on or off.  Setting the I<Autorepeat>
+delay and rate.  Turning I<Autorepeat> on or off.
+
+=cut
+
+=item I<Pointer Control>
+
+Setting I<Mouse> acceleration (multiplier and divisor) and threshold.
+Resetting the I<Mouse> to default acceleration and threshold.
+
+=cut
+
+# Uses ChangePointerControl which takes the acceleration-numerator, the
+# acceleration denominator, the threshold, whether to do acceleration
+# and whether to do threshold.  GetPointerControl returns the
+# acceleration-numerator, the acceleration-denominator and the
+# threshold.
+
+=item I<Screen Saver>
+
+Setting the I<Screen Saver> timeout and cycle.  Setting the I<Screen
+Saver> to blank, expose, activate, default, not blank, not expose,
+reset.  Setting the I<Screen Saver> on or off.
+
+=item I<Colors>
+
+Setting pixel values to a colour name.
+
+=item I<Font Path>
+
+Setting the I<Font Path>, or restoring the default font path.  Making
+the server reread the font database.  Adding or removing elements to or
+from the I<Font Path>.
+
+=item I<DPMS (Energy Start)>
+
+I<Standby> setting in seconds; I<Suspend> setting in seconds; I<Off>
+setting in seconds.  Whether I<DPMS> is enabled or not.  Whether the
+I<Monitor> is on or off.  Forcing the I<Monitor> to on, standby, suspend
+or off.
+
+=back
+
+=cut
+
+our %Keysyms;
+use Getopt::Long;
+use Glib qw(TRUE FALSE);
+use Gtk2;
+use X11::Protocol;
+use X11::Keysyms '%Keysyms',qw(MISCELLANY XKB_KEYS 3270 LATIN1 LATIN2
+	LATIN3 LATIN4 KATAKANA ARABIC CYRILLIC GREEK TECHNICAL SPECIAL
+	PUBLISHING APL HEBREW THAI KOREAN);
+use strict;
+use warnings;
+
+my %Keynames = (reverse %Keysyms);
+
+if (0) {
+    foreach my $name (sort keys %Keysyms) {
+	printf STDERR "Symbol %s: 0x%x\n", $name, $Keysyms{$name};
+    }
+}
+
+=head1 OPTIONS
+
+B<xde-input> understands the following options:
+
+=over
+
+=item B<--help>, B<-h>
+
+Prints usage information and defaults to standard error and exits.
+
+=item B<--verbose>, B<-v>
+
+Prints debugging information to standard error while operating.
+
+=item B<--display>, B<-d> I<DISPLAY>
+
+Specifies the X11 Display to use.
+
+=back
+
+=cut
+
+my %ops = (
+    help => '',
+    verbose => '',
+    display => $ENV{DISPLAY},
+);
+
+my $syntax = GetOptions( \%ops,
+    'help|h',
+    'verbose|v',
+    'display|d',
+);
+
+my %values = (
+    global_auto_repeat => 'On',
+    led_mask => 0x0000,
+    key_click_percent => 0,
+    auto_repeats => '',
+
+    bell_percent => 50,
+    bell_pitch => 400,
+    bell_duration => 100,
+
+    acceleration_numerator => 2,
+    acceleration_denominator => 1,
+    threshold => 4,
+);
+
+my $x = X11::Protocol->new($ENV{DISPLAY});
+my $dpms = $x->init_extension('DPMS');
+
+if ($ops{verbose}) {
+    foreach my $ext(qw(DPMS XFree86-Misc XKB)) {
+	my ($major,$event,$error) = $x->QueryExtension($ext);
+	if (defined $major) {
+	    printf STDERR "Server supports %s\n", $ext;
+	}
+	else {
+	    printf STDERR "Server does not support %s\n", $ext;
+	}
+    }
+}
+
+
+# use $x->Bell(0) to test the volume setting.
+
+my %vals = $x->GetKeyboardControl;
+
+if ($ops{verbose}) {
+    print STDERR "Keyboard Control:\n";
+    foreach my $key (sort keys %vals) {
+	my $name = $key; $name =~ s{_}{-}g;
+	if ($name eq 'led-mask') {
+	    printf STDERR "\t%s: 0x%04x\n", $name, $vals{$key};
+	}
+	elsif ($name eq 'auto-repeats') {
+	    printf STDERR "\t%s: %s\n", $name, join(' ',map{sprintf "%02X",$_} unpack('C*',$vals{$key}));
+	}
+	else {
+	    printf STDERR "\t%s: %s\n", $name, $vals{$key};
+	}
+    }
+}
+
+my @vals = $x->GetPointerControl;
+
+if ($ops{verbose}) {
+    print STDERR "Pointer Control:\n";
+    printf STDERR "\t%s: %s\n", 'acceleration-numerator', $vals[0];
+    printf STDERR "\t%s: %s\n", 'acceleration-denominator', $vals[1];
+    printf STDERR "\t%s: %s\n", 'threshold', $vals[2];
+}
+
+@vals = $x->GetScreenSaver;
+
+if ($ops{verbose}) {
+    print STDERR "Screen Saver:\n";
+    printf STDERR "\t%s: %s\n", 'timeout', $vals[0];
+    printf STDERR "\t%s: %s\n", 'interval', $vals[1];
+    printf STDERR "\t%s: %s\n", 'prefer-blanking', $vals[2];
+    printf STDERR "\t%s: %s\n", 'allow-exposures', $vals[3];
+}
+
+@vals = $x->GetFontPath;
+
+if ($ops{verbose}) {
+    print STDERR "Font Path:\n";
+    foreach (@vals) {
+	printf STDERR "\t%s\n",$_;
+    }
+}
+
+@vals = $x->GetPointerMapping;
+
+if ($ops{verbose}) {
+    print STDERR "Pointer Mapping:\n";
+    for (my $i=0;$i<scalar(@vals);$i++) {
+	printf STDERR "\tbutton-%d => button-%d\n", ($i+1), $vals[$i];
+    }
+}
+
+@vals = $x->GetModifierMapping;
+
+if ($ops{verbose}) {
+    my @tmp = @vals;
+    printf STDERR "Modifier Mapping: (%d)\n", scalar(@tmp);
+    foreach my $mod (qw(Shift Lock Control Mod1 Mod2 Mod3 Mod4 Mod5)) {
+	printf STDERR "\t%s: %s\n", $mod, join(',',map {sprintf "0x%x",$_} @{shift @tmp});
+    }
+}
+
+my $count = $x->max_keycode - $x->min_keycode + 1;
+
+(@vals) = $x->GetKeyboardMapping($x->min_keycode,$count);
+
+if ($ops{verbose}) {
+    my @tmp = @vals;
+    printf STDERR "Keyboard Mapping: (%d)\n", scalar(@tmp);
+    for (my $i=$x->min_keycode;$i<=$x->max_keycode;$i++) {
+	printf STDERR "\t0x%x: %s\n", $i, join(',',map{$_?($Keynames{$_}?$Keynames{$_}:sprintf "0x%x",$_):()}@{shift @tmp});
+    }
+}
+
+if ($dpms) {
+    my ($major,$minor) = $x->DPMSGetVersion;
+    my ($power_level,$state) = $x->DPMSInfo;
+    my ($standby,$suspend,$off) = $x->DPMSGetTimeouts;
+    if ($ops{verbose}) {
+	print STDERR "DPMS:\n";
+	printf STDERR "\tDPMS Version: %d.%d\n", $major,$minor;
+	printf STDERR "\tpower-level: %s\n", $power_level;
+	printf STDERR "\tstate: %s\n", $state;
+	printf STDERR "\tstandby-timeout: %s\n", $standby;
+	printf STDERR "\tsuspend-timeout: %s\n", $suspend;
+	printf STDERR "\toff-timeout: %s\n", $off;
+    }
+}
+else {
+    if ($ops{verbose}) {
+	print STDERR "DPMS:\n";
+	print STDERR "\tNot supported.\n";
+    }
+}
+
+if (0) {
+    my ($major,$minor) = $x->XF86MiscQueryVersion;
+    my ($suspend,$off) = $x->XF86MiscGetSaver(0);
+    my %mouse = $x->XF86MiscGetMouseSettings;
+    my @keybd = $x->XF86MiscGetKbdSettings;
+    print STDERR "XF86 Misc:\n";
+    printf STDERR "\tXF86-Misc Version: %d.%d\n", $major,$minor;
+    printf STDERR "\tsuspend-time: %s\n", $suspend;
+    printf STDERR "\toff-time: %s\n", $off;
+    printf STDERR "\ttype: %s\n", $keybd[0];
+    printf STDERR "\trate: %s\n", $keybd[1];
+    printf STDERR "\tdelay: %s\n", $keybd[2];
+    printf STDERR "\tservnumlock: %s\n", $keybd[3];
+    foreach (sort keys %mouse) {
+	my $name = $_; $name =~ s{_}{-}g;
+	printf STDERR "\t%s: %s\n", $name,$mouse{$_};
+    }
+}
+
+=head1 SEE ALSO
+
+L<xset(1)>, L<lxinput(1)>.
+
+=cut

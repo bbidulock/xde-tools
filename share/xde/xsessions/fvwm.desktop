@@ -1,0 +1,8 @@
+[Desktop Entry]
+Encoding=UTF-8
+Name=FVWM
+Comment=The fvwm window manager
+Type=XSession
+Exec=xde-startup fvwm
+TryExec=/usr/bin/fvwm
+Icon=fvwm

@@ -1,0 +1,225 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+    if $running_under_some_shell;
+
+
+my $here = $0; $here =~ s{/[^/]*$}{};
+unshift @INC, "$here/lib";
+
+require XDG::Icons;
+
+use Getopt::Long;
+use strict;
+use warnings;
+
+=head1 NAME
+
+ xde-icon - command-line XDG icon lookup tool
+
+=head1 SYNOPSIS
+
+ xde-icon [ OPTIONS ] [NAME[ NAME ...]]
+
+=head1 DESCRIPTION
+
+B<xde-icon> is a command line tool for looking up icons in accordance
+with the XDG icon specification.
+
+=head1 ARGUMENTS
+
+=over
+
+=item I<NAME>[,I<NAME>][ I<NAME> ...]
+
+B<xde-icon> treats all non-option arguments as a list of alternate icon
+names to seek.  Each non-option argument may itself be a list of
+comma-separated icon names.
+
+=back
+
+=cut
+
+my %ops = (
+    help	=> '',
+    verbose	=> '',
+    theme	=> '',
+    size	=> 16,
+    iconname	=> [],
+    extensions	=> [],
+    prepend	=> [],
+    append	=> [],
+);
+
+my $syntax = GetOptions(
+    "help|h"	    =>\$ops{help},
+    "theme|t=s"	    =>\$ops{theme},
+    "size|s=i"	    =>\$ops{size},
+    "icon|name|n=s" =>$ops{iconname},
+    "extensions|e=s"=>$ops{extensions},
+    "prepend|p=s"   =>$ops{prepend},
+    "append|a=s"    =>$ops{append},
+    "verbose|v"	    =>\$ops{verbose},
+);
+
+=head1 OPTIONS
+
+B<xde-icon> accepts the following options:
+
+=over
+
+=item B<--help>,B<-h>
+
+Print usage information and then exit.
+
+=item B<--verbose>,B<-v>
+
+Print the parameters of the search to standard error before searching.
+
+=item B<--theme>,B<-t> I<THEME>
+
+Specify the default theme, I<THEME>, to use when lookup up icons.  The
+default theme when unspecified will be looked up from normal sources.
+
+=item B<--size>,B<-s> I<SIZE>
+
+Specify the preferred size of the icon, I<SIZE>.  The default size when
+unspecified is 16.
+
+=item B<--icon>,B<--name>,B<-n> I<NAME>[,I<NAME>]
+
+Specify a comma separated list of alternate icon names to look up in
+addition to any non-option arguments.  The option may be repeated or
+specified using non-option arguments.
+
+=item B<--extensions>,B<-e> I<EXTENSION>[,I<EXTENSION>]
+
+Specify a comma separated list of file name extensions, I<EXTENSION>,
+(without the '.') that may be returned.  The order of preference is the
+order specified.  This option may be repeated.
+
+=item B<--append>,B<-a> I<DIRECTORY>[:I<DIRECTORY>]
+
+Specify the colon-separated list of directories to append to the list of
+search directories (in the order specified).  This option may be
+repeated to list additional directories to append.
+
+=item B<--prepend>,B<-a> I<DIRECTORY>[:I<DIRECTORY>]
+
+Specify the colon-separated list of directories to prepend to the list
+of search directories (in the order specified).  This option may be
+repeated to list additional directories to prepend.
+
+=back
+
+=cut
+
+if ($ops{help} or not $syntax) {
+    print STDERR<<EOF;
+usage:
+    xde-icon [options] [NAME [NAME ...]]
+arguments:
+    [NAME [NAME ...]]
+        zero or more space or comma separated alternate
+        icon names to look up
+options:
+    --help,-h
+        print this usage info and exit
+    --verbose,-v
+        print the parameters of the search to standard
+        error before searching
+    --theme,-t THEME
+        specify the default theme, THEME, to use when
+        looking up icons
+    --size,-s SIZE
+        specifiy the preferred size of the icon; the
+        default is 16
+    --icon,--name,-n NAME[,NAME]
+        specify comma separated list of alternate icon
+        names to look up; this option may be repeated
+        or specified using arguments
+    --extensions,-e EXTENSION[,EXTENSION]
+        specify the comma separated list of extensions,
+        (without the '.') that may be returned
+        this option may be repeated
+    --append,-a DIRECTORY[:DIRECTORY]
+        specify the colon separated list of directories
+        to append to the list of search directories
+        this option may be repeated
+    --prepend,-p DIRECTORY[:DIRECTORY]
+        specify the colon-separated list of directories
+        to prepend to the list of search directories
+        this option may be repeated
+EOF
+    exit(2) unless $syntax;
+    exit(0);
+}
+
+$ops{prepend}    = [ split(/:/,join(':',@{$ops{prepend}}   )) ];
+$ops{append}     = [ split(/:/,join(':',@{$ops{append}}    )) ];
+$ops{iconname}   = [ split(/,/,join(',',@{$ops{iconname}}  )) ];
+$ops{extensions} = [ split(/,/,join(',',@{$ops{extensions}})) ];
+
+$ops{prepend} = join(':',@{$ops{prepend}});
+$ops{append}  = join(':',@{$ops{append}} );
+
+push @{$ops{iconname}}, split(/,/,join(',',@ARGV)) if @ARGV;
+
+$ops{extensions} = undef unless @{$ops{extensions}};
+
+my $icons = new XDG::Icons({
+        Prepend	=>$ops{prepend},
+        Append	=>$ops{append},
+        Theme	=>$ops{theme},
+});
+
+if ($ops{verbose}) {
+    print STDERR "The icon list to search is '",join(',',@{$ops{iconname}}),"'\n";
+    print STDERR "The default theme is '", $icons->{theme}, "'\n";
+    print STDERR "The icon size is '", $ops{size}, "'\n";
+    print STDERR "The default extensions are: ",join(',',@{$icons->{extensions}}),"\n";
+    print STDERR "The directory search paths are:\n";
+    foreach (@{$icons->{dirs}}) {
+        print STDERR "\t$_\n";
+    }
+}
+
+my $fn = $icons->FindBestIcon($ops{iconname},$ops{size},$ops{extensions});
+
+print STDOUT "$fn\n" if $fn;
+
+exit(0);
+
+1;
+
+=head1 EXAMPLES
+
+The following example will look up the 32x32 icon named C<start-here> in
+the theme C<Mist>.  If not found, the icon named C<unknown> will be
+looked up before resorting to fallback locations.
+
+ xde-icon --theme Mist --size 32 start-here unknown
+
+=head1 HISTORY
+
+I wrote B<xde-icon> because there were no command line tools for
+determining which icon would be used by XDG compliant tools (such as
+L<Gtk2(3pm)>).
+
+The modules used by this tool are also used by L<xde-menugen(1p)> for
+when generating menus for XDE supported window managers.
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@openss7.org>
+
+=head1 COPYRIGHT
+
+Copyright (c) 2013, OpenSS7 Corporation.  All Rights Reserved.
+
+=head1 SEE ALSO
+
+L<XDG::Icons(3pm)>, L<XDG::IconTheme(3pm)>
+
+=cut

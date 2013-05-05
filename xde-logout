@@ -1,0 +1,929 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+	if $running_under_some_shell;
+
+use Getopt::Long;
+use Glib qw(TRUE FALSE);
+use Gtk2;
+use Net::DBus;
+use Net::DBus::GLib;
+use strict;
+use warnings;
+
+my %DIRS = ();
+$DIRS{here} = $0; $DIRS{here} =~ s{/[^/]*$}{};
+if ($DIRS{here} eq '/usr/bin') {
+    $DIRS{conf} = '/etc/xdg/xde';
+    $DIRS{data} = '/usr/share/xde';
+    $DIRS{icon} = '/usr/share/icons';
+} else {
+    $DIRS{conf} = "$DIRS{here}/xdg/xde";
+    $DIRS{data} = "$DIRS{here}/share/xde";
+    $DIRS{icon} = "$DIRS{here}/share/icons";
+}
+
+=head1 NAME
+
+ xde-logout - Log out of an X Session
+
+=head1 SYNOPSIS
+
+ xde-logout [OPTIONS]
+
+=head1 DESCRIPTION
+
+B<xde-logout> logs the user out of the current XDG compliant session.
+The script detects when running under L<lxsession(1)> or L<fbsession(1)>
+and performs the appropriate actions.
+
+By default, B<xde-logout> presents a menu that includes:
+
+=over
+
+=item I<Logout>
+
+Logging out of the current X Session.
+
+=item I<SwitchUser>
+
+Switch the logged in user.
+
+=item I<SwitchDesk>
+
+Switch the current desktop environment (X Session manager and window
+manager) to another.  A list of sessions is presented.
+
+=back
+
+Power-related options are only presented when the user has the privilege
+necessary to perform the actions.  Also, when the B<DISPLAY> environment
+variable indicates that the X Session is a remote session, these options
+are not activated.  The option is also only present if the hardware is
+capable of performing the action.
+
+B<xde-logout> uses I<systemd> on the I<D-Bus> to determine whether the
+user and computer are capable of performing these actions.  It also
+checks whether some of these actions are inhibited and provides the
+inhibiting message when inhibited.
+
+In contrast, B<lxsession-logout(1)> attempts to use console-kit.
+
+=over
+
+=item I<PowerOff>
+
+Power off the computer.
+
+=item I<Reboot>
+
+Reboot the computer.
+
+=item I<Suspend>
+
+Suspend the computer.
+
+=item I<Hibernate>
+
+Hibernate the computer.
+
+=item I<HybridSleep>
+
+Perform a hybrid sleep on the computer.
+
+=back
+
+=cut
+
+my $HOME = $ENV{HOME} if $ENV{HOME};
+$HOME = '~' unless $HOME;
+$ENV{HOME} = $HOME if $HOME;
+
+my $XDG_CONFIG_HOME = $ENV{XDG_CONFIG_HOME} if $ENV{XDG_CONFIG_HOME};
+$XDG_CONFIG_HOME = "$HOME/.config" unless $XDG_CONFIG_HOME;
+$ENV{XDG_CONFIG_HOME} = $XDG_CONFIG_HOME if $XDG_CONFIG_HOME;
+
+my $XDG_CONFIG_DIRS = $ENV{XDG_CONFIG_DIRS} if $ENV{XDG_CONFIG_DIRS};
+$XDG_CONFIG_DIRS = "/etc/xdg" unless $XDG_CONFIG_DIRS;
+$XDG_CONFIG_DIRS = join(':',$DIRS{conf},$XDG_CONFIG_DIRS)
+    unless ":$XDG_CONFIG_DIRS:" =~ m(:$DIRS{conf}:);
+$ENV{XDG_CONFIG_DIRS} = $XDG_CONFIG_DIRS if $XDG_CONFIG_DIRS;
+
+my @XDG_CONFIG_DIRS = split(/:/,join(':',$XDG_CONFIG_HOME,$XDG_CONFIG_DIRS));
+
+my $XDG_DATA_HOME = $ENV{XDG_DATA_HOME} if $ENV{XDG_DATA_HOME};
+$XDG_DATA_HOME = "$HOME/.local/share" unless $XDG_DATA_HOME;
+$ENV{XDG_DATA_HOME} = $XDG_DATA_HOME if $XDG_DATA_HOME;
+
+my $XDG_DATA_DIRS = $ENV{XDG_DATA_DIRS} if $ENV{XDG_DATA_DIRS};
+$XDG_DATA_DIRS = "/usr/local/share:/usr/share" unless $XDG_DATA_DIRS;
+$XDG_DATA_DIRS = join(':',$DIRS{data},$XDG_DATA_DIRS)
+    unless ":$XDG_DATA_DIRS:" =~ m(:$DIRS{data}:);
+$ENV{XDG_DATA_DIRS} = $XDG_DATA_DIRS if $XDG_DATA_DIRS;
+
+my @XDG_DATA_DIRS = split(/:/,join(':',$XDG_DATA_HOME,$XDG_DATA_DIRS));
+
+my $XDG_CURRENT_DESKTOP = $ENV{XDG_CURRENT_DESKTOP} if $ENV{XDG_CURRENT_DESKTOP};
+my $DESKTOP_SESSION = $ENV{DESKTOP_SESSION} if $ENV{DESKTOP_SESSION};
+my $FBXDG_DE = $ENV{FBXDG_DE} if $ENV{FBXDG_DE};
+
+my $XDE_SESSION = $ENV{XDE_SESSION} if $ENV{XDE_SESSION};
+$XDE_SESSION = $XDG_CURRENT_DESKTOP unless $XDE_SESSION;
+$XDE_SESSION = $DESKTOP_SESSION	    unless $XDE_SESSION;
+$XDE_SESSION = $FBXDG_DE	    unless $XDE_SESSION;
+$XDE_SESSION = ''		    unless $XDE_SESSION;
+
+$DIRS{home} = "$XDG_CONFIG_HOME/xde";
+mkpath $DIRS{home} unless -d $DIRS{home};
+
+=head1 OPTIONS
+
+B<xde-logout> options are compatible with L<lxsession-logout(1)>
+options.
+The following options are recognized:
+
+=over
+
+=item B<--help>, B<-h>
+
+Print brief usage information to standard error with the known defaults
+of all values and then exit.
+
+=item B<--verbose>, B<-v>
+
+Print debugging information to standard error during operation.
+
+=item B<--prompt>, B<-p> I<PROMPT>
+
+Specifies a custom prompt message.  The prompt message is displayed
+above the buttons that specify the action to take.
+This option is compatible with L<lxsession-logout(1)>.
+
+=item B<--banner>, B<-b> I<BANNER>
+
+Specifies a custom logout logo.  When unspecified,
+L<lxsession-logout(1)> will use the (ugliest ever) LXDE logo.  Is it a
+claw?  Is it a sparrow?
+When unspecified, B<xde-logout> will use a branded logo that depends on
+environment variables.
+This option is compatible with L<lxsession-logout(1)>.
+
+L<lxde-logout(1)> sets this option to
+F</usr/share/lxde/images/logout-banner.png> which is a 352x125 PNG
+image.
+
+=item B<--side>, B<-s> {B<left>|B<top>|B<right>|B<bottom>}
+
+Specifies the side of the window on which the logo will be placed.
+
+L<lxde-logout(1)> sets this option to B<top>.
+
+=back
+
+=cut
+
+use constant {
+    SIDES=>{top=>1,bottom=>2,left=>3,right=>4},
+};
+
+my %DIRS = ();
+$DIRS{here} = $0; $DIRS{here} =~ s{/[^/]*$}{};
+if ($DIRS{here} eq '/usr/bin') {
+    $DIRS{conf} = '/etc/xdg/xde';
+    $DIRS{data} = '/usr/share/xde';
+    $DIRS{icon} = '/usr/share/icons';
+} else {
+    $DIRS{conf} = "$DIRS{here}/xdg/xde";
+    $DIRS{data} = "$DIRS{here}/share/xde";
+    $DIRS{icon} = "$DIRS{here}/share/icons";
+}
+
+
+my %ops = (
+    help    => '',
+    verbose => '',
+    prompt  => '',
+    banner  => '',
+    side    => 'left',
+);
+
+# determine the default logout banner
+my $XDG_MENU_PREFIX = $ENV{XDG_MENU_PREFIX} if $ENV{XDG_MENU_PREFIX};
+my $XDG_VENDOR_ID = $ENV{XDG_VENDOR_ID} if $ENV{XDG_VENDOR_ID};
+if ($XDG_MENU_PREFIX and not $XDG_VENDOR_ID) {
+    $XDG_VENDOR_ID = $XDG_MENU_PREFIX;
+    $XDG_VENDOR_ID =~ s{-$}{};
+}
+elsif ($XDG_VENDOR_ID and not $XDG_MENU_PREFIX) {
+    $XDG_MENU_PREFIX = "${XDG_VENDOR_ID}-";
+}
+elsif (not $XDG_VENDOR_ID and not $XDG_MENU_PREFIX) {
+    $XDG_MENU_PREFIX = 'arch-';
+    $XDG_VENDOR_ID = 'archlinux';
+}
+$ENV{XDG_MENU_PREFIX} = $XDG_MENU_PREFIX if $XDG_MENU_PREFIX;
+$ENV{XDG_VENDOR_ID} = $XDG_VENDOR_ID if $XDG_VENDOR_ID;
+
+if (-f "$DIRS{data}/images/${XDG_MENU_PREFIX}banner.png") {
+    $ops{banner} = "$DIRS{data}/images/${XDG_MENU_PREFIX}banner.png";
+}
+elsif (-f "$DIRS{data}/images/banner.png") {
+    $ops{banner} = "$DIRS{data}/images/banner.png";
+}
+
+# determine the default logout prompt
+my $XDG_CURRENT_DESKTOP = $ENV{XDG_CURRENT_DESKTOP} if $ENV{XDG_CURRENT_DESKTOP};
+unless ($XDG_CURRENT_DESKTOP) {
+    if ($ENV{_FBSESSION_PID}) {
+        $XDG_CURRENT_DESKTOP = 'FLUXBOX';
+    }
+    elsif ($ENV{_LXSESSION_PID}) {
+        $XDG_CURRENT_DESKTOP = 'LXDE';
+    }
+    else {
+        $XDG_CURRENT_DESKTOP = 'XWINDOWS';
+    }
+}
+$ENV{XDG_CURRENT_DESKTOP} = $XDG_CURRENT_DESKTOP if $XDG_CURRENT_DESKTOP;
+
+$ops{prompt} = "Logout of $XDG_CURRENT_DESKTOP session?";
+
+my @args = ($0, @ARGV);
+
+my $syntax = GetOptions(
+    "help|h"	    => \$ops{help},
+    "verbose|v"     => \$ops{verbose},
+    "banner|b=s"    => \$ops{banner},
+    "side|s=s"	    => sub{$ops{side} = $_[1] if &SIDES->{$_[1]}},
+    "prompt|p=s"    => \$ops{prompt},
+);
+
+if ($ops{help} or not $syntax) {
+    show_usage();
+    exit($syntax ? 0 : 2);
+}
+
+sub show_usage {
+    print STDERR<<EOF;
+USAGE:
+    xde-logout [options]
+
+OPTIONS:
+    --help, -h
+        display this usage information and exit.
+
+    --verbose, -v
+        print debug messages to standard error while running.
+
+    --banner, -b BANNER [default: $ops{banner}]
+        set the banner to be displayed.
+
+    --prompt, -p PROMPT [default: $ops{prompt}]
+        set the prompt to be displayed.
+
+    --side, -s {top|bottom|left|right}
+        specify the side on which to place the banner.  The default if
+        unspecified is 'left'.
+
+EOF
+}
+
+Gtk2->init;
+
+sub lxsession_check {
+    if ($ENV{_LXSESSION_PID}) {
+        # we might have mistakenly been called by an lxpanel that is running
+        # under lxsession(1).  If that is the case, we can do the right
+        # thing.
+        $ops{desktop} = $ENV{XDG_CURRENT_DESKTOP} if $ENV{XDG_CURRENT_DESKTOP};
+        $ops{desktop} = 'LXDE' unless $ops{desktop};
+
+        # Let's really check if there is a true _LXSESSION running:
+        if (my $atom = Gtk2::Gdk::Atom->new(_LXSESSION=>TRUE)) {
+            if (my $window = Gtk2::Gdk::Selection->owner_get($atom)) {
+                # just call lxsession-logout directly
+                my @args = ('lxsession-logout');
+                push @args, '--banner', $ops{banner} if $ops{banner};
+                push @args, '--side',   $ops{side}   if $ops{side};
+                push @args, '--prompt', $ops{prompt} if $ops{prompt};
+                exec(@args) or exit(2);
+            }
+        }
+    }
+}
+
+my %dbus = ();
+
+my %can = (
+    PowerOff	    => 'na',
+    Reboot	    => 'na',
+    Suspend	    => 'na',
+    Hibernate	    => 'na',
+    HybridSleep	    => 'na',
+    SwitchUser	    => 'na',
+    SwitchDesk	    => 'na',
+    LockScreen	    => 'na',
+    Logout	    => 'yes',
+    Restart	    => 'na',
+    Cancel	    => 'yes',
+);
+
+my %tip = (
+    PowerOff	    => 'Shutdown the computer.',
+    Reboot	    => 'Reboot the computer.',
+    Suspend	    => 'Place computer in suspend mode.',
+    Hibernate	    => 'Place computer in hibernation mode.',
+    HybridSleep	    => 'Place computer in hybrid sleep mode.',
+    SwitchUser	    => 'Switch users.',
+    SwitchDesk	    => 'Switch the current desktop session.',
+    LockScreen	    => 'Lock the screen.',
+    Logout	    => 'Log out of the current session.',
+    Restart	    => 'Restart current desktop session.',
+    Cancel	    => 'Cancel and return to current session.',
+);
+
+sub test_power_functions {
+    $dbus{bus} = Net::DBus::GLib->system();
+    $dbus{srv} = $dbus{bus}->get_service('org.freedesktop.login1');
+    $dbus{obj} = $dbus{srv}->get_object('/org/freedesktop/login1',
+					'org.freedesktop.login1.Manager');
+    my $result;
+    $can{PowerOff}      = $result if $result = $dbus{obj}->CanPowerOff();
+    $can{Reboot}        = $result if $result = $dbus{obj}->CanReboot();
+    $can{Suspend}       = $result if $result = $dbus{obj}->CanSuspend();
+    $can{Hibernate}     = $result if $result = $dbus{obj}->CanHibernate();
+    $can{HybridSleep}   = $result if $result = $dbus{obj}->CanHybridSleep();
+}
+
+eval { test_power_functions(); };
+
+foreach (keys %can) {
+    if ($can{$_} eq 'na') {
+	$tip{$_} .= "\nFunction not available.";
+    }
+    elsif ($can{$_} eq 'challenge') {
+	$tip{$_} .= "\nFunction not permitted.";
+    }
+}
+
+if ($ops{verbose}) {
+    foreach (qw(PowerOff Reboot Suspend Hibernate HybridSleep)) {
+        print STDERR "$_: $can{$_}\n";
+    }
+}
+
+if (0) {
+    if (my @results = $dbus{obj}->ListInhibitors()) {
+	if ($ops{verbose}) {
+	    foreach (@results) {
+		print STDERR join(',',@$_),"\n";
+	    }
+	}
+    }
+}
+
+if (0) {
+    my $XDG_SEAT = $ENV{XDG_SEAT} if $ENV{XDG_SEAT};
+
+    if ($XDG_SEAT) {
+	$dbus{seat} = $dbus{srv}->get_object("/org/freedesktop/login1/seat/$XDG_SEAT",
+					     'org.freedesktop.DBus.Properties');
+	$dbus{prop} = $dbus{seat}->Get('org.freedesktop.login1.Seat', 'Sessions');
+    }
+}
+
+sub grabbed_window {
+    my $w = shift;
+    my $win = $w->window;
+    $win->set_override_redirect(TRUE);
+    $win->set_focus_on_map(TRUE);
+    $win->set_accept_focus(TRUE);
+    $win->set_keep_above(TRUE);
+    $win->set_modal_hint(TRUE);
+    $win->stick;
+    $win->deiconify;
+    $win->show;
+    $win->focus(Gtk2::GDK_CURRENT_TIME);
+    Gtk2::Gdk->keyboard_grab($win,TRUE,Gtk2::GDK_CURRENT_TIME);
+    Gtk2::Gdk->pointer_grab($win,TRUE, [
+	'pointer-motion-mask',
+	'pointer-motion-hint-mask',
+	#'button-motion-mask',
+	#'button1-motion-mask',
+	#'button2-motion-mask',
+	#'button3-motion-mask',
+	#'button-press-mask',
+	#'button-release-mask',
+	#'enter-notify-mask',
+	#'leave-notify-mask',
+    ], $win,undef,Gtk2::GDK_CURRENT_TIME);
+    unless (Gtk2::Gdk::Display->get_default->pointer_is_grabbed) {
+	print STDERR "pointer is NOT grabbed\n";
+    }
+    unless (Gtk2::Gdk->pointer_is_grabbed) {
+	print STDERR "pointer is NOT grabbed\n";
+    }
+}
+
+sub ungrabbed_window {
+    my $w = shift;
+    my $win = $w->window;
+    Gtk2::Gdk->pointer_ungrab(Gtk2::GDK_CURRENT_TIME);
+    Gtk2::Gdk->keyboard_ungrab(Gtk2::GDK_CURRENT_TIME);
+    $win->hide;
+}
+
+sub areyousure {
+    my ($w,$msg) = @_;
+    ungrabbed_window($w);
+    my $d = Gtk2::MessageDialog->new($w,'modal','question','yes-no',$msg);
+    $d->set_title('Are you sure?');
+    $d->set_modal(TRUE);
+    $d->set_gravity('center');
+    $d->set_type_hint('splashscreen');
+    $d->set_skip_pager_hint(TRUE);
+    $d->set_skip_taskbar_hint(TRUE);
+    $d->set_position('center-always');
+    $d->show_all;
+    $d->show_now;
+    grabbed_window($d);
+    my $result = $d->run;
+    ungrabbed_window($d);
+    $d->destroy;
+    grabbed_window($w) unless $result eq 'yes';
+    return $result;
+}
+
+sub PowerOff {
+    my $w = shift;
+    print STDERR "Power Off clicked!\n" if $ops{verbose};
+    my $result = areyousure($w, "Are you sure you want to power off the computer?");
+    if ($result eq 'yes') {
+	$dbus{obj}->PowerOff(TRUE);
+	Gtk2::main_quit;
+    }
+    return Gtk2::EVENT_PROPAGATE;
+}
+sub Reboot {
+    my $w = shift;
+    print STDERR "Reboot clicked!\n" if $ops{verbose};
+    my $result = areyousure($w, "Are you sure you want to reboot the computer?");
+    if ($result eq 'yes') {
+	$dbus{obj}->Reboot(TRUE);
+	Gtk2::main_quit;
+    }
+    return Gtk2::EVENT_PROPAGATE;
+}
+sub Suspend {
+    my $w = shift;
+    print STDERR "Suspend clicked!\n" if $ops{verbose};
+    my $result = areyousure($w, "Are you sure you want to suspend the computer?");
+    if ($result eq 'yes') {
+	$dbus{obj}->Suspend(TRUE);
+	Gtk2::main_quit;
+    }
+    return Gtk2::EVENT_PROPAGATE;
+}
+sub Hibernate {
+    my $w = shift;
+    print STDERR "Hibernate clicked!\n" if $ops{verbose};
+    my $result = areyousure($w, "Are you sure you want to hibernate the computer?");
+    if ($result eq 'yes') {
+	$dbus{obj}->Hibernate(TRUE);
+	Gtk2::main_quit;
+    }
+    return Gtk2::EVENT_PROPAGATE;
+}
+sub HybridSleep {
+    my $w = shift;
+    print STDERR "Hybrid Sleep clicked!\n" if $ops{verbose};
+    my $result = areyousure($w, "Are you sure you want to hybrid sleep the computer?");
+    if ($result eq 'yes') {
+	$dbus{obj}->HybridSleep(TRUE);
+	Gtk2::main_quit;
+    }
+    return Gtk2::EVENT_PROPAGATE;
+}
+sub SwitchUser {
+    print STDERR "Switch User clicked!\n" if $ops{verbose};
+    return Gtk2::EVENT_PROPAGATE;
+}
+sub SwitchDesk {
+    print STDERR "Switch Desktop clicked!\n" if $ops{verbose};
+    return Gtk2::EVENT_PROPAGATE;
+}
+sub LockScreen {
+    print STDERR "Lock Screen clicked!\n" if $ops{verbose};
+    return Gtk2::EVENT_PROPAGATE;
+}
+sub Logout {
+    print STDERR "Logout clicked!\n" if $ops{verbose};
+    # check for _LXSESSION_PID _FBSESSION_PID XDG_SESSION_PID
+    #   when one of these exists, logging out of the session consists of
+    #   sending a TERM signal to the PID concerned.  When none of these
+    #   exist, then we can check to see if there is information on the
+    #   root window.
+    if ($ENV{XDG_SESSION_PID}) {
+	kill 15, $ENV{XDG_SESSION_PID};
+	Gtk2->main_quit;
+	return Gtk2::EVENT_PROPAGATE;
+    }
+    if ($ENV{_FBSESSION_PID}) {
+	kill 15, $ENV{_FBSESSION_PID};
+	Gtk2->main_quit;
+	return Gtk2::EVENT_PROPAGATE;
+    }
+    if ($ENV{_LXSESSION_PID}) {
+	kill 15, $ENV{_LXSESSION_PID};
+	Gtk2->main_quit;
+	return Gtk2::EVENT_PROPAGATE;
+    }
+    my $mgr = Gtk2::Gdk::DisplayManager->get;
+    my $dpy = $mgr->get_default_display;
+    my $scn = $dpy->get_default_screen;
+    my $root = $scn->get_root_window;
+
+    print STDERR "Gtk2::Gdk::CHARS = ",Gtk2::Gdk::CHARS,"\n" if $ops{verbose};
+    print STDERR "Gtk2::Gdk::ULONGS = ",Gtk2::Gdk::ULONGS,"\n" if $ops{verbose};
+    print STDERR "Gtk2::Gdk::USHORTS = ",Gtk2::Gdk::USHORTS,"\n" if $ops{verbose};
+
+    # When the _BLACKBOX_PID atom is set on the desktop, that is the PID
+    #	of the FLUXBOX window manager: yeah, I know, fluxbox sets
+    #	_BLACKBOX_PID an nobody else does.
+    if (my $atom = Gtk2::Gdk::Atom->new(_BLACKBOX_PID=>TRUE)) {
+	my ($type,$format,$data) = $root->property_get($atom,undef,0,1,FALSE);
+	if (defined $type) {
+	    print STDERR "_BLACKBOX_PID(",$type->name,") = ($format) $data\n" if $ops{verbose};
+	    kill 15, $data;
+	    Gtk2->main_quit;
+	    return Gtk2::EVENT_PROPAGATE;
+	}
+    }
+    # Openbox sets _OPENBOX_PID atom the the desktop.  It also sets
+    #   _OB_THEME to the theme name, _OB_CONFIG_FILE to the
+    #   configuration file in use, and _OB_VERSION to the version of
+    #   openbox. _NET_SUPPORTING_WM_CHECK is set to the WM window,
+    #   which has a _NET_WM_NAME set to "Openbox".
+    if (my $atom = Gtk2::Gdk::Atom->new(_OPENBOX_PID=>TRUE)) {
+	my ($type,$format,$data) = $root->property_get($atom,undef,0,1,FALSE);
+	if (defined $type) {
+	    print STDERR "_OPENBOX_PID(",$type->name,") = ($format) $data\n" if $ops{verbose};
+	    kill 15, $data;
+	    Gtk2->main_quit;
+	    return Gtk2::EVENT_PROPAGATE;
+	}
+    }
+    # IceWM-Session does not set environment variables nor elements on
+    #   the root.  _NET_SUPPORTING_WM_CHECK is set to the WM window,
+    #   which has a _NET_WM_NAME set to "IceWM 1.3.7 (Linux 3.4.0-1-ARCH/x86_64)"
+    #   but also has _NET_WM_PID set to the pid of "icewm".  Note that
+    #   this is not the pid of icewm-session when that is running.
+    if (my $atom = Gtk2::Gdk::Atom->new(_NET_SUPPORTING_WM_CHECK=>TRUE)) {
+	my ($type,$format,$data) = $root->property_get($atom,undef,0,1,FALSE);
+	if (defined $type) {
+	    printf STDERR "_NET_SUPPORTING_WM_CHECK(",$type->name,") = ($format) 0x%08x\n", $data if $ops{verbose};
+	    if (my $win = Gtk2::Gdk::Window->foreign_new($data)) {
+		if ($atom = Gtk2::Gdk::Atom->new(_NET_WM_NAME=>TRUE)) {
+		    ($type,$format,$data) = $win->property_get($atom,undef,0,4096,FALSE);
+		    if (defined $type) {
+			my @text = Gtk2::Gdk->text_property_to_utf8_list($type,$format,$data);
+			print STDERR "_NET_WM_NAME(",$type->name,") = ($format) ",join(',',@text),"\n" if $ops{verbose};
+		    }
+		}
+		if ($atom = Gtk2::Gdk::Atom->new(_NET_WM_PID=>TRUE)) {
+		    ($type,$format,$data) = $win->property_get($atom,undef,0,1,FALSE);
+		    if (defined $type) {
+			print STDERR "_NET_WM_PID(",$type->name,") = ($format) $data\n" if $ops{verbose};
+			kill 15, $data;
+			Gtk2->main_quit;
+			return Gtk2::EVENT_PROPAGATE;
+		    }
+		}
+	    }
+	}
+    }
+    print STDERR "Cannot find session or window manager PID!\n";
+    # Blackbox does not set _BLACKBOX_PID on the desktop.
+    #	_NET_SUPPORTING_WM_CHECK is set to the WM window, which has a
+    #	_NET_WM_NAME set to "Blackbox".
+    # WindowMaker sets _WINDOWMAKER_WM_PROTOCOLS to atoms.  It sets
+    #   environment variables: WMAKER_BIN_NAME to /usr/bin/wmaker, it
+    #   sets WINDOWID and WINDOWPATH as well as
+    #   WRASTER_COLOR_RESOLUTION0.  It does set on the root the
+    #   _NET_SUPPORTING_WM_CHECK to the WM window, which does not
+    #   provide the pid or even the _NET_WM_NAME.
+    #
+    Gtk2->main_quit;
+    return Gtk2::EVENT_PROPAGATE;
+}
+sub Restart {
+    print STDERR "Restart clicked!\n" if $ops{verbose};
+    return Gtk2::EVENT_PROPAGATE;
+}
+sub Cancel {
+    print STDERR "Cancel clicked!\n" if $ops{verbose};
+    Gtk2->main_quit;
+    return Gtk2::EVENT_PROPAGATE;
+}
+
+sub show_window {
+    if ($DIRS{icon}) {
+	my $theme = Gtk2::IconTheme->get_default;
+	$theme->prepend_search_path($DIRS{icon});
+    }
+    my ($w,$h,$f,$v,$s,$l,$bb);
+    $w = Gtk2::Window->new('toplevel');
+    $w->set_wmclass('xde-logout','Xdg-logout');
+    $w->set_title('XDG Session Logout');
+    $w->set_modal(TRUE);
+    $w->set_gravity('center');
+    $w->set_type_hint('splashscreen');
+    $w->set_icon_name('xdm');
+    $w->set_border_width(15);
+    $w->set_skip_pager_hint(TRUE);
+    $w->set_skip_taskbar_hint(TRUE);
+    $w->set_position('center-always');
+    $h = Gtk2::HBox->new(FALSE,5);
+    $w->add($h);
+    if ($ops{banner}) {
+	$f = Gtk2::Frame->new;
+	$f->set_shadow_type('etched-in');
+	$h->pack_start($f,FALSE,FALSE,0);
+	$v = Gtk2::VBox->new(FALSE,5);
+	$v->set_border_width(10);
+	$f->add($v);
+	$s = Gtk2::Image->new_from_file($ops{banner});
+	$v->add($s);
+    }
+    $f = Gtk2::Frame->new;
+    $f->set_shadow_type('etched-in');
+    $h->pack_start($f,TRUE,TRUE,0);
+    $v = Gtk2::VBox->new(FALSE,5);
+    $v->set_border_width(10);
+    $f->add($v);
+    $l = Gtk2::Label->new;
+    $l->set_markup($ops{prompt});
+    $v->pack_start($l,FALSE,TRUE,0);
+    $bb = Gtk2::VButtonBox->new;
+    $bb->set_border_width(5);
+    $bb->set_layout_default('spread');
+    $bb->set_spacing_default(5);
+    $v->pack_end($bb,TRUE,TRUE,0);
+    my (@b,$b,$i);
+
+    my @data = (
+	[ 'system-shutdown', 'gnome-session-halt', 'gtk-quit', 'Power Off',
+	  sub{ PowerOff($w) }, $can{PowerOff}, $tip{PowerOff},
+	],
+	[ 'system-reboot', 'gnome-session-reboot', 'gtk-quit', 'Reboot',
+	  sub{ Reboot($w) }, $can{Reboot}, $tip{Reboot},
+	],
+	[ 'system-suspend', 'gnome-session-suspend', 'gtk-quit', 'Suspend',
+	  sub{ Suspend($w) }, $can{Suspend}, $tip{Suspend},
+	],
+	[ 'system-suspend-hibernate', 'gnome-session-hibernate', 'gtk-quit', 'Hibernate',
+	  sub{ Hibernate($w) }, $can{Hibernate}, $tip{Hibernate},
+	],
+	[ 'system-suspend-hibernate', 'gnome-session-hibernate', 'gtk-quit', 'Hybrid Sleep',
+	  sub{ HybridSleep($w) }, $can{HybridSleep}, $tip{HybridSleep},
+	],
+	[ 'system-switch-user', 'gnome-session-switch', 'gtk-quit', 'Switch User',
+	  \&SwitchUser, $can{SwitchUser}, $tip{SwitchUser},
+	],
+	[ 'system-switch-user', 'gnome-session-switch', 'gtk-quit', 'Switch Desktop',
+	  \&SwitchDesk, $can{SwitchDesk}, $tip{SwitchDesk},
+	],
+	[ 'gtk-refresh', 'gtk-refresh', 'gtk-refres', 'Restart',
+	  \&Restart, $can{Restart}, $tip{Restart},
+	],
+	[ 'system-lock-screen', 'gnome-lock-screen', 'gtk-quit', 'Lock Screen',
+	  \&LockScreen, $can{LockScreen}, $tip{LockScreen},
+	],
+	[ 'system-log-out', 'gnome-logout', 'gtk-quit', 'Logout',
+	  \&Logout, $can{Logout}, $tip{Logout},
+	],
+	[ 'gtk-cancel', 'gtk-cancel', 'gtk-cancel', 'Cancel',
+	  \&Cancel, $can{Cancel}, $tip{Cancel},
+	],
+    );
+
+    foreach (@data) {
+	next unless $_->[5] eq 'yes';
+	$b = Gtk2::Button->new;
+	$b->set_border_width(2);
+	$b->set_image_position('left');
+	$b->set_alignment(0.0,0.5);
+	$i = Gtk2::Image->new_from_icon_name($_->[0],'button');
+	$i = Gtk2::Image->new_from_icon_name($_->[1],'button') unless $i;
+	$i = Gtk2::Image->new_from_stock($_->[2],'button') unless $i;
+	$b->set_image($i);
+	$b->set_label($_->[3]);
+	$b->signal_connect(clicked=>$_->[4]);
+	$b->set_sensitive(FALSE) unless $_->[5] eq 'yes';
+	$b->set_tooltip_text($_->[6]) if $_->[6];
+	$bb->pack_start($b,TRUE,TRUE,5); push @b,$b;
+    }
+
+    $w->set_default_size(-1,350);
+    $w->show_all;
+    $w->show_now;
+    $w->signal_connect('grab-broken-event'=>sub{
+	    my ($w,$ev) = @_;
+	    print STDERR "Grab broken event!\n";
+    });
+
+    #$w->grab_focus;
+    #$w->has_grab(TRUE);
+
+    #$b[-1]->grab_focus;
+
+    grabbed_window($w);
+    Gtk2->main;
+    $w->destroy;
+    exit(0);
+}
+
+show_window;
+
+=head1 X RESOURCES
+
+B<xde-logout> examines and interprets the following X Resources:
+
+=over
+
+=item B<_BLACKBOX_PID>
+
+When B<_BLACKBOX_PID> is set on the root window of the display, it
+represents the PID of the Fluxbox window manager running on the display.
+(I know, Blackbox doesn't even set this value.)  This is not necessarily
+the PID of the machine on which B<xde-logout> is running, if
+B<xde-logout> is run from a client on a different host.
+
+=item B<_OPENBOX_PID>
+
+When B<_OPENBOX_PID> is set on the root window of the display, it
+represents the PID of the Openbox window manager running on the display.
+Additional resources set by the Openbox window manager include
+B<_OB_CONFIG_FILE> and B<_OB_VERSION>.
+
+=item B<_NET_SUPPORTING_WM_CHECK>
+
+This resource is set on the root window of the display by all window
+managers except TWM.  This is set to the window used for communications
+with the window manager.  That window will typically have
+B<_NET_WM_NAME> set to the name of the window manager (except for
+WindowMaker).  IceWM also sets the B<_NET_WM_PID> of that window to the
+PID of the IceWM window manager running on the display.
+
+=back
+
+=head1 ENVIRONMENT
+
+B<xde-logout> examines the following environment variables:
+
+=over
+
+=item B<DISPLAY>
+
+Set, of course, to the X display.
+B<xde-logout> uses this value to determine whether the X Display is on
+the local machine or is remote.  When the B<DISPLAY> begins with a
+colon, C<:>, the display is local to the machine on which B<xde-logout>
+is running.  Otherwise, it is remote.
+
+When the B<DISPLAY> begins with a colon, C<:>, the X Display may still
+be tunnelled through a SSH tunnel; however, there is no B<XDG_VTNR> in
+that case and the I<systemd> login service knows the difference.
+
+=item B<XDG_CURRENT_DESKTOP>, B<FBXDG_DE>, B<DESKTOP_SESSION>
+
+Specifies the current XDG Desktop Environment.  Typically, this is set
+by the X Session manager, L<fbsession(1)>, L<lxsession(1)> or others to
+the desktop manager in use.  Typical values are C<FLUXBOX>, C<LXDE>,
+C<BLACKBOX>, etc.  When unspecified, it is considered an error.
+
+B<FBXDG_DE> is set by L<fbautostart(1)> and L<fbsession(1)> to indicate
+the fluxbox desktop environment.  It may be used when
+B<XDG_CURRENT_DESKTOP> is unset.
+
+=item B<XDG_SEAT>
+
+Set by the XDM or X Server to the seat used by the display.  A typical
+values is C<seat0>.
+
+=item B<XDG_VTNR>
+
+Set by the XDM or X Server to the virtual terminal number used by the
+display.  A typical value for XDM is C<7>.
+
+=item B<XDG_SESSION_ID>
+
+Set by the XDM or X Server to indicate the active session within the
+seat as specified by B<XDG_SEAT>.  A typical value is C<1>.
+
+=item B<XDG_RUNTIME_DIR>
+
+Set by the XDM or X Server to indicate the runtime directory.  A typical
+value is F</run/user/1000>.
+
+=item B<XDG_SESSION_PID>, B<_LXSESSION_PID>
+
+Set by L<fbsession(1)> to its main PID.
+B<_LXSESSION_PID> is set to the main session PID by L<lxsession(1)> and
+is also set by L<fbsession(1)>.
+
+=item B<XDG_VENDOR_ID>
+
+This value is only set by L<fbsession(1)>.  It is set to the
+vendor-specific ID that is also typically used (with a dash, C<->,
+appended) as the B<XDG_MENU_PREFIX>.  B<xde-logout> uses this
+information to determine default branding (splash logos).  When
+unspecified, B<xde-logout> will try to derive this value from
+B<XDG_MENU_PREFIX> if it is set.
+
+=item B<XDG_MENU_PREFIX>
+
+Specifies the prefix for the XDG applications menu that is sought in
+F<@XDG_DATA_DIRS/menus/${XDG_MENU_PREFIX}applications.menu>.
+
+=item B<DBUS_SESSION_BUS_ADDRESS>
+
+=item B<DBUS_SESSION_BUS_PID>
+
+=item B<XDG_CONFIG_HOME>
+
+Specifies the user configuration directory.  When unspecified, it
+defaults to F<$HOME/.config> in accordance with XDG specifications.
+
+=item B<XDG_CONFIG_DIRS>
+
+Specifies the system configuration directories.  When unspecified, it
+defaults to F</etc/xdg> in accordance with XDG specifications.
+
+=item B<XDG_DATA_HOME>
+
+Specifies the user data directory.  When unspecified, it defaults to
+F<$HOME/.local/share> in accordance with XDG specifications.
+
+=item B<XDG_DATA_DIRS>
+
+Specifies the system data directories.  When unspecified, it defaults to
+F</usr/local/share:/usr/share> in accordance with XDG specifications.
+
+=item B<XDG_DESKTOP_DIR>
+
+Specifies the user Desktop directory.  When unspecified, it defaults to
+F<$HOME/Desktop> in accordance with XDG specifications.
+
+=back
+
+=head1 HISTORY
+
+One of my purposes in writing B<xde-logout> was to avoid some of the
+idiosynchrasies of L<lxsession-logout(1)> and L<lxde-logout(1)>.  There
+are several problems with those programs as follows:
+
+=over
+
+=item 1.
+
+They use ugly LXDE branding and have only minor support for custom
+branding.
+
+=item 2.
+
+They have a very crude layout.
+
+=item 3.
+
+They attempt to use consolekit to determine the privilege for power
+functions.  Consolekit is obsolete on I<Arch Linux> and the preferred
+mechanism is the I<systemd> login D-Bus service instead.
+
+=item 4.
+
+They cannot switch window managers nor users without the bloated GDM.
+
+=back
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@openss7.org>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (c) 2013 by OpenSS7 Corporation.
+All rights reserved.
+
+This program is free software; you basically stole it, and you can,
+therefore, do what you want with it, but we take no responsibility in
+that.
+
+=head1 SEE ALSO
+
+L<fbsession(1)>, L<lxsession(1)>, L<lxsession-logout(1)>,
+L<lxde-logout(1)>.
+
+
+=cut

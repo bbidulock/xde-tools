@@ -1,0 +1,254 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+    if $running_under_some_shell;
+
+use Getopt::Long;
+use GLib qw(TRUE FALSE);
+use Gtk2;
+use Gtk2::Notify;
+use Gtk2::Unique;
+use Net::DBus;
+use Net::DBus::GLib;
+use strict;
+use warnings;
+
+my $sbus = Net::DBus::GLib->session();
+my $ybus = Net::DBus::GLib->system();
+
+use constant {
+    COMMAND_SESSION => 1,
+    COMMAND_EDITOR  => 2,
+    COMMAND_MENUBLD => 3,
+    COMMAND_CONTROL => 4,
+    COMMAND_LOGOUT  => 5,
+    COMMAND_EXECUTE => 6,
+    SIDES=>{top=>1,bottom=>2,left=>3,right=>4},
+	
+};
+
+my %ops = (
+    help => '',
+    banner => '',
+    side => 'left',
+    prompt => '',
+);
+
+my @args = ($0, @ARGV);
+
+my $syntax = GetOptions(
+    "help|h"=>\$ops{help},
+    "banner|b=s"=>\$ops{banner},
+    "side|s=s"=>sub{ $ops{side} = $_[1] if exists &SIDES->{$_[1]} },
+    "prompt|p=s"=>\$ops{prompt},
+);
+
+if ($ops{help} or not $syntax) {
+    print STDERR<<EOF;
+usage:
+    xde-session-logout [options]
+EOF
+}
+
+Gtk2->init;
+
+my $unique = Gtk2::UniqueApp->new(
+    'com.unexicon.xde-session', undef,
+    'xde-session' => &COMMAND_SESSION,
+    'xde-session-edit' => &COMMAND_EDITOR,
+    'xde-session-menu' => &COMMAND_MENUBLD,
+    'xde-session-ctrl' => &COMMAND_CONTROL,
+    'xde-session-logout' => &COMMAND_LOGOUT,
+    'xde-session-run' => &COMMAND_EXECUTE,
+);
+
+if ($unique->is_running) {
+    $unique->send_message_by_name('xde-session-edit'=>text=>join('|',@args));
+    print STDERR "Executing command $0 on running instance...\n";
+    exit(0);
+}
+
+if ($ENV{_LXSESSION_PID}) {
+    # we might have mistakenly been called by an lxpanel that is running
+    # under lxsession(1).  If that is the case, we can do the right thing.
+    $ops{desktop} = $ENV{XDG_CURRENT_DESKTOP} if $ENV{XDG_CURRENT_DESKTOP};
+    $ops{desktop} = 'LXDE' unless $ops{desktop};
+
+    # Let's really check if there is a true _LXSESSION running:
+    if (my $atom = Gtk2::Gdk::Atom->new(_LXSESSION=>FALSE)) {
+        if (my $window = Gtk2::Gdk::Selection->owner_get($atom)) {
+            # just call lxsession-logout directly
+            my @args = ('lxsession-logout');
+            push @args, "--banner", "$ops{banner}" if $ops{banner};
+            push @args, "--side",   "$ops{side}"   if $ops{side};
+            push @args, "--prompt", "$ops{prompt}" if $ops{prompt};
+            exec(@args) or exit(2);
+        }
+    }
+}
+
+print STDERR "No xde-session running!\n";
+exit(1);
+
+=head1 NAME
+
+ xde-session-logout - logout the user from the xde-session
+
+=head1 SYNOPSIS
+
+ xde-session-logout [ OPTIONS ]
+
+=head1 DESCRIPTION
+
+B<xde-session-logout> is a command that causes a running instance of
+L<xde-session(1)> or L<lxsession(1)> to exit the session.  Several options are
+provided when available under the system and authorized to the user logging out
+as described below.  The B<xde-session-logout> command does not actually
+interrogate and present these options, they are provided by the running
+L<xde-session(1)>.  When L<lxsession(1)> is running, L<lxsession-logout> is simply
+invoked to provide this function.
+
+The following options are only interrogated and available to L<xde-session(1)>
+when running under L<systemd(8)>.  This is because the program was design to run
+under L<Arch Linux>.  Because it uses stable interfaces, it should also run fine
+under Fedora, SuSE and any other systems using L<systemd(8)>.  Power management
+services are provided by the F<org.freedesktop.login1> D-BUS system
+services.
+
+      PowerOff(in  b interactive);
+
+      Reboot(in  b interactive);
+
+      Suspend(in  b interactive);
+
+      Hibernate(in  b interactive);
+
+      HybridSleep(in  b interactive);
+
+      CanPowerOff(out s result);
+
+      CanReboot(out s result);
+
+      CanSuspend(out s result);
+
+      CanHibernate(out s result);
+
+      CanHybridSleep(out s result);
+
+      Inhibit(in  s what,
+              in  s who,
+              in  s why,
+              in  s mode,
+              out h fd);
+
+      ListInhibitors(out a(ssssuu) inhibitors);
+
+    signals:
+      PrepareForShutdown(b active);
+
+      PrepareForSleep(b active);
+
+interface org.freedesktop.login1.Session
+      Terminate();
+      Activate();
+      Lock();
+      Unlock();
+      SetIdleHint(in  b b);
+      Kill(in  s who,
+           in  s signal);
+    signals:
+      Lock();
+      Unlock();
+    properties:
+      readonly s Id = '1';
+      readonly (uo) User = (501, '/org/freedesktop/login1/user/501');
+      readonly s Name = 'brian';
+      readonly t Timestamp = 1365701354972341;
+      readonly t TimestampMonotonic = 48080041;
+      readonly s DefaultControlGroup = 'name=systemd:/user/brian/1';
+      readonly u VTNr = 2;
+      readonly (so) Seat = ('seat0', '/org/freedesktop/login1/seat/seat0');
+      readonly s TTY = 'tty2';
+      readonly s Display = '';
+      readonly b Remote = false;
+      readonly s RemoteHost = '';
+      readonly s RemoteUser = '';
+      readonly s Service = 'login';
+      readonly u Leader = 1226;
+      readonly u Audit = 1;
+      readonly s Type = 'tty';
+      readonly s Class = 'user';
+      readonly b Active = true;
+      readonly s State = 'active';
+      readonly as Controllers = [];
+      readonly as ResetControllers = [];
+      readonly b KillProcesses = false;
+      readonly b IdleHint = true;
+      readonly t IdleSinceHint = 1365701437311630;
+      readonly t IdleSinceHintMonotonic = 129894018;
+
+  interface org.freedesktop.login1.Seat {
+    methods:
+      Terminate();
+      ActivateSession(in  s id);
+    signals:
+    properties:
+      readonly s Id = 'seat0';
+      readonly so ActiveSession = ('1', '/org/freedesktop/login1/session/_31');
+      readonly b CanMultiSession = true;
+      readonly b CanTTY = true;
+      readonly b CanGraphical = true;
+      readonly a(so) Sessions = [('33', '/org/freedesktop/login1/session/_333'), ('14', '/org/freedesktop/login1/session/_314'), ('1', '/org/freedesktop/login1/session/_31')];
+      readonly b IdleHint = true;
+      readonly t IdleSinceHint = 1365791429859242;
+      readonly t IdleSinceHintMonotonic = 90122441631;
+  };
+
+=over
+
+=item 1.
+
+=item 2.
+
+=item 3.
+
+=item 4.
+
+=item 5.
+
+=item 6.
+
+=item 7.
+
+=item 8.
+
+=item 9.
+
+=item 10.
+
+=item 11.
+
+=back
+
+=head1 RATIONALE
+
+=head1 CAVEATS
+
+=head1 HISTORY
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@openss7.org>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (c) 2013 by OpenSS7 Corporation.
+All rights reserved.
+
+This program is free software; you basically stole it, and you can,
+therefore, do what you want with it, but we take no responsibility in that.
+
+=head1 SEE ALSO
+
+=cut

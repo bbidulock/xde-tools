@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Icon=emblem-mail
+Name=mutt
+Exec=mutt %u
+NoDisplay=true
+Terminal=true

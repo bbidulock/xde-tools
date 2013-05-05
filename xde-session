@@ -1,0 +1,1018 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+    if $running_under_some_shell;
+
+
+use Getopt::Long;
+use POSIX qw(setsid getpid :sys_wait_h);
+use File::Path;
+use Glib qw(TRUE FALSE);
+use Gtk2;
+use Gtk2::Notify;
+use Gtk2::Unique;
+use X11::Protocol;
+use Net::DBus;
+use Net::DBus::GLib;
+use strict;
+use warnings;
+
+# always launch a new session so we can get the session pid, let
+# the other ones rot
+
+my %dargs;
+
+if (-x "/usr/bin/dbus-launch") {
+	foreach (`/usr/bin/dbus-launch --sh-syntax --exit-with-session`) {
+	    if (/(DBUS_SESSION_BUS_ADDRESS)='(.*)';/) {
+		$dargs{$1} = $ENV{$1} = $2;
+	    }
+	    elsif (/(DBUS_SESSION_BUS_PID)=(\d+);/) {
+		$dargs{$1} = $ENV{$1} = $2;
+	    }
+	}
+}
+
+
+# first process necessary environment variables
+
+my $HOSTNAME=$ENV{HOSTNAME} if exists $ENV{HOSTNAME};
+unless ($HOSTNAME) { $HOSTNAME=`hostname`; chomp $HOSTNAME }
+$ENV{HOSTNAME}="$HOSTNAME";
+
+my $USER=$ENV{USER} if exists $ENV{USER};
+unless ($USER) { $USER=`whoami`; chomp $USER }
+$ENV{USER}="$USER";
+
+my $HOME=$ENV{HOME} if exists $ENV{HOME};
+unless ($HOME) { $HOME="/home/$USER" }
+$ENV{HOME}="$HOME";
+
+my $XDG_CONFIG_HOME=$ENV{XDG_CONFIG_HOME} if exists $ENV{XDG_CONFIG_HOME};
+$XDG_CONFIG_HOME="$HOME/.config" unless $XDG_CONFIG_HOME;
+$ENV{XDG_CONFIG_HOME}="$XDG_CONFIG_HOME";
+mkpath "$XDG_CONFIG_HOME" unless -d $XDG_CONFIG_HOME;
+
+my $XDG_CONFIG_DIRS=$ENV{XDG_CONFIG_DIRS} if exists $ENV{XDG_CONFIG_DIRS};
+$XDG_CONFIG_DIRS='/etc/xdg' unless $XDG_CONFIG_DIRS;
+$ENV{XDG_CONFIG_DIRS}=$XDG_CONFIG_DIRS if $XDG_CONFIG_DIRS;
+
+my @XDG_CONFIG_DIRS = (split(/:/,join(':',$XDG_CONFIG_HOME,$XDG_CONFIG_DIRS)));
+
+my $XDG_DATA_HOME=$ENV{XDG_DATA_HOME} if exists $ENV{XDG_DATA_HOME};
+$XDG_DATA_HOME="$HOME/.local/share" unless $XDG_DATA_HOME;
+$ENV{XDG_DATA_HOME}=$XDG_DATA_HOME if $XDG_DATA_HOME;
+mkpath "$XDG_DATA_HOME" unless -d $XDG_DATA_HOME;
+
+my $XDG_DATA_DIRS=$ENV{XDG_DATA_DIRS} if exists $ENV{XDG_DATA_DIRS};
+$XDG_DATA_DIRS='/usr/local/share:/usr/share' unless $XDG_DATA_DIRS;
+$ENV{XDG_DATA_DIRS}=$XDG_DATA_DIRS if $XDG_DATA_DIRS;
+
+my @XDG_DATA_DIRS = (split(/:/,join(':',$XDG_DATA_HOME,$XDG_DATA_DIRS)));
+
+
+my %ops = (
+	help	    => '',
+	display	    => $ENV{DISPLAY},
+	desktop	    => '',
+	session	    => '',
+	startwm	    => '',
+	file	    => '',
+	exec	    => [],
+	autostart   => 1,
+	wait	    => 1,
+	pause	    => 0,
+	splash	    => "$ENV{HOME}/.fluxbox/logout-banner.png",
+	message	    => "Logout UNEXICON session?",
+	side	    => 'left',
+	vendor	    => 'unexicon',
+	mkdirs	    => '',
+);
+
+my $syntax = GetOptions(
+	"help|h"	=>\$ops{help},
+	"display|d=s"	=>\$ops{display},
+	"desktop|e=s"	=>\$ops{desktop},
+	"session|s=s"	=>\$ops{session},
+	"startwm|m=s"	=>\$ops{startwm},
+	"file|f=s"	=>\$ops{file},
+	"exec|x=s"	=>$ops{exec},
+	"autostart!"	=>\$ops{autostart},
+	"a"		=>sub{ $ops{autostart} = 0 },
+	"wait|w!"	=>\$ops{wait},
+	"pause|p:2000"	=>\$ops{pause},
+	"splash|l:s"	=>\$ops{splash},
+	"message|g=s"	=>\$ops{message},
+	"side|i=s"	=>\$ops{side},
+	"vendor|v=s"	=>\$ops{vendor},
+	"mkdirs!"	=>\$ops{mkdirs},
+);
+
+if ($ops{help} or not $syntax) {
+	print STDERR<<EOF;
+usage:
+    xde-session [options]
+options:
+    --help
+        print this usage info and exit
+    --startwm|-m EXECUTE
+        execute EXECUTE to start window manager
+        (default: startfluxbox)
+    --pause|-p [PAUSE]
+        wait for PAUSE milliseconds before autostarting tasks
+        (default: 0 milliseconds)
+    --desktop|-e [DESKTOP]
+        specify the desktop to use (default: FLUXBOX)
+    --wait|-w, --nowait
+        wait (or not) for a window manager to appear before
+        executing or autostarting tasks (default: wait)
+    --exec|-x COMMAND
+        execute COMMAND before autostarting tasks (default: '')
+        this option may be repeated
+    --autostart, --noautostart|-a
+        autostart (or not) XDG applications (default: true)
+    --session|-s SESSION
+        pretend to be lxsession and set the session profile
+        to SESSION (default: '')
+EOF
+	exit 0;
+}
+
+# prepend vendor directories
+
+if ($ops{vendor}) {
+    $XDG_CONFIG_DIRS = join(':',"/etc/xdg/$ops{vendor}",$XDG_CONFIG_DIRS);
+    $XDG_DATA_DIRS = join(':',"/usr/share/$ops{vendor}",$XDG_DATA_DIRS);
+    $ENV{XDG_CONFIG_DIRS} = $XDG_CONFIG_DIRS;
+    $ENV{XDG_DATA_DIRS} = $XDG_DATA_DIRS;
+    @XDG_CONFIG_DIRS = (split(/:/,join(':',$XDG_CONFIG_HOME,$XDG_CONFIG_DIRS)));
+    @XDG_DATA_DIRS   = (split(/:/,join(':',$XDG_DATA_HOME,  $XDG_DATA_DIRS  )));
+}
+
+# setup user directories
+
+if (-x "/usr/bin/xdg-user-dirs-update" ) {
+	system("/usr/bin/xdg-user-dirs-update");
+}
+elsif (! -f "$XDG_CONFIG_HOME/user-dirs.dirs") {
+    open FILE, ">", "$XDG_CONFIG_HOME/user-dirs.dirs";
+    print FILE<<'EOF';
+XDG_DESKTOP_DIR="$HOME/Desktop"
+XDG_DOWNLOAD_DIR="$HOME/Downloads"
+XDG_TEMPLATES_DIR="$HOME/Templates"
+XDG_PUBLICSHARE_DIR="$HOME/Public"
+XDG_DOCUMENTS_DIR="$HOME/Documents"
+XDG_MUSIC_DIR="$HOME/Documents/Music"
+XDG_PICTURES_DIR="$HOME/Documents/Pictures"
+XDG_VIDEOS_DIR="$HOME/Documents/Videos"
+EOF
+    close FILE;
+}
+
+my %user_dirs;
+open FILE, "<", "$XDG_CONFIG_HOME/user-dirs.dirs";
+while (<FILE>) {
+	my ($dir,$val) = split(/=/,$_);
+	next unless $dir and $val;
+	next unless $dir =~ /^XDG_/ and $dir =~ /_DIR$/;
+	$val =~ s/^"([^"]*)"$/$1/;
+	$val =~ s/\$HOME/$HOME/g;
+	next unless $val;
+	$user_dirs{$dir} = $val;
+}
+close FILE;
+
+# if we want to make user directories
+if ($ops{mkdirs}) {
+    foreach (keys %user_dirs) {
+	mkpath "$user_dirs{$_}" unless -d "$user_dirs{$_}";
+    }
+}
+
+# we must have at least the XDG_DESKTOP_DIR to launch the session
+my $XDG_DESKTOP_DIR = $ENV{XDG_DESKTOP_DIR} if exists $ENV{XDG_DESKTOP_DIR};
+$XDG_DESKTOP_DIR = $user_dirs{XDG_DESKTOP_DIR} unless $XDG_DESKTOP_DIR;
+$XDG_DESKTOP_DIR = "$HOME/Desktop" unless $XDG_DESKTOP_DIR;
+$ENV{XDG_DESKTOP_DIR}="$XDG_DESKTOP_DIR" unless exists $ENV{XDG_DESKTOP_DIR};
+mkpath "$XDG_DESKTOP_DIR" unless -d "$XDG_DESKTOP_DIR";
+
+$ops{desktop} = $ENV{FBXDG_DE} if $ENV{FBXDG_DE} and not $ops{desktop};
+$ops{desktop} = $ENV{XDG_CURRENT_DESKTOP} if $ENV{XDG_CURRENT_DESKTOP} and not $ops{desktop};
+$ops{desktop} = 'FLUXBOX' unless $ops{desktop};
+$ENV{XDG_CURRENT_DESKTOP} = $ops{desktop};
+$ENV{FBXDG_DE} = $ops{desktop};
+
+$ops{session} = $ENV{DESKTOP_SESSION} if $ENV{DESKTOP_SESSION} and not $ops{session};
+$ops{session} = 'FLUXBOX' unless $ops{session};
+$ENV{DESKTOP_SESSION} = $ops{session};
+
+# set up the XDG menu prefix
+my $XDG_MENU_PREFIX = $ENV{XDG_MENU_PREFIX} if exists $ENV{XDG_MENU_PREFIX};
+$XDG_MENU_PREFIX = "$ops{vendor}-" unless $XDG_MENU_PREFIX or not $ops{vendor};
+$XDG_MENU_PREFIX = "lxde-" unless $XDG_MENU_PREFIX or $ops{desktop} ne 'LXDE';
+$XDG_MENU_PREFIX = '' unless $XDG_MENU_PREFIX;
+$ENV{XDG_MENU_PREFIX} = $XDG_MENU_PREFIX;
+
+Gtk2->init;
+#Gtk2::Notify->init('xde-session');
+
+my $theme = Gtk2::IconTheme->get_default;
+$theme->append_search_path('/usr/share/WindowMaker/Icons');
+undef $theme;
+
+#my $sbus = Net::DBus::GLib->new($dargs{DBUS_SESSION_BUS_ADDRESS});
+#my $ybus = Net::DBus::GLib->system();
+
+my $manager = Gtk2::Gdk::DisplayManager->get;
+my $dpy = $manager->get_default_display;
+my $screen = $dpy->get_default_screen;
+my $root = $screen->get_root_window;
+my %atoms = (
+	UTF8_STRING		=> Gtk2::Gdk::Atom->new(UTF8_STRING		=>FALSE),
+	_NET_STARTUP_INFO_BEGIN	=> Gtk2::Gdk::Atom->new(_NET_STARTUP_INFO_BEGIN	=>FALSE),
+	_NET_STARTUP_INFO	=> Gtk2::Gdk::Atom->new(_NET_STARTUP_INFO	=>FALSE),
+	_NET_STARTUP_ID		=> Gtk2::Gdk::Atom->new(_NSET_STARTUP_ID	=>FALSE),
+	_NET_SUPPORTING_WM_CHECK=> Gtk2::Gdk::Atom->new(_NET_SUPPORTING_WM_CHECK=>FALSE),
+	_BLACKBOX_PID		=> Gtk2::Gdk::Atom->new(_BLACKBOX_ID		=>FALSE),
+	);
+
+# Funny, but FLUXBOX sets _BLACKBOX_PID and yet BLACKBOX does not.  This is useful for
+# determining the PID of the WM when FLUXBOX was run before the session manager.
+
+use constant {
+	COMMAND_SESSION	=> 1,
+	COMMAND_EDITOR	=> 2,
+	COMMAND_MENUBLD	=> 3,
+	COMMAND_CONTROL	=> 4,
+	COMMAND_LOGOUT	=> 5,
+	COMMAND_EXECUTE => 6,
+};
+
+my $unique = Gtk2::UniqueApp->new(
+	'com.unexicon.xde-session', undef,
+	'xde-session' => &COMMAND_SESSION,
+	'xde-session-edit' => &COMMAND_EDITOR,
+	'xde-session-menu' => &COMMAND_MENUBLD,
+	'xde-session-ctrl' => &COMMAND_CONTROL,
+	'xde-session-logout' => &COMMAND_LOGOUT,
+	'xde-session-run' => &COMMAND_EXECUTE,
+);
+if ($unique->is_running) {
+	my $cmd = $0; $cmd =~ s/^.*\///;
+	$unique->send_message_by_name($cmd=>text=>join('|',$0,@ARGV));
+	print STDERR "Another instance of $cmd is already running.\n";
+	exit(0);
+}
+
+sub message_received {
+	my ($uniq,$command,$msg,$time) = @_;
+	#  The startup ID is transferred from the non-unique calling process.
+	if ($command == &COMMAND_SESSION) {
+	}
+	elsif ($command == &COMMAND_EDITOR) {
+		# launch a session editor window and
+		# $win->set_screen($msg->get_screen);
+	}
+	elsif ($command == &COMMAND_MENUBLD) {
+		# launch a session editor window and
+		# $win->set_screen($msg->get_screen);
+	}
+	elsif ($command == &COMMAND_CONROL) {
+		# perform the control actions.
+		# $win->set_screen($msg->get_screen);
+	}
+	elsif ($command == &COMMAND_LOGOUT) {
+		# perform the control actions.
+		# $win->set_screen($msg->get_screen);
+	}
+	elsif ($command == &COMMAND_RUN) {
+		# perform the control actions.
+		# $win->set_screen($msg->get_screen);
+	}
+	my $startup_id = $msg->get_startup_id;
+	$startup_id = $ENV{DESKTOP_STARTUP_ID} unless $startup_id;
+	if ($startup_id) {
+		Gtk2::Gdk->notify_startup_complete_with_id($startup_id);
+	}
+	else {
+		Gtk2::Gdk->notify_startup_complete();
+	}
+}
+
+# let use perform our Xsettings first
+# we should actually fork to do this and run the protocol
+# loop in a blocking fashion.
+#if (0) {
+#    my $x = X11::Protocol->new($ENV{DISPLAY});
+#    $x->{error_handler} = sub{};
+#    $x->ChangeKeyboardControl(
+#	    global_auto_repeat => 1,
+#	    led_mask => 0xffff,
+#	    key_click_percent => 100,
+#	    bell_percent => 100,
+#	    bell_pitch => 440,
+#	    bell_duration => 300,
+#	    auto_repeats => "",
+#    );
+#    $x->Bell($percent);
+#    $x->ChangePointerControl(
+#	    $do_acceleration,
+#	    $do_threshold,
+#	    $acceleration_numerator,
+#	    $acceleration_denominator,
+#	    $threshold,
+#    );
+#    $x->SetScreenSaver(
+#	    $timeout,
+#	    $interval,
+#	    $prefer_blanking,
+#	    $allow_exposures,
+#    );
+#}
+
+my $splscr = Gtk2::Window->new('toplevel');
+$splscr->set_wmclass('xde-session','Xde-session');
+$unique->watch_window($splscr);
+$unique->signal_connect(message_received=>\&message_received);
+$splscr->set_gravity('center');
+$splscr->set_type_hint('splashscreen');
+$splscr->set_border_width(20);
+$splscr->set_skip_pager_hint(TRUE);
+$splscr->set_skip_taskbar_hint(TRUE);
+$splscr->set_position('center-always');
+my $table;
+my $cols = 7;
+
+{
+	my $hbox = Gtk2::HBox->new(FALSE,5);
+	$splscr->add($hbox);
+	my $vbox = Gtk2::VBox->new(FALSE,5);
+	$hbox->pack_start($vbox,TRUE,TRUE,0);
+	my $img = Gtk2::Image->new_from_file($ops{splash});
+	$vbox->pack_start($img,FALSE,FALSE,0);
+	my $sw = Gtk2::ScrolledWindow->new;
+	$sw->set_shadow_type('etched-in');
+	$sw->set_policy('never','automatic');
+	$sw->set_size_request(800,-1);
+	$vbox->pack_end($sw,TRUE,TRUE,0);
+	$table = Gtk2::Table->new(1,$cols,TRUE);
+	$table->set_col_spacings(1);
+	$table->set_row_spacings(1);
+	$table->set_homogeneous(TRUE);
+	$table->set_size_request(750,-1);
+	$sw->add_with_viewport($table);
+	$splscr->set_default_size(-1,600);
+	$splscr->show_all;
+	$splscr->show_now;
+}
+
+my @XDG_AUTO_DIRS = (reverse split(/:/,$XDG_CONFIG_DIRS), $XDG_CONFIG_HOME);
+
+my %dirs;
+my @dirs;
+foreach (@XDG_AUTO_DIRS) {
+	Gtk2->main_iteration while Gtk2->events_pending;
+	s/\/*$//;
+	next if $dirs{$_};
+	next unless -d "$_/autostart";
+	$dirs{$_} = 1;
+	push @dirs, "$_/autostart";
+}
+undef %dirs;
+
+my %files;
+
+#
+# According to the autostart spec, file names in "more important" directories
+# override those from "less important" directories and the comparison is done
+# by filename.
+#
+foreach my $d (@dirs) {
+	Gtk2->main_iteration while Gtk2->events_pending;
+	opendir(my $dir, "$d") or next;
+	foreach my $f (readdir($dir)) {
+		next unless -f "$d/$f" and $f =~ /\.desktop$/;
+		open(my $fh,"<","$d/$f") or next;
+		my $parsing = 0;
+		my %e = (file=>"$d/$f");
+		while (<$fh>) {
+			if (/^\[/) {
+				if (/^\[Desktop Entry\]/) {
+					$parsing = 1;
+				}
+				elsif (/^\[.*\]/) {
+					$parsing = 0;
+				}
+			}
+			elsif ($parsing and /^([^=]*)=([^[:cntrl:]]*)/) {
+				$e{$1} = $2;
+			}
+		}
+		close($fh);
+		next unless $e{Name};
+		$files{$f} = \%e;
+	}
+	closedir($dir);
+}
+
+my @autostart;
+my $numb = scalar keys %files;
+my $rows = ($numb+$cols-1)/$cols;
+$rows =~ s/\..*$//;
+
+$table->resize($rows,$cols);
+
+my $col = 0;
+my $row = 0;
+
+foreach my $f (sort keys %files) {
+	Gtk2->main_iteration while Gtk2->events_pending;
+	my $e = $files{$f};
+	my $name = $e->{Icon};
+	$name =~ s/\.(xpm|png)$// if $name;
+	$name = 'gtk-missing-image' unless $name;
+	my $icon = Gtk2::Image->new_from_icon_name($name,'dialog');
+	$icon = Gtk2::Image->new_from_icon_name('gtk-missing-image','dialog') unless $icon;
+	my $but = Gtk2::Button->new;
+	$but->set_image_position('top');
+	$but->set_image($icon);
+	#$but->set_label($e->{Name});
+	$but->set_tooltip_text($e->{Name});
+	$table->attach_defaults($but,$col,$col+1,$row,$row+1);
+	$but->set_sensitive(FALSE);
+	$but->show_all;
+	$but->show_now;
+	$col = $col + 1;
+	if ($col >= $cols) {
+		$col = 0; $row = $row + 1;
+		print STDERR "packing new row $row\n";
+	}
+	next if $e->{Type} and $e->{Type} ne 'Application';
+	next if $e->{Hidden} and $e->{Hidden} =~ /true|yes|1/i;
+	next if $e->{OnlyShowIn} and ";$e->{OnlyShowIn};" !~ /;$ops{desktop};/;
+	next if $e->{NotShowIn} and ";$e->{NotShowIn};" =~ /;$ops{desktop};/;
+	#
+	# According to autostart spec we need to search through $PATH
+	# when the TryExec field is not a path.
+	#
+	if ($e->{TryExec} and not -x "$e->{TryExec}") {
+		next if $e->{TryExec} =~ /\//;
+		my $found = 0;
+		foreach my $d (split(/:/,$ENV{PATH})) {
+			next unless -x "$d/$e->{TryExec}";
+			$found = 1; last;
+		}
+		next unless $found;
+	}
+	next unless $e->{Exec};
+	$but->set_sensitive(TRUE);
+	$but->show_now;
+	push @autostart, $e;
+}
+Gtk2->main_iteration while Gtk2->events_pending;
+
+# This is basically to daemonize ourselves, make sure we are a
+# process group leader and a session leader.
+
+my $pid = getpid();
+
+open(STDIN,"</dev/null") or die "cannot redirect stdin";
+open(STDOUT,">/dev/null") or die "cannot redirect stdout";
+
+my $sid = setsid();
+$sid = $pid if $sid == -1;
+
+# The following is mostly for lxpanel(1), which we like to use on a number
+# of window managers becuase it supports a system tray as well as an XDG
+# compliant menu.  lxpanel(1) takes three comands in its config file:
+#
+# $XDG_CONFIG_HOME/lxpanel/${XDG_CURRENT_DESKTOP:-default}/config
+#
+# [Command]
+# FileManager=pcmanfs -p $ops{desktop} %s
+# Terminal=lxterminal
+# Logout=lxde-logout
+#
+# lxde-logout is just a short script that calls lxsession-logout with a
+# --banner specified.
+#
+# When _LXSESSION_PID is defined and Logout= is not specified, lxpanel
+# will automatically call plain old lxsession-logout.
+#
+# lxsession-logout is just going to kill -TERM the _LXSESSION_PID on logout
+# so if we set _LXSESSION_PID on logout we catch lxpanel invoking
+# lxsession-logout by mistake.
+#
+# Note that when lxpanel starts up it checks for XDG_CURRENT_DESKTOP and
+# sets the desktop_name to that before options processing.  When
+# XDG_CURRENT_DESKTOP is not set a user launching an lxpanel themselves
+# will get the config files for LXDE.
+
+$ENV{XDG_SESSION_PID} = $sid unless exists $ENV{XDG_SESSION_PID};
+$ENV{_LXSESSION_PID} = $sid unless exists $ENV{_LXSESSION_PID}; # for lxpanel et al
+
+print STDERR "session id $sid\n";
+
+my %children;
+my %restarts;
+my %watchers;
+
+my $wmpid = 0;
+
+sub childexit {
+	my ($pid,$waitstatus,$data) = @_;
+	delete $watchers{$pid};
+	delete $children{$pid};
+	my $cmd = delete $restarts{$pid};
+	if (WIFEXITED($waitstatus)) {
+		my $status = WEXITSTATUS($waitstatus);
+		warn "child $pid exited with status $status" if $status;
+		unless ($status) {
+			if ($data) {
+				if (-x "/usr/bin/lxsession-logout") {
+					system("/usr/bin/lxsession-logout --banner \"$ops{splash}\" --side=$ops{side} --prompt=\"$ops{message}\"")
+				} else {
+					$cmd = undef;
+					Gtk2->main_quit;
+				}
+			} else {
+				$cmd = undef;
+			}
+		}
+	}
+	elsif (WIFSIGNALED($waitstatus)) {
+		my $signal = WTERMSIG($waitstatus);
+		warn "child $pid exited on signal $signal" if $signal;
+	}
+	elsif (WIFSTOPPED($waitstatus)) {
+		warn "child $pid stopped";
+		kill -TERM $pid;
+	}
+	if ($cmd) {
+		print STDERR "restarting $pid with $cmd\n";
+		$pid = startup($cmd,$data);
+		$wmpid = $pid if $data;
+	}
+	else {
+		print STDERR "there goes our last female...\n";
+		Gtk2->main_quit if (scalar(keys %children) == 0);
+	}
+}
+
+sub startup {
+	my ($cmd,$data) = @_;
+	my $restart = ($cmd =~ s/^@//) ? 1 : 0;
+	my $child = fork();
+	next unless defined $child;
+	if ($child) {
+		# we are the parent
+		print STDERR "Child $child started...\n";
+		$restarts{$child} = 1 if $restart;
+		$children{$child} = 1;
+		$watchers{$child} = Glib::Child->watch_add($child,\&childexit,$data);
+	} else {
+		# we are the child
+		exec "$cmd" or exit 1;
+	}
+	return $child;
+}
+
+if ($ops{startwm}) {
+	Gtk2->main_iteration while Gtk2->events_pending;
+	# we need to start the window manager
+	$wmpid = startup("\@$ops{startwm}",TRUE);
+}
+
+if (1) {
+my $count = 0;
+while ($ops{wait}) {
+	my $property = $atoms{_NET_SUPPORTING_WM_CHECK};
+	my ($prop_type,$format,@data) = $root->property_get($property,undef,0,1,FALSE);
+	last if defined $prop_type;
+	Gtk2->main_iteration while Gtk2->events_pending;
+	$count = $count + 1;
+	last if $count > 3;
+	sleep(1);
+}
+} else {
+if ($ops{wait}) {
+	my $to = Glib::Timeout->add(2000,sub{
+		Gtk2::Gdk::Event->handler_set(undef,undef);
+		Gtk2->main_quit;
+		0;
+	});
+	Gtk2::Gdk::Event->handler_set(sub{
+		my ($event,$data) = @_;
+		my $property = $atoms{_NET_SUPPORTING_WM_CHECK};
+		my ($type,$format,@data) = $root->property_get($property,undef,0,1,FALSE);
+		if (defined $type) {
+			Glib::Source->remove;
+			Gtk2::Gdk::Event->handler_set(undef,undef);
+			Gtk2->main_quit;
+		}
+		Gtk2->main_do_event($event);
+	},$to);
+}
+}
+
+if ($ops{pause}) {
+	Glib::Timeout->add($ops{pause},sub{ Gkt2->main_quit; 0; });
+	Gtk2->main;
+}
+
+foreach my $e (@{$ops{exec}}) {
+	Gtk2->main_iteration while Gtk2->events_pending;
+	startup($e,FALSE);
+}
+
+if ($ops{autostart}) {
+	foreach my $a (@autostart) {
+		Gtk2->main_iteration while Gtk2->events_pending;
+		startup($a->{Exec},FALSE);
+	}
+}
+
+#$splscr->set_type_hint('utility');
+
+Glib::Timeout->add(150000,sub{ $splscr->hide_all });
+
+#$splscr->destroy;
+
+Gtk2->main;
+
+exit 0;
+
+1;
+
+=pod
+
+=head1 NAME
+
+ xde-session - start a fluxbox session
+
+=head1 SYNOPSIS
+
+ xde-session [ COMMAND ] [ OPTIONS ] [ I<SESSION> ]
+ xde-session --help
+
+ xde-session help
+ xde-session edit    [ OPTIONS ]
+ xde-session run     [ OPTIONS ] COMMAND ARG ...
+ xde-session start   [ OPTIONS ] [ I<SESSION> ]
+ xde-session restart [ OPTIONS ] [ I<SESSION> ]
+
+=head1 DESCRIPTION
+
+B<xde-session> starts a new X session, optionally launches a window
+manager, and optionallly starts any additional applications or XDG
+autostart applications as specified by the L<XDG Desktop Specification>. 
+
+See the L</USAGE> section for usage examples.
+
+=head1 COMMANDS
+
+Command options that control the major behaviour of B<xde-session> are as
+follows:
+
+=over 4
+
+=item B<--help>, B<help>
+
+Print a brief usage message to stdout and then exit.
+
+=item B<--test>, B<test>
+
+Regardless of the other options, do not launch any tasks or perform any
+other actions that would conflict with another running B<xde-session>.
+Also, do not guarantee that the running B<xde-session> is unique for the
+display.  This is for testing, to see visually what B<xde-session> would
+do and to allow for the testing and development of the task monitor and
+session editor.
+
+=item B<--edit>, B<-m>, B<edit>
+
+Invoke the session editor dialog on the running lxsession (or a new
+editor when B<--test> is specified or no xde-session is running).
+
+Most of the command line options are intended for use by X
+initialization scripts (such as those in L<xmd(1)>) that invoke the X
+session.  Many additional options are available only through the
+configuration file or the editor.
+
+=item B<--run>, B<-u>, B<exec>
+
+Ask a running B<xde-session> instance to launch and manage a program
+
+=item B<--restart>, B<-r>
+
+=back
+
+=head1 ARGUMENTS
+
+=over
+
+=item I<SESSION>
+
+B<xde-session> only recognizes a single optional non-option argument,
+I<SESSION>.  When specified this argument has the same effect as the
+B<--session> argument and overrides the setting of both the B<--session>
+argument, the B<XDG_CURRENT_DESKTOP> and the B<DESKTOP_SESSION>
+environment variables.
+
+=back
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<--display>, B<-d> I<DISPLAY>
+
+Specifies the display to use.  This is not normally necessary as the
+display is obtained from the B<DISPLAY> environment variable when this
+option is not specified.
+
+=item B<--desktop>, B<-e> I<DESKTOP>
+
+Specify the desktop environment (DE) to use, I<DESKTOP>, e.g.
+C<FLUXBOX>, C<BLACKBOX>, C<ICEWM>, C<LXDE>.  The default value when not
+specified is C<FLUXBOX>.  The desktop environment must be specified when
+B<--autostart> is specified.
+
+In L<lxsession(1)> compatability mode, this is equivalent to the B<-e>
+option to L<lxsession(1)>.  This option may also be specified using the
+B<XDG_CURRENT_DESKTOP> or B<FBXDG_DE> environment variables described
+below.
+
+=item B<--session>, B<-s> I<SESSION>
+
+Invokes L<lxsession(1)> compatability mode, and specifies the session
+profile to use for emulating L<lxsession(1)>.  This is equivalent to the
+B<-s> option to L<lxsession(1)>.  This option may also be specified
+using the B<DESKTOP_SESSION> environment variable as described below.
+
+=item B<--startwm>, B<-m> I<EXECUTE>
+
+Execute the command string, I<EXECUTE>, to start a window manager.
+Shell characters will be interpreted.  When specified, the window
+manager will be started before all other tasks.
+
+When not specified, this option will be determined from the
+L<session.conf> file in the F<SESSION> subdirectory under
+F<$XDG_CONFIG_HOME/xde-session>, where F<SESSION> is specified by the
+B<-s> option, or by the first non-option argument.
+
+In L<lxsession(1)> compatability mode, this option will be determined
+from the L<lxsession(1)> F<desktop.conf> file in the F<SESSION>
+subdirectory under F<$XDG_CONFIG_HOME/lxsession>, where F<SESSION> is
+specified with the B<-s> option.
+
+=item B<--file>, B<-f> I<FILE>
+
+Execute the commands contained in the file, I<FILE>, after executing the
+window manager, but before executing any other commands or autostarting
+tasks.  File is compatible with the L<lxsession(1)> F<autostart> file.
+Each line of the file contains a shell command to execute, optionally
+prefixed with a C<@> to indicate that the process should be restarted
+when it exits abnormally.  Tasks executed from this file will be started
+before any specified by the B<-x> option, or autostarted from XDG
+autostart desktop files.
+
+In L<lxsession(1)> compatablity mode, this option will default to the
+F<autostart> file in the F<SESSION> subdirectory under
+F<$XDG_CONFIG_HOME/lxsession>, where F<SESSION> is specified with the
+B<-s> option.
+
+=item B<--exec>, B<-x> I<COMMAND>
+
+Execute the command string, I<COMMAND>, to start applications after the
+window manager, and before autostart tasks are executed.  This option
+defaults to none.  The option may be repeated to execute a number of
+commands the order specified.  It is possible to prefix the I<COMMAND>
+string with a single C<@> that will indicate that the task should be
+restarted when it exits abnormally.
+
+=item B<--autostart>, B<--noautostart>, B<-a>
+
+Specifies whether (or not) to autostart XDG applications in accordance
+with the L<Desktop Application Autostart Specification>.  The inverted
+sense of the B<-a> flag is for compatablity with L<lxsession(1)>.
+
+=item B<--wait>, B<-w>, B<--nowait>
+
+Specifies whether (or not) to wait for a EWMH/NetWM compatible window
+manager to take control of the root window of the default screen of the
+display before starting further applications.  This option takes effect
+regardless of whether the B<--startwm> option has been specified.
+
+=item B<--pause>, B<-p> [I<PAUSE>]
+
+Specifies the interval of time, I<PAUSE>, in seconds to wait after the
+window manager initialization phase before starting the first
+applications.  If I<PAUSE> is not specified, it defaults to 2 seconds.
+The default when the option is not specified is not to pause at all.
+The pause can be explicitly disable by using a I<PAUSE> value of zero
+(0).
+
+=item B<--splash>, B<-l> [I<IMAGE>]
+
+Specifies that a splash window is to be generated and optionally
+populated with an image from the file, I<IMAGE>, (that can be in XPM or
+PNG format).  The splash window will display the icons of the XDG
+compliant F<*.desktop> files as they are started.  The I<IMAGE> is for
+optional branding.
+
+=back
+
+=head1 USAGE
+
+B<xde-session> is intended on being launched by the L<xdg_session(8)>
+shell script.  See the L<xdg_session(8)> manual page for details on its
+operation.
+
+When used directly, B<xde-session> will launch the following window
+managers (and likely others as a variation on a theme) successfully:
+
+=over 4
+
+=item B<FLUXBOX>
+
+Simply execute B<xde-session> as the only command in your
+F<~/.fluxbox/startup> file.  The execution line should look like:
+
+ xde-session --desktop FLUXBOX --startwm "fluxbox -rc ~/.fluxbox/init"
+
+where F<~/.fluxbox/init> is just the default.  Use B<xde-session-edit(1)>
+to autostart the programs that you would otherwise start from your
+F<startup> script.  Therefore the above command bypasses the normal
+F<startup> script, which is likely unaware of B<xde-session>.
+
+=item B<BLACKBOX>
+
+Where you would invoke L<blackbox(1)>, invoke the following:
+
+ xde-session --desktop BLACKBOX --startwm "blackbox -rc ~/.blackboxrc"
+
+where F<~/.blackboxrc> is just the default.
+
+=item B<ICEWM>
+
+L<icewm(1)> user normally either launch L<icewm(1)> alone or
+L<icewm-session(1)>.  L<icewm-session(1)> provides some limited
+autostarting of applications (it forks L<icewwmtray(1)> and
+L<icewmbg(1)> as well as L<icewm(1)> itself), but does not support XDG
+Autostart, XSETTINGS and Startup Notification.
+
+=item B<OPENBOX>
+
+L<openbox(1)> is typically started either using L<openbox-session(1)>
+directly, or under LXDE using L<lxdestart(1)>.
+
+=item B<WMAKER>
+
+L<wmaker(1)> has its own non-XDG compliant session management.  This
+means that if B<xde-session> is used to launch WindowMaker, it should be
+made to suppress XDG autostart tasks using the B<--noautostart> or B<-a>
+option, such as:
+
+ xde-session --noautostart --desktop WMAKER --startwm wmaker
+
+=back
+
+=head1 EXAMPLES
+
+=head1 FILES
+
+=over
+
+=item F<$XDG_CONFIG_{HOME,DIRS}/lxsession/SESSION/autostart>
+
+The default F<autostart> files in L<lxsession(1)> compatability mode.
+Note that the values from B<all> autostart files will be used.
+
+=item F<$XDG_CONFIG_{HOME,DIRS}/lxsession/SESSION/desktop.conf>
+
+The default F<desktop.conf> file in L<lxsession(1)> compatability mode.
+Note that the values from only the file in the "most important"
+directory will be used.
+
+=back
+
+=head1 ENVIRONMENT
+
+The following environment variables are examined or set by B<xde-session>:
+
+=over 4
+
+=item B<HOME>
+
+Will be used to determined the user's home directory for the purpose of
+calculating the default value for C<XDG_CONFIG_HOME> when required.
+
+=item B<XDG_CONFIG_HOME>
+
+When set, C<$XDG_CONFIG_HOME/autostart> will be examined for
+C<*.desktop> files.  The variable defaults to C<$HOME/.config>.
+
+=item B<XDG_CONFIG_DIRS>
+
+When set, C<DIRECTORY/autostart> will be examined for each C<DIRECTORY>
+in the colon separated list of directories contained in
+C<XDG_CONFIG_DIRS>.  The variable defaults to C</etc/xdg>.
+
+=item B<XDG_CURRENT_DESKTOP>
+
+When the C<--desktop> option is not specified, C<XDG_CURRENT_DESKTOP> is
+examined to determine the current desktop.  C<XDG_CURRENT DESKTOP> is
+set to the value that resulted from option and environment variable
+processing for children of the session.
+
+=item B<FBXDG_DE>
+
+To emulate L<fbautostart>, the C<FBXDG_DE> environment variable is
+examined when the C<--desktop> option is not specified and the
+C<XDG_CURRENT_DESKTOP> environment variable is not set.  C<FBXDG_DE> is
+set to the value that resulted from option and environment variable
+processing for children of the session.
+
+=item B<DESKTOP_SESSION>
+
+To emulate L<lxsession(1)>, the C<DESKTOP_SESSION> environment variable
+is set to the value that resulted from potion and enviroment variable
+processing for children of the session.
+
+=item B<XDG_SESSION_PID>
+
+C<XDG_SESSION_PID> is set to the PID of B<xde-session>, the process group
+leader responsible for launching all tasks under the X session manager.
+The X session can be terminated by killing this process.
+
+=item B<_LXSESSION_PID>
+
+To emulate L<lxsession(1)>, the C<_LXSESSION_PID> environment variable
+is set to the PID of B<xde-session>, the process group leader responsible
+for launching all tasks under the X session manager.  The X session can
+be terminated by killing this process.
+
+=back
+
+=head1 SIGNALS
+
+=over
+
+=item I<SIGTERM>
+
+A I<SIGTERM> signal sent to the C<$XDG_SESSION_PID> or
+C<$_LXSESSION_PID> will terminate the entire session.  This should be
+avoided when the window manager does not properly catch termination
+signals and save its configuration before terminating.
+
+When the B<--startwm> option is specified or implied, B<xde-session> will
+also terminate when the window manager exits normally.
+
+=back
+
+=head1 CAVEATS
+
+When in L<lxsession(1)> compatability mode, B<xde-session> cannot act as
+an Xsettings daemon in accordance with the Xsettings specification.
+L<lxsession(1)> can.
+
+=head1 HISTORY
+
+I wrote B<xde-session> due to the deficiencies of B<fbautostart(1)> and
+L<lxsession(1)> when launching XDG-compliant applications and desktop
+environments over NWM/ENWM compliant light-weight window managers.
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@openss7.org>
+
+=head1 COPYRIGHT AND LICENSE
+
+Copyright (c) 2013 by OpenSS7 Corporation.  All rights reserved.
+
+This program is free software; you basically stole it, and you can,
+therefore, do what you want with it, but we take no responsibility in
+that.
+
+=head1 SEE ALSO
+
+L<lxsession(1)>, L<Standards(7)>,
+
+L<Basedir|http://www.freedesktop.org/wiki/Specifications/basedir-spec>,
+
+L<Desktop Entry Specification|http://www.freedesktop.org/wiki/Specifications/desktop-entry-spec>,
+
+L<Desktop Application Autostart Specification|http://www.freedesktop.org/wiki/Specifications/autostart-spec>,
+
+L<Desktop Menu Specification|http://www.freedesktop.org/wiki/Specifications/menu-spec>,
+
+L<Startup Notification|http://www.freedesktop.org/wiki/Specifications/startup-notification-spec>,
+
+L<XSETTINGS|http://www.freedesktop.org/wiki/Specifications/xsettings-spec>,
+
+L<System Tray|http://www.freedesktop.org/wiki/Specifications/systemtray-spec>.
+
+=cut
+

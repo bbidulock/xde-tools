@@ -1,0 +1,9 @@
+Makefile.old
+Makefile
+pm_to_blib
+MYMETA.json
+MYMETA.yml
+*.log
+.*.sw[op]
+*.tar.gz
+blib/*
