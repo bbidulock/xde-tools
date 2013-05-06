@@ -38,9 +38,9 @@ sub new {
 sub setup {
     my $self = shift;
     my $setup = shift;
-    if (defined $setup and ref $setup and ref($setup) =~ /HASH/) {
-	foreach (keys %{$self}) {
-	    $self->{$_} = $setup->{$_} if exists $setup->{$_};
+    if (defined $setup and ref($setup) and ref($setup) =~ /HASH/) {
+	foreach (keys %$setup) {
+	    $self->{$_} = $setup->{$_};
 	}
     }
     $self->default;
@@ -95,15 +95,25 @@ sub default {
 }
 sub getenv {
     my $self = shift;
-    foreach (@{&MYENV}) { $self->{$_} = $ENV{$_} }
+    foreach my $var (@{&MYENV}) { $self->{$var} = $ENV{$var} }
     $self->default;
     return $self;
 }
 sub setenv {
     my $self = shift;
-    foreach (@{&MYENV}) {
-	delete $ENV{$_};
-	$ENV{$_} = $self->{$_} if $self->{$_};
+    foreach my $var (@{&MYENV}) {
+	delete $ENV{$var};
+	my $val = $self->{$var};
+	my $base = $var;
+	if ($base =~ s{_DIRS$}{}) {
+	    # collapse APPEND and PREPEND into DIRS value
+	    $val = join(':',
+		    $self->{"${base}_PREPEND"} ? split(/:/,$self->{"${base}_PREPEND"}) : (),
+		    $self->{"${base}_DIRS"}    ? split(/:/,$self->{"${base}_DIRS"}   ) : (),
+		    $self->{"${base}_APPEND"}  ? split(/:/,$self->{"${base}_APPEND"} ) : (),
+	    );
+	}
+	$ENV{$var} = $val if $val;
     }
     return $self;
 }
@@ -111,7 +121,23 @@ sub setenv {
 sub update_array {
     my $self = shift;
     my $base = shift;
-    $self->{"${base}_DIRS"} = shift;
+    # collapse PREPEND and APPEND into DIRS
+    if (my $dirs = $self->{"${base}_DIRS"}) {
+	if (my $prepend = $self->{"${base}_PREPEND"}) {
+	    if (length($dirs) >= length($prepend)) {
+		if (substr($dirs,0,length($prepend)) eq $prepend) {
+		    $self->{"${base}_PREPEND"} = undef;
+		}
+	    }
+	}
+	if (my $append = $self->{"${base}_APPEND"}) {
+	    if (length($dirs) >= length($append)) {
+		if (substr($dirs,length($dirs)-length($append),length($append)) eq $append) {
+		    $self->{"${base}_APPEND"} = undef;
+		}
+	    }
+	}
+    }
     $self->{"${base}_ARRAY"} = [];
     foreach my $part (qw(LEGACY HOME PREPEND DIRS APPEND FALLBACK)) {
 	push @{$self->{"${base}_ARRAY"}},

@@ -5,6 +5,7 @@ lib/X11/Xsm.pm
 lib/XDE/Chooser.pm
 lib/XDE/Context.pm
 lib/XDE/Startup.pm
+lib/XDE/Logout.pm
 lib/XDG/Context.pm
 lib/XDG/IconData.pm
 lib/XDG/Icons.pm

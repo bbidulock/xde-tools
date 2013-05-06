@@ -4,12 +4,13 @@
 eval 'exec perl -S $0 ${1+"@"}'
     if $running_under_some_shell;
 
-my %overrides = ();
+my %OVERRIDES = ();
 my %DIRS = ();
 $DIRS{here} = $0; $DIRS{here} =~ s{/[^/]*$}{};
-if ($DIRS{here} =~ s{^\./}{}) {
+if ($DIRS{here} =~ s{^\.}{}) {
     chomp(my $cwd = `pwd`);
-    $DIRS{here} = "$cwd/$DIRS{here}";
+    $DIRS{here} = "/$DIRS{here}" if $DIRS{here};
+    $DIRS{here} = "$cwd$DIRS{here}";
 }
 if ($DIRS{here} eq '/usr/bin') {
     $DIRS{conf} = '/etc/xdg/xde';
@@ -20,7 +21,7 @@ if ($DIRS{here} eq '/usr/bin') {
     $DIRS{data} = "$DIRS{here}/share/xde";
     $DIRS{icon} = "$DIRS{here}/share/icons";
     unshift @INC, "$DIRS{here}/lib";
-    %overrides = (
+    %OVERRIDES = (
 	    XDG_CONFIG_PREPEND => "$DIRS{here}/xdg/xde:$DIRS{here}/xdg",
 	    XDG_DATA_PREPEND   => "$DIRS{here}/share/xde:$DIRS{here}/share",
 	    XDG_ICON_APPEND    => "$DIRS{here}/share/pixmaps",
@@ -61,7 +62,7 @@ exit status is returned.
 
 =cut
 
-my $xde = XDE::Context->new(\%overrides);
+my $xde = XDE::Context->new(\%OVERRIDES);
 $xde->getenv();
 $xde->setenv();
 $xde->mkdirs();
@@ -153,23 +154,14 @@ sub read_string {
     return $string;
 }
 
-sub default_banner {
-    my $banner;
-    $banner = "$DIRS{data}/images/$xde->{XDG_MENU_PREFIX}banner.png";
-    return $banner if -f $banner;
-    $banner = "$DIRS{data}/images/banner.png";
-    return $banner if -f $banner;
-    return '';
-}
-
 my %ops = (
     help	=> '',
+    verbose	=> '',
     prompt	=> '',
-    banner      => default_banner(),
+    banner      => $xde->default_banner(),
     noask	=> '',
     charset	=> langinfo(CODESET),
     language	=> setlocale(LC_MESSAGES),
-    verbose	=> '',
     setdflt     => '',
     default	=> read_string($xde->{XDE_DEFAULT_FILE}),
     current	=> read_string($xde->{XDE_CURRENT_FILE}),

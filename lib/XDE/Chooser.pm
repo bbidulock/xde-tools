@@ -71,7 +71,7 @@ sub choose {
     if ($ops{prompt}) {
 	print STDERR "Choosing $ops{choice}...\n"
 	    if $ops{verbose};
-	return $self->makechoice();
+	return $self->make_login_choice();
     }
     else {
 	print STDERR "Choosing $ops{choice}...\n"
@@ -113,7 +113,7 @@ sub launch_session {
     #Gtk2->main_quit;
 }
 
-sub makechoice {
+sub make_login_choice {
     my $self = shift;
     my $xde = $self->{xde};
     my %ops = %{$self->{ops}};

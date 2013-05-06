@@ -242,5 +242,22 @@ sub mkdirs {
     }
 }
 
+# determine the default branding banner
+sub default_banner {
+    my $self = shift;
+    foreach my $file ("$self->{XDG_MENU_PREFIX}banner.png", "banner.png") {
+	foreach my $dir (map {"$_/images"} $self->XDG_DATA_ARRAY) {
+	    my $banner = "$dir/$file";
+	    if (-f $banner) {
+		print STDERR "Found banner '$banner'\n" if $self->{verbose};
+		return $banner;
+	    }
+	    print STDERR "No banner named '$banner'\n" if $self->{verbose};
+	}
+    }
+    print STDERR "Failed to find a banner\n" if $self->{verbose};
+    return '';
+}
+
 1;
 
