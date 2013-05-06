@@ -4,20 +4,13 @@
 eval 'exec perl -S $0 ${1+"@"}'
     if $running_under_some_shell;
 
-use Getopt::Long;
-use File::Path;
-use Encode;
-use I18N::Langinfo qw(langinfo CODESET);
-use POSIX qw(locale_h);
-use Glib qw(TRUE FALSE);
-use Gtk2;
-use Net::DBus;
-use Net::DBus::GLib;
-use strict;
-use warnings;
-
+my %overrides = ();
 my %DIRS = ();
 $DIRS{here} = $0; $DIRS{here} =~ s{/[^/]*$}{};
+if ($DIRS{here} =~ s{^\./}{}) {
+    chomp(my $cwd = `pwd`);
+    $DIRS{here} = "$cwd/$DIRS{here}";
+}
 if ($DIRS{here} eq '/usr/bin') {
     $DIRS{conf} = '/etc/xdg/xde';
     $DIRS{data} = '/usr/share/xde';
@@ -26,7 +19,22 @@ if ($DIRS{here} eq '/usr/bin') {
     $DIRS{conf} = "$DIRS{here}/xdg/xde";
     $DIRS{data} = "$DIRS{here}/share/xde";
     $DIRS{icon} = "$DIRS{here}/share/icons";
+    unshift @INC, "$DIRS{here}/lib";
+    %overrides = (
+	    XDG_CONFIG_PREPEND => "$DIRS{here}/xdg/xde:$DIRS{here}/xdg",
+	    XDG_DATA_PREPEND   => "$DIRS{here}/share/xde:$DIRS{here}/share",
+	    XDG_ICON_APPEND    => "$DIRS{here}/share/pixmaps",
+    );
 }
+
+use Getopt::Long;
+use Encode;
+use I18N::Langinfo qw(langinfo CODESET);
+use POSIX qw(locale_h);
+require XDE::Context;
+require XDE::Chooser;
+use strict;
+use warnings;
 
 =head1 NAME
 
@@ -53,68 +61,10 @@ exit status is returned.
 
 =cut
 
-my $HOME = $ENV{HOME} if $ENV{HOME};
-$HOME = '~' unless $HOME;
-$ENV{HOME} = $HOME if $HOME;
-
-my $XDG_CONFIG_HOME = $ENV{XDG_CONFIG_HOME} if $ENV{XDG_CONFIG_HOME};
-$XDG_CONFIG_HOME = "$HOME/.config" unless $XDG_CONFIG_HOME;
-$ENV{XDG_CONFIG_HOME} = $XDG_CONFIG_HOME if $XDG_CONFIG_HOME;
-
-my $XDG_CONFIG_DIRS = $ENV{XDG_CONFIG_DIRS} if $ENV{XDG_CONFIG_DIRS};
-$XDG_CONFIG_DIRS = "/etc/xdg" unless $XDG_CONFIG_DIRS;
-$XDG_CONFIG_DIRS = join(':',$DIRS{conf},$XDG_CONFIG_DIRS)
-    unless ":$XDG_CONFIG_DIRS:" =~ m(:$DIRS{conf}:);
-$ENV{XDG_CONFIG_DIRS} = $XDG_CONFIG_DIRS if $XDG_CONFIG_DIRS;
-
-my @XDG_CONFIG_DIRS = split(/:/,join(':',$XDG_CONFIG_HOME,$XDG_CONFIG_DIRS));
-
-my $XDG_DATA_HOME = $ENV{XDG_DATA_HOME} if $ENV{XDG_DATA_HOME};
-$XDG_DATA_HOME = "$HOME/.local/share" unless $XDG_DATA_HOME;
-$ENV{XDG_DATA_HOME} = $XDG_DATA_HOME if $XDG_DATA_HOME;
-
-my $XDG_DATA_DIRS = $ENV{XDG_DATA_DIRS} if $ENV{XDG_DATA_DIRS};
-$XDG_DATA_DIRS = "/usr/local/share:/usr/share" unless $XDG_DATA_DIRS;
-$XDG_DATA_DIRS = join(':',$DIRS{data},$XDG_DATA_DIRS)
-    unless ":$XDG_DATA_DIRS:" =~ m(:$DIRS{data}:);
-$ENV{XDG_DATA_DIRS} = $XDG_DATA_DIRS if $XDG_DATA_DIRS;
-
-my @XDG_DATA_DIRS = split(/:/,join(':',$XDG_DATA_HOME,$XDG_DATA_DIRS));
-
-my $XDG_CURRENT_DESKTOP = $ENV{XDG_CURRENT_DESKTOP} if $ENV{XDG_CURRENT_DESKTOP};
-my $DESKTOP_SESSION = $ENV{DESKTOP_SESSION} if $ENV{DESKTOP_SESSION};
-my $FBXDG_DE = $ENV{FBXDG_DE} if $ENV{FBXDG_DE};
-
-my $XDE_SESSION = $ENV{XDE_SESSION} if $ENV{XDE_SESSION};
-$XDE_SESSION = $XDG_CURRENT_DESKTOP unless $XDE_SESSION;
-$XDE_SESSION = $DESKTOP_SESSION	    unless $XDE_SESSION;
-$XDE_SESSION = $FBXDG_DE	    unless $XDE_SESSION;
-$XDE_SESSION = ''		    unless $XDE_SESSION;
-
-$DIRS{home} = "$XDG_CONFIG_HOME/xde";
-mkpath $DIRS{home} unless -d $DIRS{home};
-
-my $default = "$DIRS{home}/default";
-my $current = "$DIRS{home}/current";
-
-my $XDG_MENU_PREFIX = $ENV{XDG_MENU_PREFIX} if $ENV{XDG_MENU_PREFIX};
-my $XDG_VENDOR_ID = $ENV{XDG_VENDOR_ID} if $ENV{XDG_VENDOR_ID};
-
-if ($XDG_MENU_PREFIX and not $XDG_VENDOR_ID) {
-    $XDG_VENDOR_ID = $XDG_MENU_PREFIX;
-    $XDG_VENDOR_ID =~ s{-$}{};
-}
-elsif ($XDG_VENDOR_ID and not $XDG_MENU_PREFIX) {
-    $XDG_MENU_PREFIX = "${XDG_VENDOR_ID}-";
-}
-elsif (not $XDG_VENDOR_ID and not $XDG_MENU_PREFIX) {
-    $XDG_MENU_PREFIX = 'arch-';
-    $XDG_VENDOR_ID = 'archlinux';
-}
-$ENV{XDG_MENU_PREFIX} = $XDG_MENU_PREFIX if $XDG_MENU_PREFIX;
-$ENV{XDG_VENDOR_ID} = $XDG_VENDOR_ID if $XDG_VENDOR_ID;
-
-$XDG_VENDOR_ID = $XDG_MENU_PREFIX unless $XDG_VENDOR_ID;
+my $xde = XDE::Context->new(\%overrides);
+$xde->getenv();
+$xde->setenv();
+$xde->mkdirs();
 
 =head1 OPTIONS
 
@@ -205,7 +155,7 @@ sub read_string {
 
 sub default_banner {
     my $banner;
-    $banner = "$DIRS{data}/images/${XDG_MENU_PREFIX}banner.png";
+    $banner = "$DIRS{data}/images/$xde->{XDG_MENU_PREFIX}banner.png";
     return $banner if -f $banner;
     $banner = "$DIRS{data}/images/banner.png";
     return $banner if -f $banner;
@@ -221,9 +171,10 @@ my %ops = (
     language	=> setlocale(LC_MESSAGES),
     verbose	=> '',
     setdflt     => '',
-    default	=> read_string($default),
-    current	=> read_string($current),
+    default	=> read_string($xde->{XDE_DEFAULT_FILE}),
+    current	=> read_string($xde->{XDE_CURRENT_FILE}),
     choice	=> '',
+    vendor	=> $xde->{XDG_VENDOR_ID},
 );
 
 use constant {
@@ -241,6 +192,7 @@ my $syntax = GetOptions(
     "language|l=s"  => \$ops{language},
     "setdflt|d"	    => \$ops{setdflt},
     "icons|i"	    => \$ops{icons},
+    "vendor|V=s"    => \$ops{vendor},
 );
 
 $ops{lang} = $ops{language};
@@ -316,28 +268,28 @@ OPTIONS:
         returning a string
 
 FILES:
-    $default
+    $xde->{XDE_DEFAULT_FILE}
         the file containing the default session.
 
-    $current
+    $xde->{XDE_CURRENT_FILE}
         the file containing the current session.
 
 ENVIRONMENT:
-    XDG_DATA_HOME       [default: $XDG_DATA_HOME]
+    XDG_DATA_HOME       [default: $xde->{XDG_DATA_HOME}]
         specifies the user data directory.
 
-    XDG_DATA_DIRS       [default: $XDG_DATA_DIRS]
+    XDG_DATA_DIRS       [default: $xde->{XDG_DATA_DIRS}]
         specifies the system data directory.
 
-    XDG_CONFIG_HOME     [default: $XDG_CONFIG_HOME]
+    XDG_CONFIG_HOME     [default: $xde->{XDG_CONFIG_HOME}]
         specifies the user configuration directory.
 
-    XDG_CONFIG_DIRS     [default: $XDG_CONFIG_DIRS]
+    XDG_CONFIG_DIRS     [default: $xde->{XDG_CONFIG_DIRS}]
         specifies the system configuration directory.
 
-    XDG_CURRENT_DESKTOP [default: $XDG_CURRENT_DESKTOP]
-    DESKTOP_SESSION     [default: $DESKTOP_SESSION]
-    FBXDG_DE            [default: $FBXDG_DE]
+    XDG_CURRENT_DESKTOP [default: $xde->{XDG_CURRENT_DESKTOP}]
+    DESKTOP_SESSION     [default: $xde->{DESKTOP_SESSION}]
+    FBXDG_DE            [default: $xde->{FBXDG_DE}]
         can also be used to specify the session
 
 
@@ -422,483 +374,20 @@ line containing the session name.
 
 =cut
 
-sub get_sessions {
-    my %files;
-    my @XDG_XSESSION_DIRS = map {"$_/xsessions"} @XDG_DATA_DIRS;
-    foreach my $d (reverse @XDG_XSESSION_DIRS) {
-        opendir(my $dir, "$d") or next;
-        foreach my $f (readdir($dir)) {
-            next unless -f "$d/$f" and $f =~ /\.desktop$/;
-            open (my $fh, "<", "$d/$f") or next;
-            my $parsing = 0;
-            my %e = (file=>"$d/$f");
-            my %xl = ();
-            while (<$fh>) {
-                if (/^\[([^]]*)\]/) {
-                    my $section = $1;
-                    if ($section eq 'Desktop Entry' or $section eq 'Window Manager') {
-                        $parsing = 1;
-                    } else {
-                        $parsing = 0;
-                    }
-                }
-                elsif ($parsing and /^([^=\[]+)\[([^=\]]+)\]=([^[:cntrl:]]*)/) {
-                    $xl{$1}{$2} = $3;
-                }
-                elsif ($parsing and /^([^=]*)=([^[:cntrl:]]*)/) {
-                    $e{$1} = $2 unless exists $e{$1};
-                }
-            }
-            close($fh);
-            $ops{lang} =~ m{^(..)}; my $short = $1;
-            foreach (keys %xl) {
-                if (exists $xl{$_}{$ops{lang}}) {
-                    $e{$_} = $xl{$_}{$ops{lang}};
-                }
-                elsif (exists $xl{$_}{$short}) {
-                    $e{$_} = $xl{$_}{$short};
-                }
-            }
-            $e{Name} = '' unless $e{Name};
-            $e{Exec} = '' unless $e{Exec};
-            $e{SessionManaged} = 'false' unless $e{SessionManaged};
-            $e{Comment} = $e{Name} unless $e{Comment};
-            $e{Label} = "\L$e{Name}\E" unless $e{Label};
-            $files{$f} = \%e;
-        }
-        close($dir);
-    }
-    my %sessions;
-    foreach (values %files) {
-        $sessions{$_->{Label}} = $_;
-    }
-    undef %files;
-    # Get rid of those that are not to be displayed.
-    my @todelete = ();
-    foreach my $s (keys %sessions) {
-        my $e = $sessions{$s};
-        unless ($e->{Name}) {
-            print STDERR "$s has no Name!\n"
-                if $ops{verbose};
-            push @todelete, $s;
-            next;
-        }
-        unless ($e->{Exec}) {
-            print STDERR "$s ($e->{Name}): has no Exec!\n"
-                if $ops{verbose};
-            push @todelete, $s;
-            next;
-        }
-        if ($e->{Hidden} and $e->{Hidden} =~ m{true|yes}i) {
-            print STDERR "$s ($e->{Name}) is Hidden!\n"
-                if $ops{verbose};
-            push @todelete, $s;
-            next;
-        }
-        if ($e->{NoDisplay} and $e->{NoDisplay} =~ m{true|yes}i) {
-            print STDERR "$s ($e->{Name}) is NoDisplay!\n"
-                if $ops{verbose};
-            push @todelete, $s;
-            next;
-        }
-        unless ($e->{TryExec}) {
-            my @words = split(/\s+/,$e->{Exec});
-            $e->{TryExec} = $words[0];
-        }
-        if (my $x = $e->{TryExec}) {
-            if ($x =~ m{/}) {
-                unless (-x "$x") {
-                    print STDERR "$s ($e->{Name}) $x is not executable!\n"
-                        if $ops{verbose};
-                    push @todelete, $s;
-                    next;
-                }
-            }
-            else {
-                my @PATH = split(/:/,$ENV{PATH});
-                my $found = 0;
-                foreach (@PATH) {
-                    if (-x "$_/$x") {
-                        $found = 1;
-                        last;
-                    }
-                }
-                unless ($found) {
-                    print STDERR "$s ($e->{Name}) $x is not executable!\n"
-                        if $ops{verbose};
-                    push @todelete, $s;
-                    next;
-                }
-            }
-        }
-    }
-    foreach (@todelete) {
-        print STDERR "Deleting $_ ($sessions{$_}->{Name})\n"
-            if $ops{verbose};
-        delete $sessions{$_};
-    }
-    return \%sessions;
-}
+my $chooser = XDE::Chooser->new($xde,\%ops);
+my ($result,$entry) = $chooser->choose();
 
-my $xsessions = get_sessions();
-
-my @xsessions = sort {$a->{Label} cmp $b->{Label}} values %$xsessions;
-if ($ops{verbose}) {
-    foreach (@xsessions) {
-	print STDERR "----------------------\n";
-	print STDERR "Label: ",$_->{Label},"\n";
-	print STDERR "XSession: ",$_->{Name},"\n";
-	print STDERR "Comment: ",$_->{Comment},"\n";
-	print STDERR "Exec: ",$_->{Exec},"\n";
-	print STDERR "SessionManaged: ",$_->{SessionManaged},"\n";
-	print STDERR "File: ",$_->{file},"\n";
-	print STDERR "Icon: ",$_->{Icon},"\n";
-    }
-}
-
-if ($ops{default} and not exists $xsessions->{$ops{default}}) {
-    print STDERR "Default $ops{default} is not available!\n";
-    $ops{choice} = 'choose' if $ops{choice} eq $ops{default};
-}
-
-if ($ops{choice} eq 'default' and not $ops{default}) {
-    print STDERR "Default is chosen but there is no default.\n";
-    $ops{choice} = 'choose';
-}
-
-if ($ops{choice} ne 'choose' and not exists $xsessions->{$ops{choice}}) {
-    print STDERR "Choice $ops{choice} is not available.\n";
-    $ops{choice} = 'choose';
-}
-if ($ops{choice} eq 'choose') {
-    $ops{prompt} = 1;
-}
-elsif ($ops{choice} ne $ops{default}) {
-    $ops{prompt} = 1 unless $ops{noask};
-}
-
-print STDERR "The default was $ops{default}: "
-    if $ops{verbose} and $ops{default};
-if ($ops{prompt}) {
-    print STDERR "Choosing $ops{choice}...\n"
-        if $ops{verbose};
-    makechoice();
+if ($result eq 'logout') {
+    print STDERR "Logging out...\n" if $ops{verbose};
+    print STDOUT $result;
 }
 else {
-    print STDERR "Choosing $ops{choice}...\n"
-        if $ops{verbose};
-    launch_session($ops{choice});
+    print STDERR "Launching session $result...\n" if $ops{verbose};
+    print STDOUT $result;
+    # the other thing to do here is to pass $entry directly to an
+    # instance of XDE::Startup.
+    $chooser->launch_session($result,$entry);
 }
-
-sub launch_session {
-    my $label = shift;
-    return unless $label;
-    my $session = $xsessions->{$label};
-    return unless $session;
-    print STDERR "Launching session for $label\n" if $ops{verbose};
-    $ops{current} = $label;
-    print STDOUT "$label";
-    if (open(my $fh,">",$current)) {
-	$ops{current} = $label;
-	print $fh "$ops{current}\n";
-	close($fh);
-    }
-    if ($ops{setdflt}) {
-	if (open(my $fh,">",$default)) {
-	    $ops{default} = $label;
-	    print $fh "$ops{default}\n";
-	    close($fh);
-	}
-    }
-    exit(0);
-     #Gtk2->main_quit;
-}
-
-sub makechoice {
-    Gtk2->init;
-    if ($DIRS{icon}) {
-	my $theme = Gtk2::IconTheme->get_default;
-	$theme->prepend_search_path($DIRS{icon});
-    }
-    my ($w,$h,$f,$v,$s,$l,$sw,$bb);
-    $w = Gtk2::Window->new('toplevel');
-    $w->set_wmclass('xde-chooser','Xdg-chooser');
-    $w->set_title('Window Manager Selection');
-    $w->set_gravity('center');
-    $w->set_type_hint('dialog');
-    $w->set_icon_name('xdm');
-    $w->set_border_width(15);
-    $w->set_skip_pager_hint(TRUE);
-    $w->set_skip_taskbar_hint(TRUE);
-    $w->set_position('center-always');
-    $h = Gtk2::HBox->new(FALSE,5);
-    $w->add($h);
-    if ($ops{banner}) {
-        $f = Gtk2::Frame->new;
-        $f->set_shadow_type('etched-in');
-        $h->pack_start($f,FALSE,FALSE,0);
-        $v = Gtk2::VBox->new(FALSE,5);
-        $v->set_border_width(10);
-        $f->add($v);
-        $s = Gtk2::Image->new_from_file($ops{banner});
-        $v->add($s);
-    }
-    $f = Gtk2::Frame->new;
-    $f->set_shadow_type('etched-in');
-    $h->pack_start($f,TRUE,TRUE,0);
-    $v = Gtk2::VBox->new(FALSE,5);
-    $v->set_border_width(10);
-    $f->add($v);
-    $sw = Gtk2::ScrolledWindow->new;
-    $sw->set_shadow_type('etched-in');
-    $sw->set_policy('never','automatic');
-    $sw->set_border_width(3);
-    $v->pack_start($sw,TRUE,TRUE,0);
-    $bb = Gtk2::HButtonBox->new;
-    $bb->set_spacing_default(5);
-    $bb->set_layout_default('end');
-    $v->pack_end($bb,FALSE,TRUE,0);
-
-    my $store = Gtk2::ListStore->new(
-            'Glib::String',  # pixbuf
-            'Glib::String',  # Name
-            'Glib::String',  # Comment
-            'Glib::String',  # Name and Comment Markup
-            'Glib::String',  # Label
-	    'Glib::Boolean', # SessionManaged ?
-    );
-    my $view = Gtk2::TreeView->new($store);
-    $view->set_rules_hint(TRUE);
-    $view->set_search_column(1);
-    $view->set_headers_visible(FALSE);
-    $view->set_grid_lines('both');
-    $sw->add($view);
-
-    my ($rend,$col);
-
-    $rend = Gtk2::CellRendererToggle->new;
-    $col = Gtk2::TreeViewColumn->new_with_attributes('Managed',$rend,active=>5);
-    $view->append_column($col);
-
-    $rend = Gtk2::CellRendererPixbuf->new;
-    $view->insert_column_with_data_func(-1,'Icon',$rend,sub{
-            my ($col,$cell,$store,$iter) = @_;
-            my ($iname) = $store->get($iter,0);
-            $iname =~ s/\.(xpm|svg|png)$// if $iname;
-            $iname = 'gtk-missing-image' unless $iname;
-            my $theme = Gtk2::IconTheme->get_default;
-            my $pixbuf = $theme->load_icon($iname,32,'generic-fallback');
-            $pixbuf = $theme->load_icon('gtk-missing-image',32,'generic-fallback') unless $pixbuf;
-            $cell->set(pixbuf=>$pixbuf);
-    });
-
-    $rend = Gtk2::CellRendererText->new;
-    $col = Gtk2::TreeViewColumn->new_with_attributes(
-            'Window Manager',$rend,markup=>3);
-    $col->set_sort_column_id(1);
-    $view->append_column($col);
-    my $cursor = $col;
-
-    my (@b,$b,$i);
-
-    $b = Gtk2::Button->new;
-    $b->set_border_width(3);
-    $b->set_image_position('left');
-    $b->set_alignment(0.0,0.5);
-    if ($ENV{DISPLAY} =~ /^:/) {
-	$i = Gtk2::Image->new_from_stock('gtk-quit','button');
-	$b->set_image($i);
-	$b->set_label('Logout');
-    } else {
-	$i = Gtk2::Image->new_from_stock('gtk-disconnect','button');
-	$b->set_image($i);
-	$b->set_label('Disconnect');
-    }
-    $bb->pack_start($b,TRUE,TRUE,5); push @b, $b;
-     #$bb->add($b); push @b,$b;
-    $b->signal_connect(clicked=>sub{
-	    my $selection = $view->get_selection;
-	    my ($store,$iter) = $selection->get_selected;
-	    if ($store) {
-		my ($label) = $store->get($iter,4); # Label column
-		print STDERR "Label selected $label\n"
-		    if $ops{verbose};
-	    }
-	    $ops{current} = 'logout';
-	    Gtk2->main_quit;
-    });
-
-    $b = Gtk2::Button->new;
-    $b->set_border_width(3);
-    $b->set_image_position('left');
-    $b->set_alignment(0.0,0.5);
-    $i = Gtk2::Image->new_from_stock('gtk-save','button');
-    $b->set_image($i);
-    $b->set_label('Make Default');
-    $bb->pack_start($b,TRUE,TRUE,5); push @b, $b;
-     #$bb->add($b); push @b,$b;
-    $b->signal_connect(clicked=>sub{
-	    my $selection = $view->get_selection;
-	    my ($store,$iter) = $selection->get_selected;
-	    if ($store) {
-		my ($label) = $store->get($iter,4); # Label column
-		print STDERR "Label selected $label\n"
-		    if $ops{verbose};
-		if (open(my $fh,">",$default)) {
-		    $ops{default} = $label;
-		    print $fh "$ops{default}\n";
-		    close($fh);
-		    $ops{default} = '';
-		    $b[1]->set_sensitive(FALSE);
-		    $b[2]->set_sensitive(FALSE);
-		    $b[3]->set_sensitive(TRUE);
-		}
-	    }
-	    return Gtk2::EVENT_PROPAGATE;
-    });
-
-    $b = Gtk2::Button->new;
-    $b->set_border_width(3);
-    $b->set_image_position('left');
-    $b->set_alignment(0.0,0.5);
-    $i = Gtk2::Image->new_from_stock('gtk-revert-to-saved','button');
-    $b->set_image($i);
-    $b->set_label('Select Default');
-    $bb->pack_start($b,TRUE,TRUE,5); push @b, $b;
-     #$bb->add($b); push @b,$b;
-    $b->signal_connect(clicked=>sub{
-	    my $selection = $view->get_selection;
-	    if ($ops{default}) {
-		my $store = $view->get_model;
-		my $index = $xsessions->{$ops{default}}{index};
-		my $iter = $store->iter_nth_child(undef,$index);
-		$selection->select_iter($iter);
-		my $path = Gtk2::TreePath->new_from_string("$index");
-		$view->set_cursor_on_cell($path,$cursor,undef,FALSE);
-	    } else {
-		$selection->unselect_all;
-	    }
-	    return Gtk2::EVENT_PROPAGATE;
-    });
-
-    $b = Gtk2::Button->new;
-    $b->set_flags(['can-default','has-default']);
-    $b->set_border_width(3);
-    $b->set_image_position('left');
-    $b->set_alignment(0.0,0.5);
-    $i = Gtk2::Image->new_from_stock('gtk-ok','button');
-    $b->set_image($i);
-    $b->set_label('Launch Session');
-    $bb->pack_start($b,TRUE,TRUE,5); push @b, $b;
-     #$bb->add($b); push @b,$b;
-    $b->signal_connect(clicked=>sub{
-	    my $selection = $view->get_selection;
-	    my ($store,$iter) = $selection->get_selected;
-	    if ($store) {
-		my ($label) = $store->get($iter,4); # Label column
-		$ops{current} = $label;
-		Gtk2->main_quit;
-	    }
-	    return Gtk2::EVENT_PROPAGATE;
-    });
-
-    my $selection = $view->get_selection;
-    $selection->set_mode('single');
-    $selection->signal_connect(changed=>sub{
-            my $selection = shift;
-            my ($store,$iter) = $selection->get_selected;
-	    if ($store) {
-		my ($label) = $store->get($iter,4); # Label column
-		my $session = $xsessions->{$label};
-		print STDERR "Label selected was: $label\n" if $ops{verbose};
-		if ($label eq $ops{default}) {
-		    $b[1]->set_sensitive(FALSE);
-		    $b[2]->set_sensitive(FALSE);
-		    $b[3]->set_sensitive(TRUE);
-		} else {
-		    $b[1]->set_sensitive(TRUE);
-		    $b[2]->set_sensitive(TRUE);
-		    $b[3]->set_sensitive(TRUE);
-		}
-	    } else {
-		$b[1]->set_sensitive(FALSE);
-		$b[2]->set_sensitive(TRUE);
-		$b[3]->set_sensitive(FALSE);
-	    }
-            return Gtk2::EVENT_PROPAGATE;
-    });
-    $view->signal_connect(row_activated=>sub{
-            my ($view,$path,$column) = @_;
-            my $selection = $view->get_selection;
-            my ($store,$iter) = $selection->get_selected;
-	    if ($store) {
-		my ($label) = $store->get($iter,4); # Label column
-		$ops{current} = $label;
-		Gtk2->main_quit;
-	    }
-            return Gtk2::EVENT_PROPAGATE;
-    });
-    $view->signal_connect(button_press_event=>sub{
-            my ($view,$event) = @_;
-            my ($path,$column) = $view->get_path_at_pos($event->x,$event->y);
-            my $selection = $view->get_selection;
-            $selection->select_path($path);
-            my ($store,$iter) = $selection->get_selected;
-	    if ($store) {
-		my ($label) = $store->get($iter,4); # Label column
-		my $session = $xsessions->{$label};
-		print STDERR "Label clicked was: $label\n" if $ops{verbose};
-	    }
-            return Gtk2::EVENT_PROPAGATE;
-    });
-
-    my $index = 0;
-    foreach my $s (@xsessions) {
-	$s->{index} = $index; $index = $index + 1;
-        my $iname = $s->{Icon};
-        my $name = $s->{Name};
-        my $comment = $s->{Comment};
-        my $markup = "<b>$name</b>\n$comment";
-        my $label = $s->{Label};
-	my $managed = ($s->{SessionManaged} =~ /true/i) ? TRUE : FALSE;
-        my $iter = $store->append;
-        $store->set($iter,
-                0, $iname,
-                1, $name,
-                2, $comment,
-                3, $markup,
-                4, $label,
-		5, $managed,
-        );
-	if ($label eq $ops{choice} or
-		(($ops{choice} eq 'choose' or $ops{choice} eq 'default') and
-		 $label eq $ops{default})) {
-	    $selection->select_iter($iter);
-	    my $path = Gtk2::TreePath->new_from_string("$index");
-	    $view->set_cursor_on_cell($path,$cursor,undef,FALSE);
-	}
-    }
-
-    $w->set_default_size(-1,400);
-    $w->show_all;
-
-    $b[3]->grab_focus;
-
-    Gtk2->main;
-    if ($ops{current} eq 'logout') {
-	print STDERR "Logging out...\n" if $ops{verbose};
-	$w->destroy;
-	print STDOUT "$ops{current}";
-	exit(0);
-    }
-    else {
-	print STDERR "Launching session $ops{current}...\n" if $ops{verbose};
-	$w->destroy;
-	launch_session($ops{current});
-	exit(0);
-    }
-}
-
 
 exit(0);
 

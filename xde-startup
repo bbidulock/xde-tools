@@ -286,6 +286,13 @@ of the L<xde-menugen(1p)>  and L<xde-traymenu(1p)> tools in the XDE
 suite so that theme options presented to users in window manager
 specific menus are consistent.
 
+=cut
+
+sub setup_session {
+}
+
+=pod
+
 The actions performed for specific window managers are as follows:
 
 =over

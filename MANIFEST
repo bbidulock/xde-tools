@@ -2,6 +2,10 @@ gtkrc-2.0
 lib/X11/XDG/StartupNotification.pm
 lib/X11/XDG/Xsettings.pm
 lib/X11/Xsm.pm
+lib/XDE/Chooser.pm
+lib/XDE/Context.pm
+lib/XDE/Startup.pm
+lib/XDG/Context.pm
 lib/XDG/IconData.pm
 lib/XDG/Icons.pm
 lib/XDG/IconTheme.pm
