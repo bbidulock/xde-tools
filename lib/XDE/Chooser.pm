@@ -1,33 +1,28 @@
 package XDE::Chooser;
+require XDE::Context;
+use base qw(XDE::Context);
 use Glib qw(TRUE FALSE);
 use Gtk2;
 #use Net::DBus;
 #use Net::DBus::GLib;
-require XDE::Context;
 use strict;
 use warnings;
 
 sub new {
-    my ($type,$xde,$ops) = @_;
-    die 'usage: XDE::Chooser->new($xde,$ops)'
-	unless $xde and $xde->isa('XDE::Context') and
-	       $ops and ref($ops) =~ /HASH/;
-    my $self = bless {
-	xde=>$xde,
-	ops=>$ops,
-    }, $type;
-    foreach (qw(verbose lang charset language)) {
-	$xde->{$_} = $ops->{$_} if $ops->{$_};
-    }
-    $xde->set_vendor($ops->{vendor}) if $ops->{vendor};
+    my $self = XDE::Context::new(@_);
+    $self->getenv() if $self;
     return $self;
 }
 
 sub choose {
-    my $self = shift;
-    my $xde = $self->{xde};
-    my %ops = %{$self->{ops}};
-    my $xsessions = $self->{xsessions} = $xde->get_xsessions();
+    my ($self,%ops) = @_;
+    $self->{ops} = \%ops;
+    # XDE::Context expects these on the main object
+    foreach (qw/verbose lang language charset/) {
+	$self->{$_} = $ops{$_} if $ops{$_};
+    }
+    $self->set_vendor($ops{vendor}) if $ops{vendor};
+    my $xsessions = $self->get_xsessions();
     my @xsessions = sort {$a->{Label} cmp $b->{Label}} values %$xsessions;
     $self->{sessions} = \@xsessions;
 
@@ -38,6 +33,7 @@ sub choose {
 	    print STDERR "XSession: ",$_->{Name},"\n";
 	    print STDERR "Comment: ",$_->{Comment},"\n";
 	    print STDERR "Exec: ",$_->{Exec},"\n";
+	    print STDERR "TryExec: ",$_->{TryExec},"\n";
 	    print STDERR "SessionManaged: ",$_->{SessionManaged},"\n";
 	    print STDERR "File: ",$_->{file},"\n";
 	    print STDERR "Icon: ",$_->{Icon},"\n";
@@ -58,7 +54,7 @@ sub choose {
 
     if ($ops{choice} ne 'choose' and not exists $xsessions->{$ops{choice}}) {
 	print STDERR "Choice $ops{choice} is not available.\n"
-	    if $ops{verrbose};
+	    if $ops{verbose};
 	$ops{choice} = 'choose';
     }
 
@@ -87,23 +83,22 @@ sub launch_session {
     my $self = shift;
     my ($label,$session) = @_;
     return unless $label and $session;
-    my $xde = $self->{xde};
     my %ops = %{$self->{ops}};
-    $xde->set_session($label);
-    $xde->setenv;
+    $self->set_session($label);
+    $self->setenv;
     print STDERR "Environment would be: \n---------------------\n"
 	if $ops{verbose};
     system("env | sort >&2") if $ops{verbose};
     print STDERR "Launching session for $label\n" if $ops{verbose};
     print STDERR "Launch command would be '$session->{Exec}'\n" if $ops{verbose};
     $ops{current} = "$label";
-    if (open(my $fh,">",$xde->{XDE_CURRENT_FILE})) {
+    if (open(my $fh,">",$self->{XDE_CURRENT_FILE})) {
 	$ops{current} = $label;
 	print $fh "$ops{current}\n";
 	close($fh);
     }
     if ($ops{setdflt}) {
-	if (open(my $fh,">",$xde->{XDE_DEFAULT_FILE})) {
+	if (open(my $fh,">",$self->{XDE_DEFAULT_FILE})) {
 	    $ops{default} = $label;
 	    print $fh "$ops{default}\n";
 	    close($fh);
@@ -115,21 +110,20 @@ sub launch_session {
 
 sub make_login_choice {
     my $self = shift;
-    my $xde = $self->{xde};
     my %ops = %{$self->{ops}};
     my $xsessions = $self->{xsessions};
     my @xsessions = @{$self->{sessions}};
     Gtk2->init;
-    if ($xde->{XDG_ICON_PREPEND} or $xde->{XDG_ICON_APPEND})
+    if ($self->{XDG_ICON_PREPEND} or $self->{XDG_ICON_APPEND})
     {
 	my $theme = Gtk2::IconTheme->get_default;
-	if ($xde->{XDG_ICON_PREPEND}) {
-	    foreach (reverse split(/:/,$xde->{XDG_ICON_PREPEND})) {
+	if ($self->{XDG_ICON_PREPEND}) {
+	    foreach (reverse split(/:/,$self->{XDG_ICON_PREPEND})) {
 		$theme->prepend_search_path($_);
 	    }
 	}
-	if ($xde->{XDG_ICON_APPEND}) {
-	    foreach (split(/:/,$xde->{XDG_ICON_APPEND})) {
+	if ($self->{XDG_ICON_APPEND}) {
+	    foreach (split(/:/,$self->{XDG_ICON_APPEND})) {
 		$theme->append_search_path($_);
 	    }
 	}
@@ -260,7 +254,7 @@ sub make_login_choice {
 		my ($label) = $store->get($iter,4); # Label column
 		print STDERR "Label selected $label\n"
 		    if $ops{verbose};
-		if (open(my $fh,">",$xde->{XDE_DEFAULT_FILE})) {
+		if (open(my $fh,">",$self->{XDE_DEFAULT_FILE})) {
 		    $ops{default} = $label;
 		    print $fh "$ops{default}\n";
 		    close($fh);

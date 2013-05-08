@@ -93,9 +93,23 @@ use constant {
 	wmaker		 => 'Library/WindowMaker/menu',
     },
 };
+
+=head1 METHODS
+
+=over
+
+=item B<new> XDG::Context::new
+
+=cut
+
 sub new {
 	return XDG::Context::new(@_);
 }
+
+=item $xde->B<default>()
+
+=cut
+
 sub default {
     my $self = shift;
     $self->{XDG_CONFIG_PREPEND} = '/etc/xdg/xde' unless $self->{XDG_CONFIG_PREPEND};
@@ -166,11 +180,26 @@ sub default {
     }
     return $self;
 }
+
+=item $xde->B<getenv>()
+
+Read environment variables into the context and recalculate defaults.
+
+=cut
+
 sub getenv {
     my $self = shift;
     foreach (@{&MYENV}) { $self->{$_} = $ENV{$_} }
     return $self->SUPER::getenv();
 }
+
+=item $xde->B<setenv>()
+
+Write pertinent XDE environment variables from the context into the
+environment.
+
+=cut
+
 sub setenv {
     my $self = shift;
     $self->SUPER::setenv();
@@ -180,6 +209,24 @@ sub setenv {
     }
     return $self;
 }
+
+=item $xde->B<mkdirs>()
+
+Create configuration directories in the user's home directory (and,
+optionally, menu directories in /tmp) if they do not already exist.
+
+=cut
+
+sub mkdirs {
+    my $self = shift;
+    $self->SUPER::mkdirs();
+    foreach (qw(XDE_CONFIG_HOME XDE_CONFIG_DIR XDE_MENU_DIR)) {
+	if (my $dir = $self->{$_}) {
+	    eval { mkpath $dir; } unless -d $dir;
+	}
+    }
+}
+
 sub DESKTOP_SESSION	{ return shift->get_or_set(DESKTOP_SESSION  =>@_) }
 sub FBXDG_DE		{ return shift->get_or_set(FBXDG_DE	    =>@_) }
 sub XDE_SESSION		{ return shift->get_or_set(XDE_SESSION	    =>@_) }
@@ -188,13 +235,23 @@ sub XDE_CONFIG_FILE	{ return shift->get_or_set(XDE_CONFIG_FILE  =>@_) }
 sub XDE_MENU_DIR	{ return shift->get_or_set(XDG_MENU_DIR	    =>@_) }
 sub XDE_MENU_FILE	{ return shift->get_or_set(XDG_MENU_FILE    =>@_) }
 
+=item $xde->B<set_session>($session)
+
+Sets the desktop session (window manager) to the string specified with
+the C<$session> argument.  Performs no actions unless the session
+argument is recognized.  The C<$session> argument is case insensitive.
+Returns the session argument if it is recognized, otherwise it returns
+C<undef>.
+
+=cut
+
 sub set_session {
     my $self = shift;
-    my $session = shift;
+    my $session = $self->{session} = shift;
     if (exists &SESSIONS->{"\L$session\E"}) {
 	$session = &SESSIONS->{"\L$session\E"};
 	my $desktop = "\U$session\E";
-	$self->setup({
+	$self->setup(
 	    XDG_CURRENT_DESKTOP => $desktop,
 	    DESKTOP_SESSION	=> $desktop,
 	    FBXDG_DE		=> $desktop,
@@ -203,7 +260,7 @@ sub set_session {
 	    XDE_CONFIG_FILE	=> undef,
 	    XDE_MENU_DIR	=> undef,
 	    XDE_MENU_FILE	=> undef,
-	});
+	);
 	return $session;
     }
     return undef;
@@ -232,15 +289,13 @@ sub setup_session {
     }
 }
 
-sub mkdirs {
-    my $self = shift;
-    $self->SUPER::mkdirs();
-    foreach (qw(XDE_CONFIG_HOME XDE_CONFIG_DIR XDE_MENU_DIR)) {
-	if (my $dir = $self->{$_}) {
-	    eval { mkpath $dir; } unless -d $dir;
-	}
-    }
-}
+=item $xde->B<default_banner>() => SCALAR
+
+Determine the full path of the default branding banner from XDE/XDG
+context and return it as a scalar.  L</set_vendor> should be called
+before this function if it is to be called at all.
+
+=cut
 
 # determine the default branding banner
 sub default_banner {
@@ -259,5 +314,254 @@ sub default_banner {
     return '';
 }
 
-1;
+=item $xde->B<get_themes> => HASHREF
 
+Search out all XDG themes directories and collect XDE themes into a hash
+reference.  The keys of the hash are the names of the theme subdirectory
+in which the theme.ini file resided.  Themes follow XDG precedence rules
+for XDG data directories.
+
+Also establishes a hash refernece in $xdg->{dirs}{theme} that contains
+all of the directories searched (whether they existed or not) for use in
+conjunction with L<Linux::Inotify2(3pm)>.
+
+=cut
+
+sub get_themes {
+    my $self = shift;
+    my %themedirs = ();
+    my %themes = ();
+    foreach my $d (reverse map {"$_/themes"} @{$self->{XDG_DATA_ARRAY}}) {
+	$themedirs{$d} = 1;
+	opendir(my $dir, $d) or next;
+	foreach my $s (readdir($dir)) {
+	    next if $s eq '.' or $s eq '..';
+	    next unless -d "$d/$s";
+	    my $f = "$d/$s/xde/theme.ini";
+	    next unless -f $f;
+	    open (my $fh,"<","$d/$f") or next;
+	    my $parsing = 0;
+	    my %e = (file=>$f,theme=>$s);
+	    my %xl = ();
+	    my $section;
+	    while (<$fh>) {
+		next if /^\s*\#/; # comment
+		if (/^\[([^]]*)\]/) {
+		    $section = $1;
+		    $parsing = 1;
+		}
+                elsif ($parsing and /^([^=\[]+)\[([^=\]]+)\]=([^[:cntrl:]]*)/) {
+		    $xl{$section}{$1}{$2} = $3;
+		}
+                elsif ($parsing and /^([^=]*)=([^[:cntrl:]]*)/) {
+		    $e{$section}{$1} = $2;
+		}
+	    }
+	    close($fh);
+	    my $short = $1 if $self->{lang} =~ /^(..)/;
+	    foreach (keys %xl) {
+		if (exists $xl{$_}{$self->{lang}}) {
+                    $e{$_} = $xl{$_}{$self->{lang}};
+		}
+                elsif ($short and exists $xl{$_}{$short}) {
+                    $e{$_} = $xl{$_}{$short};
+		}
+	    }
+	    $e{Theme}{Name} = $s unless $e{Theme}{Name};
+	    $e{Xsettings}{'Xde/ThemeName'} = $e{Theme}{Name}
+		unless $e{Xsettings}{'Xde/ThemeName'};
+	    foreach my $wm (qw(fluxbox blackbox openbox icewm fvwm wmaker)) {
+		foreach (keys %{$e{Theme}}) {
+		    $e{$wm}{$_} = $e{Theme}{$_} unless $e{$wm}{$_};
+		}
+	    }
+	    $themes{$s} = \%e;
+	}
+	closedir($dir);
+    }
+    $self->{dirs}{theme} = \%themedirs;
+    return \%themes;
+}
+
+=item $xde->B<get_styles> => HASHREF
+
+Search out all window manager style directories and collect WM styles
+into a hash reference.  The keys of the hash are the names of the style
+subdirectory (or file) in which the WM-specific file resides.  Styles do
+not fully follow XDG precedence rules, but follow WM-specific rules.
+L</set_session> should be called before this function if it is to be
+called at all.
+
+Also establishes a hash refernece in $xdg->{dirs}{style} that contains
+all of the directories searched (whether they existed or not) for use in
+conjunction with L<Linux::Inotify2(3pm)>.
+
+=cut
+
+sub get_styles {
+    my $self = shift;
+    unless ($self->{session}) {
+	print STDERR "Session must be set before calling XDE::Context::get_styles\n";
+	return {};
+    }
+    my $method = "get_styles_\U$self->{session}\E";
+    unless ($self->can($method)) {
+	print STDERR "Unrecognized session '\U$self->{session}\E'\n";
+	return {};
+    }
+    return $self->$method(@_);
+}
+
+=item $xde->B<get_styles_FLUXBOX>() => HASHREF
+
+Normally invoked as B<get_styles>, gets the styles hash when the session
+is a C<FLUXBOX> session.  The directories searched are
+F<@XDG_DATA_DIRS/fluxbox/styles> with a fallback to
+F<$HOME/.fluxbox/styles>.
+
+=cut
+
+sub get_styles_FLUXBOX {
+    my $self = shift;
+    my %styledirs = ();
+    my %styles = ();
+    foreach my $d (reverse map{"$_/fluxbox/styles"}@{$self->{XDG_DATA_ARRAY}},
+	    "$ENV{HOME}/.fluxbox/styles") {
+	$styledirs{$d} = 1;
+	opendir(my $dir, $d) or next;
+	foreach my $s (readdir($dir)) {
+	    next if $s eq '.' or $s eq '..';
+	    if (-d "$dir/$s" and -f "$dir/$s/theme.cfg") {
+		$styles{$s} = "$dir/$s/theme.cfg";
+	    }
+	    elsif (-f "$dir/$s") {
+		$styles{$s} = "$dir/$s";
+	    }
+	}
+	closedir($dir);
+    }
+    $self->{dirs}{style} = \%styledirs;
+    return \%styles;
+}
+sub get_styles_BLACKBOX {
+    my $self = shift;
+    my %styledirs = ();
+    my %styles = ();
+    foreach my $d (reverse
+	    map{"$_/blackbox/styles"}@{$self->{XDG_DATA_ARRAY}},
+	    "$ENV{HOME}/.blackbox/styles") {
+	$styledirs{$d} = 1;
+	opendir(my $dir, $d) or next;
+	foreach my $s (readdir($dir)) {
+	    next if $s eq '.' or $s eq '..';
+	    next unless -f "$dir/$s";
+	    $styles{$s} = "$dir/$s";
+	}
+	closedir($dir);
+    }
+    $self->{dirs}{style} = \%styledirs;
+    return \%styles;
+}
+sub get_styles_OPENBOX {
+    my $self = shift;
+    my %styledirs = ();
+    my %styles = ();
+    foreach my $d (reverse map{"$_/themes"}@{$self->{XDG_DATA_ARRAY}}) {
+	$styledirs{$d} = 1;
+	opendir(my $dir, $d) or next;
+	foreach my $s (readdir($dir)) {
+	    next if $s eq '.' or $s eq '..';
+	    next unless -d "$d/$s";
+	    my $f = "$d/$s/openbox-3/themerc";
+	    next unless -f $f;
+	    $styles{$s} = $f;
+	}
+	closedir($dir);
+    }
+    $self->{dirs}{style} = \%styledirs;
+    return \%styles;
+}
+sub get_styles_ICEWM {
+    my $self = shift;
+    my %styledirs = ();
+    my %styles = ();
+    foreach my $d (reverse
+	    map{"$_/icewm/themes"}@{$self->{XDG_DATA_ARRAY}},
+	    "$ENV{HOME}/.icewm/themes") {
+	$styledirs{$d} = 1;
+	opendir(my $dir, $d) or next;
+	foreach my $s (readdir($dir)) {
+	    next if $s eq '.' or $s eq '..';
+	    next unless -d "$dir/$s";
+	    opendir(my $t, "$dir/$s") or next;
+	    foreach my $e (readdir($t)) {
+		my $f = "$dir/$s/$e";
+		next unless $f =~ /^(.*)\.theme$/ and -f $f;
+		my $tn = $1 eq 'default' ? "$s" : "$s/$1";
+		$styles{$tn} = $f;
+	    }
+	    closedir($t);
+	}
+	closedir($dir);
+    }
+    $self->{dirs}{style} = \%styledirs;
+    return \%styles;
+}
+sub get_styles_FVWM {
+    my $self = shift;
+    my %styledirs = ();
+    my %styles = ();
+    foreach my $d (reverse
+	    map{"$_/fvwm/themes"}@{$self->{XDG_DATA_ARRAY}},
+	    "$ENV{HOME}/.fvwm/themes") {
+	$styledirs{$d} = 1;
+	opendir(my $dir, $d) or next;
+	foreach my $s (readdir($dir)) {
+	    next if $s eq '.' or $s eq '..';
+	    next unless $s =~ m{^Theme\.(.*)$} and -f "$dir/$s";
+	    my $tn = $1;
+	    $styles{$tn} = "$dir/$s";
+	}
+	closedir($dir);
+    }
+    $self->{dirs}{style} = \%styledirs;
+    return \%styles;
+}
+sub get_styles_WMAKER {
+    my $self = shift;
+    my %styledirs = ();
+    my %styles = ();
+    my $home = $ENV{GNUSTEP_USER_ROOT};
+    $home = "$ENV{HOME}/GNUstep" unless $home;
+    $home = "$ENV{HOME}/$home" unless $home =~ m{^/};
+    foreach my $d (reverse
+	    map{("$_/WindowMaker/Themes","$_/WindowMaker/Styles")}
+	    @{$self->{XDG_DATA_ARRAY}},
+	    "$home/Library/WindowMaker/Themes",
+	    "$home/Library/WindowMaker/Styles") {
+	$styledirs{$d} = 1;
+	opendir(my $dir, $d) or next;
+	foreach my $s (readdir($dir)) {
+	    next if $s eq '.' or $s eq '..';
+	    if ($s =~ m{^(.*)\.style} and -f "$dir/$s") {
+		my $tn = $1;
+		$styles{$tn} = "$dir/$s";
+	    }
+	    elsif ($s = m{^(.*)\.themed} and -d "$dir/$s" and -f
+		    "$dir/$s/style") {
+		my $tn = $1;
+		$styles{$tn} = "$dir/$s/style";
+	    }
+	}
+	closedir($dir);
+    }
+    $self->{dirs}{style} = \%styledirs;
+    return \%styles;
+}
+
+=back
+
+=cut
+
+1;
+# vim: sw=4 tw=72

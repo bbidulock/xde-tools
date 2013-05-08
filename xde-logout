@@ -32,7 +32,6 @@ use Getopt::Long;
 use Encode;
 use I18N::Langinfo qw(langinfo CODESET);
 use POSIX qw(locale_h);
-require XDE::Context;
 require XDE::Logout;
 use strict;
 use warnings;
@@ -109,10 +108,7 @@ Perform a hybrid sleep on the computer.
 
 =cut
 
-my $xde = XDE::Context->new(\%OVERRIDES);
-$xde->getenv();
-$xde->setenv();
-$xde->mkdirs();
+my $xde = XDE::Logout->new(%OVERRIDES);
 
 =head1 OPTIONS
 
@@ -225,12 +221,13 @@ OPTIONS:
 EOF
 }
 
-my $logout = XDE::Logout->new($xde,\%ops);
-my $choice = $logout->logout();
+
+
+my $choice = $xde->logout(%ops);
 exit(0) if $choice eq 'Cancel';
 my $action = "Do$choice";
-if ($logout->can($action)) {
-    $logout->$action();
+if ($xde->can($action)) {
+    $xde->$action();
     exit(0);
 }
 

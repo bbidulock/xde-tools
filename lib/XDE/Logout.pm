@@ -1,9 +1,10 @@
 package XDE::Logout;
+require XDE::Context;
+use base qw(XDE::Context);
 use Glib qw(TRUE FALSE);
 use Gtk2;
 use Net::DBus;
-use Net::DBus::GLib;
-require XDE::Context;
+#use Net::DBus::GLib;
 use strict;
 use warnings;
 
@@ -13,18 +14,14 @@ XDE::Logout - log out of an XDE session or boot computer
 
 =head1 SYNOPSIS
 
- require XDE::Context;
  require XDE::Logout;
 
- my $xde = XDE::Context->new();
- $xde->getenv();
- 
- my $logout = XDE::Logout->new($xde,{});
- my $choice = $logout->logout();
+ my $xde = XDE::Logout->new();
+ my $choice = $xde->logout(%ops);
  exit(0) if $choice eq 'Cancel';
  my $action = "Do$choice";
- if ($logout->can($action)) {
-	 $logout->$action();
+ if ($xde->can($action)) {
+	 $xde->$action();
 	 exit(0);
  }
  die "Cannot grok response '$choice'";
@@ -34,18 +31,8 @@ XDE::Logout - log out of an XDE session or boot computer
 =cut
 
 sub new {
-    my ($type,$xde,$ops) = @_;
-    die 'usage: XDE::Logout->new($xde,$ops)'
-	unless $xde and $xde->isa('XDE::Context') and
-	       $ops and ref($ops) =~ /HASH/;
-    my $self = bless {
-	xde=>$xde,
-	ops=>$ops,
-    }, $type;
-    foreach (qw(verbose lang charset language)) {
-	$xde->{$_} = $ops->{$_} if $ops->{$_};
-    }
-    $xde->set_vendor($ops->{vendor}) if $ops->{vendor};
+    my $self = XDE::Context::new(@_);
+    $self->getenv() if $self;
     return $self;
 }
 
@@ -76,21 +63,16 @@ sub lxsession_check {
 
 sub test_power_functions {
     my $self = shift;
-    $self->{dbus}{bus} = Net::DBus::Glib->system();
+    $self->{dbus}{bus} = Net::DBus->system();
     $self->{dbus}{srv} = $self->{dbus}{bus}->get_service('org.freedesktop.login1');
-    $self->{dbus}{obj} = $self->{dbus}{srv}->get_object('/org/freedesktop.login1',
+    $self->{dbus}{obj} = $self->{dbus}{srv}->get_object('/org/freedesktop/login1',
 							 'org.freedesktop.login1.Manager');
     my $result;
     $self->{can}{PowerOff}    = $result if $result = $self->{dbus}{obj}->CanPowerOff();
-    print STDERR "No response to CanPowerOff\n" unless $result;
     $self->{can}{Reboot}      = $result if $result = $self->{dbus}{obj}->CanReboot();
-    print STDERR "No response to CanReboot\n" unless $result;
     $self->{can}{Suspend}     = $result if $result = $self->{dbus}{obj}->CanSuspend();
-    print STDERR "No response to CanSuspend\n" unless $result;
     $self->{can}{Hibernate}   = $result if $result = $self->{dbus}{obj}->CanHibernate();
-    print STDERR "No response to CanHibernate\n" unless $result;
     $self->{can}{HybridSleep} = $result if $result = $self->{dbus}{obj}->CanHybridSleep();
-    print STDERR "No response to CanHybridSleep\n" unless $result;
 }
 
 sub grabbed_window {
@@ -260,9 +242,14 @@ sub Cancel {
 }
 
 sub logout {
-    my $self = shift;
+    my ($self,%ops) = @_;
+    $self->{ops} = \%ops;
+    # XDE::Context expects these on the main object
+    foreach (qw/verbose lang language charset/) {
+	$self->{$_} = $ops{$_} if $ops{$_};
+    }
+    $self->set_vendor($ops{vendor}) if $ops{vendor};
 
-    my $dbus = $self->{dbus} = {};
     my $can = $self->{can} = {
 	PowerOff    => 'na',
 	Reboot	    => 'na',
@@ -294,9 +281,17 @@ sub logout {
     foreach (keys %$can) {
 	if ($can->{$_} eq 'na') {
 	    $tip->{$_} .= "\nFunction not available.";
+	    $tip->{$_} .= "\nCan value was '$can->{$_}'."
+		if $ops{verbose};
 	}
 	elsif ($can->{$_} eq 'challenge') {
-	    $tip->{$_} .= "\nFunction not permitted.";
+	    #$tip->{$_} .= "\nFunction not permitted.";
+	    $tip->{$_} .= "\nCan value was '$can->{$_}'."
+		if $ops{verbose};
+	}
+	else {
+	    $tip->{$_} .= "\nCan value was '$can->{$_}'."
+		if $ops{verbose};
 	}
     }
     if ($self->{ops}{verbose}) {
@@ -304,42 +299,23 @@ sub logout {
 	    print STDERR "$_: $can->{$_}\n";
 	}
     }
-    if (0) {
-	if (my @results = $dbus->{obj}->ListInhibitors()) {
-	    if ($self->{ops}{verbose}) {
-		foreach (@results) {
-		    print STDERR join(',',@$_),"\n";
-		}
-	    }
-	}
-    }
-    if (0) {
-	my $XDG_SEAT = $ENV{XDG_SEAT} if $ENV{XDG_SEAT};
-
-	if ($XDG_SEAT) {
-	    $dbus->{seat} = $dbus->{srv}->get_object("/org/freedesktop/login1/seat/$XDG_SEAT",
-						     'org.freedesktop.DBus.Properties');
-	    $dbus->{prop} = $dbus->{seat}->Get('org.freedesktop.login1.Seat', 'Sessions');
-	}
-    }
     return $self->make_logout_choice;
 }
 
 sub make_logout_choice {
     my $self = shift;
-    my $xde = $self->{xde};
     my %ops = %{$self->{ops}};
     Gtk2->init;
-    if ($xde->{XDG_ICON_PREPEND} or $xde->{XDG_ICON_APPEND})
+    if ($self->{XDG_ICON_PREPEND} or $self->{XDG_ICON_APPEND})
     {
 	my $theme = Gtk2::IconTheme->get_default;
-	if ($xde->{XDG_ICON_PREPEND}) {
-	    foreach (reverse split(/:/,$xde->{XDG_ICON_PREPEND})) {
+	if ($self->{XDG_ICON_PREPEND}) {
+	    foreach (reverse split(/:/,$self->{XDG_ICON_PREPEND})) {
 		$theme->prepend_search_path($_);
 	    }
 	}
-	if ($xde->{XDG_ICON_APPEND}) {
-	    foreach (split(/:/,$xde->{XDG_ICON_APPEND})) {
+	if ($self->{XDG_ICON_APPEND}) {
+	    foreach (split(/:/,$self->{XDG_ICON_APPEND})) {
 		$theme->append_search_path($_);
 	    }
 	}
@@ -435,7 +411,7 @@ sub make_logout_choice {
 	$b->set_image($i);
 	$b->set_label($_->[3]);
 	$b->signal_connect(clicked=>$_->[4]);
-	$b->set_sensitive(FALSE) unless $_->[5] eq 'yes';
+	$b->set_sensitive(FALSE) unless $_->[5] =~ m{^(yes|challenge)$};
 	$b->set_tooltip_text($_->[6]) if $_->[6];
 	$bb->pack_start($b,TRUE,TRUE,5); push @b,$b;
     }
@@ -459,35 +435,27 @@ sub make_logout_choice {
 }
 
 sub DoPowerOff {
-    my $self = shift;
-    $self->{dbus}{obj}->PowerOff(TRUE);
+    shift->{dbus}{obj}->PowerOff(TRUE);
 }
 sub DoReboot {
-    my $self = shift;
-    $self->{dbus}{obj}->Reboot(TRUE);
+    shift->{dbus}{obj}->Reboot(TRUE);
 }
 sub DoSuspend {
-    my $self = shift;
-    $self->{dbus}{obj}->Suspend(TRUE);
+    shift->{dbus}{obj}->Suspend(TRUE);
 }
 sub DoHibernate {
-    my $self = shift;
-    $self->{dbus}{obj}->Hibernate(TRUE);
+    shift->{dbus}{obj}->Hibernate(TRUE);
 }
 sub DoHybridSleep {
-    my $self = shift;
-    $self->{dbus}{obj}->HybridSleep(TRUE);
+    shift->{dbus}{obj}->HybridSleep(TRUE);
 }
 sub DoSwitchUser {
-    my $self = shift;
     print STDERR "Unimplemented DoSwitchUser\n";
 }
 sub DoSwitchDesk {
-    my $self = shift;
     print STDERR "Unimplemented DoSwitchDesk\n";
 }
 sub DoLockScreen {
-    my $self = shift;
     print STDERR "Unimplemented DoLockScreen\n";
 }
 sub DoLogout {

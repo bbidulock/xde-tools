@@ -638,3 +638,4 @@ L<hsetroot(1)>, L<esetroot(1)>, L<wmsetbg(1)>, L<bsetbg(1)>,
 L<fbsetbg(1)>.
 
 =cut
+# vim: set sw=4 tw=72

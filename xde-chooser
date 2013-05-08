@@ -32,7 +32,6 @@ use Getopt::Long;
 use Encode;
 use I18N::Langinfo qw(langinfo CODESET);
 use POSIX qw(locale_h);
-require XDE::Context;
 require XDE::Chooser;
 use strict;
 use warnings;
@@ -62,10 +61,7 @@ exit status is returned.
 
 =cut
 
-my $xde = XDE::Context->new(\%OVERRIDES);
-$xde->getenv();
-$xde->setenv();
-$xde->mkdirs();
+my $xde = XDE::Chooser->new(%OVERRIDES);
 
 =head1 OPTIONS
 
@@ -366,8 +362,7 @@ line containing the session name.
 
 =cut
 
-my $chooser = XDE::Chooser->new($xde,\%ops);
-my ($result,$entry) = $chooser->choose();
+my ($result,$entry) = $xde->choose(%ops);
 
 if ($result eq 'logout') {
     print STDERR "Logging out...\n" if $ops{verbose};
@@ -378,7 +373,7 @@ else {
     print STDOUT $result;
     # the other thing to do here is to pass $entry directly to an
     # instance of XDE::Startup.
-    $chooser->launch_session($result,$entry);
+    $xde->launch_session($result,$entry);
 }
 
 exit(0);

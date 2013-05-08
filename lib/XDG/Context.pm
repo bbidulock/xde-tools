@@ -31,21 +31,35 @@ use constant {
 	XDG_ICON_APPEND
     )],
 };
+
+=head1 METHODS
+
+=over
+
+=item B<new> XDG::Context => bless HASHREF
+
+=cut
+
 sub new {
     my $self = bless {}, shift;
     return $self->setup(@_);
 }
+
+=item $xdg->B<setup>(%ops) => $xdg
+
+=cut
+
 sub setup {
-    my $self = shift;
-    my $setup = shift;
-    if (defined $setup and ref($setup) and ref($setup) =~ /HASH/) {
-	foreach (keys %$setup) {
-	    $self->{$_} = $setup->{$_};
-	}
-    }
+    my ($self,%ops) = @_;
+    $self->{$_} = $ops{$_} foreach (keys %ops);
     $self->default;
     return $self;
 }
+
+=item $xdg->B<default>()
+
+=cut
+
 sub default {
     my $self = shift;
 
@@ -93,12 +107,22 @@ sub default {
     }
     return $self;
 }
+
+=item $xdg->B<getenv>() => $xdg
+
+=cut
+
 sub getenv {
     my $self = shift;
     foreach my $var (@{&MYENV}) { $self->{$var} = $ENV{$var} }
     $self->default;
     return $self;
 }
+
+=item $xdg->B<setenv>() => $xdg
+
+=cut
+
 sub setenv {
     my $self = shift;
     foreach my $var (@{&MYENV}) {
@@ -117,6 +141,23 @@ sub setenv {
     }
     return $self;
 }
+
+=item $xdg->B<mkdirs>()
+
+=cut
+
+sub mkdirs {
+    my $self = shift;
+    foreach (qw(XDG_CONFIG_HOME XDG_DATA_HOME)) {
+	if (my $dir = $self->{$_}) {
+	    eval { mkpath $dir; } unless -d $dir;
+	}
+    }
+}
+
+=item $xdg->B<update_array>($base)
+
+=cut
 
 sub update_array {
     my $self = shift;
@@ -193,24 +234,155 @@ sub XDG_VENDOR_ID       { return shift->get_or_set(XDG_VENDOR_ID      =>@_) }
 sub XDG_CURRENT_DESKTOP { return shift->get_or_set(XDG_CURRENT_DESKTOP=>@_) }
 sub XDG_MENU_PREFIX	{ return shift->get_or_set(XDG_MENU_PREFIX    =>@_) }
 
+=item $xdg->B<set_vendor>($vendor) => $vendor
+
+=cut
+
 sub set_vendor {
     my $self = shift;
     my $vendor = shift;
     if ($vendor) {
 	$vendor = "\L$vendor\E";
-	$self->setup({
+	$self->setup(
 	    XDG_VENDOR_ID   => "${vendor}",
 	    XDG_MENU_PREFIX => "${vendor}-",
-	});
+	);
     }
     return $vendor;
 }
 
+=item $xdg->B<get_autostart>() => HASHREF
+
+Search out all XDG autostart files and collect them into a hash
+reference.  The keys of the hash are the names of the F<.desktop> files
+collected.  Autostart files follow XDG precedence rules for XDG
+configuration directories.
+
+Also establishes a hash reference in $xdg->{dirs}{autostart} that
+contains all of the directories searched (whether they existed or not)
+for use in conjuction with L<Linux::Inotify2(3pm)>.
+
+=cut
+
+sub get_autostart {
+    my $self = shift;
+    my %autostartdirs = ();
+    my %files;
+    foreach my $d (reverse map {"$_/autostart"} @{$self->{XDG_CONFIG_ARRAY}}) {
+	$autostartdirs{$d} = 1;
+	opendir(my $dir, $d) or next;
+	foreach my $f (readdir($dir)) {
+	    next unless -f "$d/$f" and $f =~ /\.desktop$/;
+	    open (my $fh,"<","$d/$f") or next;
+	    my $parsing = 0;
+	    my %e = (file=>"$d/$f",id=>$f);
+	    my %xl = {};
+	    while (<$fh>) {
+                if (/^\[([^]]*)\]/) {
+		    my $section = $1;
+		    if ($section eq 'Desktop Entry') {
+			$parsing = 1;
+		    } else {
+			$parsing = 0;
+		    }
+		}
+                elsif ($parsing and /^([^=\[]+)\[([^=\]]+)\]=([^[:cntrl:]]*)/) {
+                    $xl{$1}{$2} = $3;
+                }
+                elsif ($parsing and /^([^=]*)=([^[:cntrl:]]*)/) {
+                    $e{$1} = $2 unless exists $e{$1};
+                }
+	    }
+            close($fh);
+            $self->{lang} =~ m{^(..)}; my $short = $1;
+            foreach (keys %xl) {
+                if (exists $xl{$_}{$self->{lang}}) {
+                    $e{$_} = $xl{$_}{$self->{lang}};
+                }
+                elsif (exists $xl{$_}{$short}) {
+                    $e{$_} = $xl{$_}{$short};
+                }
+            }
+            $e{Name} = '' unless $e{Name};
+            $e{Exec} = '' unless $e{Exec};
+            $e{Comment} = $e{Name} unless $e{Comment};
+            $files{$f} = \%e;
+	}
+	closedir($dir);
+    }
+    # Mark those that are not to be run...
+    my $desktop = $self->{XDG_CURRENT_DESKTOP};
+    foreach my $e (values %files) {
+	unless ($e->{Name}) {
+	    $e->{'X-Disable'} = 'true';
+	    $e->{'X-Disable-Reason'} = "No Name";
+	    next;
+	}
+	unless ($e->{Exec}) {
+	    $e->{'X-Disable'} = 'true';
+	    $e->{'X-Disable-Reason'} = "No Exec";
+	    next;
+	}
+	if ($e->{Hidden} and $e->{Hidden} =~ m{true|yes}i) {
+	    $e->{'X-Disable'} = 'true';
+	    $e->{'X-Disable-Reason'} = "Hidden";
+	    next;
+	}
+	if ($e->{OnlyShowIn} and ";$e->{OnlyShowIn};" !~ /;$desktop;/) {
+	    $e->{'X-Disable'} = 'true';
+	    $e->{'X-Disable-Reason'} = "Only shown in $e->{OnlyShowIn}";
+	    next;
+	}
+	if ($e->{NotShowIn} and ";$e->{NotShowIn};" =~ /;$desktop;/) {
+	    $e->{'X-Disable'} = 'true';
+	    $e->{'X-Disable-Reason'} = "Not shown in $e->{NotShowIn}";
+	    next;
+	}
+        unless ($e->{TryExec}) {
+            my @words = split(/\s+/,$e->{Exec});
+            $e->{TryExec} = $words[0];
+        }
+        if (my $x = $e->{TryExec}) {
+            if ($x =~ m{/}) {
+                unless (-x "$x") {
+		    $e->{'X-Disable'} = 'true';
+		    $e->{'X-Disable-Reason'} = "$x is not executable";
+                    next;
+                }
+            }
+            else {
+                my @PATH = split(/:/,$ENV{PATH});
+                my $found = 0;
+                foreach (@PATH) {
+                    if (-x "$_/$x") {
+                        $found = 1;
+                        last;
+                    }
+                }
+                unless ($found) {
+		    $e->{'X-Disable'} = 'true';
+		    $e->{'X-Disable-Reason'} = "$x is not executable";
+                    next;
+                }
+            }
+        }
+	$e->{'X-Disable'} = 'false';
+    }
+    $self->{dirs}{autostart} = \%autostartdirs;
+    return \%files;
+}
+
+=item $xdg->B<get_sessions>() => HASHREF
+
+=cut
+
 sub get_xsessions {
     my $self = shift;
+    my %sessiondirs = ();
     my %files;
     foreach my $d (reverse map {"$_/xsessions"} @{$self->{XDG_DATA_ARRAY}}) {
-        opendir(my $dir, "$d") or next;
+	$sessiondirs{$d} = 1;
+        opendir(my $dir, $d) or next;
         foreach my $f (readdir($dir)) {
             next unless -f "$d/$f" and $f =~ /\.desktop$/;
             open (my $fh, "<", "$d/$f") or next;
@@ -250,7 +422,7 @@ sub get_xsessions {
             $e{Label} = "\L$e{Name}\E" unless $e{Label};
             $files{$f} = \%e;
         }
-        close($dir);
+        closedir($dir);
     }
     my %sessions;
     foreach (values %files) {
@@ -321,17 +493,13 @@ sub get_xsessions {
             if $self->{verbose};
         delete $sessions{$_};
     }
+    $self->{dirs}{session} = \%sessiondirs;
     return \%sessions;
 }
 
-sub mkdirs {
-    my $self = shift;
-    foreach (qw(XDG_CONFIG_HOME XDG_DATA_HOME)) {
-	if (my $dir = $self->{$_}) {
-	    eval { mkpath $dir; } unless -d $dir;
-	}
-    }
-}
+=back
+
+=cut
 
 1;
-
+# vim: sw=4 tw=72
