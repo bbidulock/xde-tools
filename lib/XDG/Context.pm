@@ -6,6 +6,40 @@ use POSIX qw(locale_h);
 use strict;
 use warnings;
 
+=head1 NAME
+
+XDG::Context -- establish an XDG environment context
+
+=head1 SYNOPSIS
+
+ use XDG::Context;
+
+ my $xdg = new XDG::Context %OVERRIDES;
+ $xdg->getenv();
+
+ use Getopt::Long;
+
+ GetOptions($xdg->{ops},
+    'language|l=s',
+    'charset|c=s',
+ ) or die "bad option";
+
+ print "XDG config home directory is ",
+    $xdg->{XDG_CONFIG_HOME}, "\n";
+
+ $xdg->setenv();
+
+=head1 DESCRIPTION
+
+XDG::Context provides a collection of the XDG context as gleened from
+environment variables with overrides specified on creation.  It is able
+to provide lists of directories of a type.  This modules tracks the XDG
+configuration directories B<XDG_CONFIG_*>, data directories
+B<XDG_DATA_*>, icon directories B<XDG_ICON_*> and maybe soon sound
+directories B<XDG_SOUND_*>.
+
+=cut
+
 use constant {
     MYENV => [qw(
 	XDG_CONFIG_HOME
@@ -18,17 +52,23 @@ use constant {
     )],
     MYPATH => [qw(
 	XDG_CONFIG_HOME
+	XDG_CONFIG_LEGACY
 	XDG_CONFIG_PREPEND
 	XDG_CONFIG_DIRS
 	XDG_CONFIG_APPEND
+	XDG_CONFIG_FALLBACK
 	XDG_DATA_HOME
+	XDG_DATA_LEGACY
 	XDG_DATA_PREPEND
 	XDG_DATA_DIRS
 	XDG_DATA_APPEND
+	XDG_DATA_FALLBACK
 	XDG_ICON_HOME
+	XDG_ICON_LEGACY
 	XDG_ICON_PREPEND
 	XDG_ICON_DIRS
 	XDG_ICON_APPEND
+	XDG_ICON_FALLBACK
     )],
 };
 
@@ -36,27 +76,110 @@ use constant {
 
 =over
 
-=item B<new> XDG::Context => bless HASHREF
+=item $xdg = B<new> XDG::Context I<%OVERRIDES> => bless HASHREF
+
+This method establishes a blessed hash reference of whatever type was
+passed to the method and calls the B<setup> method.  The default
+B<setup> method establishes I<%OVERRIDES> and defaults.  It is
+up to the caller to caller or derived class to call the B<getenv> or
+B<setenv> methods to read or write values from or to the environment.
+
+An options hash reference with default values (considering overrides)
+will be available in C<$xdg->{ops}>.
+
+I<%OVERRIDES> that are interpreted by this module are:
+
+=over
+
+=item B<XDG_CONFIG_*>
+
+This includes B<XDG_CONFIG_LEGACY>, B<XDG_CONFIG_HOME>,
+B<XDG_CONFIG_PREPEND>, B<XDG_CONFIG_DIRS>, B<XDG_CONFIG_APPEND>,
+B<XDG_CONFIG_FALLBACK>.  Each takes a colon-separated list of paths
+corresponding to XDG configuration directory lookup paths.  The
+character C<~> will be replaced with the contents of the B<$HOME>
+environtment variable.
+
+=item B<XDG_DATA_*>
+
+This includes B<XDG_DATA_LEGACY>, B<XDG_DATA_HOME>, B<XDG_DATA_PREPEND>,
+B<XDG_DATA_DIRS>, B<XDG_DATA_APPEND>, B<XDG_DATA_FALLBACK>.  Each takes
+a colon-separated list of paths corresponding to XDG data directory
+lookup paths.  The character C<~> will be replaced with the contents of
+the B<$HOME> environtment variable.
+
+=item B<XDG_ICON_*>
+
+This includes B<XDG_ICON_LEGACY>, B<XDG_ICON_HOME>, B<XDG_ICON_PREPEND>,
+B<XDG_ICON_DIRS>, B<XDG_ICON_APPEND>, B<XDG_ICON_FALLBACK>.  Each takes
+a colon-separated list of paths corresponding to icon lookup paths.  The
+character C<~> will be replaced with the contents of the B<$HOME>
+environtment variable.
+
+=item B<XDG_MENU_PREFIX>, B<XDG_VENDOR_ID>
+
+B<XDG_MENU_PREFIX> specifies the XDG menu prefix.  B<XDG_VENDOR_ID>
+specifies the XDG vendor identifier that will be used when determining
+the default B<XDG_MENU_PREFIX>.
+
+=item B<XDG_CURRENT_DESKTOP>
+
+Specifies the current desktop session.  This is the all upper-case name
+that will be used as the desktop environment when interpreting
+C<OnlyShowIn> and C<NotShowIn> F<.desktop> file fields.
+
+=back
+
+I<%ops> that are interpreted by this module are:
+
+=over
+
+=item B<language>, B<charset>, B<lang>
+
+These are used to determine localized strings from F<.desktop> files.
+
+=back
 
 =cut
 
 sub new {
-    my $self = bless {}, shift;
+    my $self =  bless {}, shift;
     return $self->setup(@_);
 }
 
-=item $xdg->B<setup>(%ops) => $xdg
+=item $xdg->B<setup>(I<%OVERRIDES>) => $xdg
+
+The default B<setup> method called by B<new>.  This can be overriden by
+a derived class.  This default method establishes the I<%OVERRIDES>
+specified to the B<new> methods and the C<$xdg->{ops}> options hash
+reference.
+
+This method can be called at any time (such as after calling B<getenv>)
+to reapply overrides if necessary.
 
 =cut
 
 sub setup {
-    my ($self,%ops) = @_;
-    $self->{$_} = $ops{$_} foreach (keys %ops);
+    my ($self,%OVERRIDES) = @_;
+    foreach (keys %OVERRIDES) {
+	if ($_ eq 'ops' and exists $self->{ops}) {
+	    foreach my $k (keys %{$OVERRIDES{ops}}) {
+		$self->{ops}{$k} = $OVERRIDES{ops}{$k};
+	    }
+	} else {
+	    $self->{$_} = $OVERRIDES{$_};
+	}
+    }
     $self->default;
     return $self;
 }
 
-=item $xdg->B<default>()
+=item $xdg->B<default>() => $xdg
+
+Called internally to reset all default settings that were not overridden
+or obtained from the environment.  This too can be overridden by a
+derived module; however, it should call this method from the overridden
+method to ensure that proper defaults are assigned to this module.
 
 =cut
 
@@ -99,16 +222,27 @@ sub default {
     foreach (qw(XDG_CONFIG XDG_DATA XDG_ICON)) {
 	    $self->update_array($_);
     }
-    $self->{language} = setlocale(LC_MESSAGES) unless $self->{language};
-    $self->{charset} = langinfo(CODESET) unless $self->{charset};
-    unless ($self->{lang}) {
-	$self->{lang} = $self->{language};
-	$self->{lang} =~ s{\..*$}{};
+    $self->{ops}{language} = setlocale(LC_MESSAGES) unless $self->{ops}{language};
+    $self->{ops}{charset} = langinfo(CODESET) unless $self->{ops}{charset};
+    unless ($self->{ops}{lang}) {
+	$self->{ops}{lang} = $self->{ops}{language};
+	$self->{ops}{lang} =~ s{\..*$}{};
     }
+    $self->{ops}{vendor} = $self->{XDG_VENDOR_ID}
+	unless $self->{ops}{vendor};
     return $self;
 }
 
 =item $xdg->B<getenv>() => $xdg
+
+Reads pertinent environment variables and then resets defaults in
+accordance with the environment variables read.  Environment variables
+read by this module are: B<XDG_CONFIG_HOME>, B<XDG_CONFIG_DIRS>,
+B<XDG_DATA_HOME>, B<XDG_DATA_DIRS>, B<XDG_VENDOR_ID>, B<XDG_MENU_PREFIX>
+and B<XDG_CURRENT_DESKTOP>.
+
+This method can be overridden by a derived module to read supplemental
+environment variables.
 
 =cut
 
@@ -120,6 +254,10 @@ sub getenv {
 }
 
 =item $xdg->B<setenv>() => $xdg
+
+Writes pertinent environment variables to the environment.  This method
+can be overridden by a derived module to write supplemental environment
+variables.
 
 =cut
 
@@ -144,6 +282,10 @@ sub setenv {
 
 =item $xdg->B<mkdirs>()
 
+Creates necessary directories (normally in the user's C<$HOME>
+directory).  This method may be overridden by a derived module to create
+supplemental directories.
+
 =cut
 
 sub mkdirs {
@@ -156,6 +298,12 @@ sub mkdirs {
 }
 
 =item $xdg->B<update_array>($base)
+
+An internal method to update the internal B<XDG_*_ARRAY> fields which
+contains a complete array of B<_LEGACY>, B<_HOME>, B<_PREPEND>, B<_DIRS>,
+B<_APPEND> and B<_FALLBACK> directories for B<XDG_CONFIG_*>,
+B<XDG_DATA_*> and B<XDG_ICON_*>.  It can be used by derived modules that
+pass it the C<XDG_DATA> portion of the the string (for example).
 
 =cut
 
@@ -236,6 +384,9 @@ sub XDG_MENU_PREFIX	{ return shift->get_or_set(XDG_MENU_PREFIX    =>@_) }
 
 =item $xdg->B<set_vendor>($vendor) => $vendor
 
+Used to set the I<$vendor> string for setting the B<XDG_VENDOR_ID> and
+B<XDG_MENU_PREFIX> variables.
+
 =cut
 
 sub set_vendor {
@@ -260,7 +411,8 @@ configuration directories.
 
 Also establishes a hash reference in $xdg->{dirs}{autostart} that
 contains all of the directories searched (whether they existed or not)
-for use in conjuction with L<Linux::Inotify2(3pm)>.
+for use in conjuction with L<Linux::Inotify2(3pm)>.  See
+L<XDE::Inotify(3pm)>.
 
 =cut
 
@@ -372,7 +524,16 @@ sub get_autostart {
     return \%files;
 }
 
-=item $xdg->B<get_sessions>() => HASHREF
+=item $xdg->B<get_xsessions>() => HASHREF
+
+Search out all XDG xsession files and collect them into a hash
+reference.  The keys of the hash are the names of the F<.desktop> files
+collected.  Session files follow XDG precedence rules for XDG
+configuration directories.
+
+Also establishes a hash reference in $xdg->{dirs}{xsessions} that contains
+all of the directories search (whether they existed or not) for use in
+conjunction with L<Linux::Inotify2(3pm)>.  See L<XDE::Inotify(3pm)>.
 
 =cut
 
@@ -493,7 +654,7 @@ sub get_xsessions {
             if $self->{verbose};
         delete $sessions{$_};
     }
-    $self->{dirs}{session} = \%sessiondirs;
+    $self->{dirs}{xsessions} = \%sessiondirs;
     return \%sessions;
 }
 
@@ -502,4 +663,5 @@ sub get_xsessions {
 =cut
 
 1;
+
 # vim: sw=4 tw=72

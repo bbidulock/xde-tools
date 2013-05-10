@@ -12,12 +12,13 @@ XDE::Context - establish an XDE environment context
 =head1 SYNOPSIS
 
  use XDE::Context;
- my $xde = XDE::Context->new({
-	xdg_rcdir   => 0,
-	no_tmp_menu => 0, });
+
+ my $xde = XDE::Context->new();
+
  $xde->getenv();
  $xde->set_session('fluxbox') or die "Cannot use fluxbox";
  $xde->setenv();
+
  print "Config file is ",
 	$xde->XDE_CONFIG_DIR,'/',
 	$xde->XDE_CONFIG_FILE,"\n";
@@ -145,10 +146,10 @@ sub default {
 	$self->{XDE_CONFIG_FILE} = &CONFDIR->{$session};
 	$self->{XDE_MENU_DIR}    = &MENUDIR->{$session};
 	$self->{XDE_MENU_FILE}   = &MENUFILE->{$session};
-	if ($self->{xdg_rcdir}) {
+	if ($self->{ops}{xdg_rcdir}) {
 	    $self->{XDE_CONFIG_DIR} = "$self->{XDG_CONFIG_HOME}/$session";
 	}
-	unless ($self->{no_tmp_menu}) {
+	unless ($self->{ops}{no_tmp_menu}) {
 	    my $prefix = $self->{XDG_MENU_PREFIX};
 	    $prefix =~ s{-$}{};
 	    $prefix = "/$prefix" if $prefix;
@@ -178,12 +179,17 @@ sub default {
     foreach my $var (@{&MYPATH}) {
 	$self->{$var} =~ s(~)($self->{HOME})g if $self->{$var};
     }
+    $self->{ops}{banner} = $self->default_banner;
     return $self;
 }
 
 =item $xde->B<getenv>()
 
 Read environment variables into the context and recalculate defaults.
+Environment variables examined are: B<XDE_SESSION>, B<XDE_CONFIG_DIR>,
+B<XDE_CONFIG_FILE>, B<XDE_MENU_DIR>, B<XDE_MENU_FILE>,
+B<DESKTOP_SESSION>, B<FBXDG_DE>.  See L<XDG::Context(3pm)> for
+additional environment variables examined.
 
 =cut
 
@@ -196,7 +202,10 @@ sub getenv {
 =item $xde->B<setenv>()
 
 Write pertinent XDE environment variables from the context into the
-environment.
+environment.  Environment variables written are: B<XDE_SESSION>,
+B<XDE_CONFIG_DIR>, B<XDE_CONFIG_FILE>, B<XDE_MENU_DIR>,
+B<XDE_MENU_FILE>, B<DESKTOP_SESSION>, B<FBXDG_DE>.  See
+L<XDG::Context(3pm)> for additional environment variables written.
 
 =cut
 
@@ -214,6 +223,9 @@ sub setenv {
 
 Create configuration directories in the user's home directory (and,
 optionally, menu directories in /tmp) if they do not already exist.
+The directories created are: B<XDE_CONFIG_HOME>, B<XDE_CONFIG_DIR>,
+B<XDE_MENU_DIR>.  See L<XDG::Context(3pm)> for additional directories
+established.
 
 =cut
 
@@ -250,20 +262,19 @@ sub set_session {
     my $session = $self->{session} = shift;
     if (exists &SESSIONS->{"\L$session\E"}) {
 	$session = &SESSIONS->{"\L$session\E"};
-	my $desktop = "\U$session\E";
-	$self->setup(
-	    XDG_CURRENT_DESKTOP => $desktop,
-	    DESKTOP_SESSION	=> $desktop,
-	    FBXDG_DE		=> $desktop,
-	    XDE_SESSION		=> $session,
-	    XDE_CONFIG_DIR	=> undef,
-	    XDE_CONFIG_FILE	=> undef,
-	    XDE_MENU_DIR	=> undef,
-	    XDE_MENU_FILE	=> undef,
-	);
-	return $session;
     }
-    return undef;
+    my $desktop = "\U$session\E";
+    $self->setup(
+	XDG_CURRENT_DESKTOP => $desktop,
+	DESKTOP_SESSION	    => $desktop,
+	FBXDG_DE	    => $desktop,
+	XDE_SESSION	    => $session,
+	XDE_CONFIG_DIR	    => undef,
+	XDE_CONFIG_FILE	    => undef,
+	XDE_MENU_DIR	    => undef,
+	XDE_MENU_FILE	    => undef,
+    );
+    return $desktop;
 }
 
 sub setup_session {
@@ -321,9 +332,9 @@ reference.  The keys of the hash are the names of the theme subdirectory
 in which the theme.ini file resided.  Themes follow XDG precedence rules
 for XDG data directories.
 
-Also establishes a hash refernece in $xdg->{dirs}{theme} that contains
+Also establishes a hash reference in $xdg->{dirs}{themes} that contains
 all of the directories searched (whether they existed or not) for use in
-conjunction with L<Linux::Inotify2(3pm)>.
+conjunction with L<Linux::Inotify2(3pm)>.  See L<XDE::Inotify(3pm)>.
 
 =cut
 
@@ -358,10 +369,10 @@ sub get_themes {
 		}
 	    }
 	    close($fh);
-	    my $short = $1 if $self->{lang} =~ /^(..)/;
+	    my $short = $1 if $self->{ops}{lang} =~ /^(..)/;
 	    foreach (keys %xl) {
-		if (exists $xl{$_}{$self->{lang}}) {
-                    $e{$_} = $xl{$_}{$self->{lang}};
+		if (exists $xl{$_}{$self->{ops}{lang}}) {
+                    $e{$_} = $xl{$_}{$self->{ops}{lang}};
 		}
                 elsif ($short and exists $xl{$_}{$short}) {
                     $e{$_} = $xl{$_}{$short};
@@ -379,7 +390,9 @@ sub get_themes {
 	}
 	closedir($dir);
     }
-    $self->{dirs}{theme} = \%themedirs;
+    $self->{dirs}{themes} = \%themedirs;
+    $self->{objs}{themes} = \%themes;
+    return (\%themes,\%themedirs) if wantarray;
     return \%themes;
 }
 
@@ -416,7 +429,7 @@ sub get_styles {
 
 Normally invoked as B<get_styles>, gets the styles hash when the session
 is a C<FLUXBOX> session.  The directories searched are
-F<@XDG_DATA_DIRS/fluxbox/styles> with a fallback to
+F<@XDG_DATA_DIRS/fluxbox/styles> with an override from
 F<$HOME/.fluxbox/styles>.
 
 =cut
@@ -443,6 +456,16 @@ sub get_styles_FLUXBOX {
     $self->{dirs}{style} = \%styledirs;
     return \%styles;
 }
+
+=item $xde->B<get_styles_BLACKBOX>() => HASHREF
+
+Normally invoked as B<get_styles>, gets the styles hash when the session
+is a C<BLACKBOX> session.  The directories searched are
+F<@XDG_DATA_DIRS/backbox/styles> with an override from
+F<$HOME/.fluxbox/styles>.
+
+=cut
+
 sub get_styles_BLACKBOX {
     my $self = shift;
     my %styledirs = ();
@@ -462,6 +485,15 @@ sub get_styles_BLACKBOX {
     $self->{dirs}{style} = \%styledirs;
     return \%styles;
 }
+
+=item $xde->B<get_styles_OPENBOX>() => HASHREF
+
+Normally invoked as B<get_styles>, gets the styles hash when the session
+is a C<OPENBOX> session.  The directories searched are
+F<@XDG_DATA_DIRS/themes/*/openbox-3>.
+
+=cut
+
 sub get_styles_OPENBOX {
     my $self = shift;
     my %styledirs = ();
@@ -481,6 +513,16 @@ sub get_styles_OPENBOX {
     $self->{dirs}{style} = \%styledirs;
     return \%styles;
 }
+
+=item $xde->B<get_styles_ICEWM>() => HASHREF
+
+Normaly invoked as B<get_styles>, gets the styles hash wen the session
+is an C<ICEWM> session.  The directories searched are
+F<@XDG_DATA_DIRS/icewm/themes> with an override from
+F<$HOME/.icewm/themes>.
+
+=cut
+
 sub get_styles_ICEWM {
     my $self = shift;
     my %styledirs = ();
@@ -507,6 +549,17 @@ sub get_styles_ICEWM {
     $self->{dirs}{style} = \%styledirs;
     return \%styles;
 }
+
+=item $xde->B<get_styles_FVWM>() => HASHREF
+
+Normaly invoked as B<get_styles>, gets the styles hash when the session
+is an C<FVWM> session.  The directories searched are
+F<@XDG_DATA_DIRS/fvwm/themes> with an override from
+F<$HOME/.fvwm/themes>.  Note that FVWM does not really have any themes
+directories.
+
+=cut
+
 sub get_styles_FVWM {
     my $self = shift;
     my %styledirs = ();
@@ -527,6 +580,16 @@ sub get_styles_FVWM {
     $self->{dirs}{style} = \%styledirs;
     return \%styles;
 }
+
+=item $xde->B<get_styles_WMAKER>() => HASHREF
+
+Normally invoked as B<get_styles>, gets the styles hash when the session
+is a C<WMAKER> session.  The directories searched are
+F<@XDG_DATA_DIRS/WindowMaker/{Themes,Styles}> with an override from
+F<{$GNUSTEP_USER_ROOT,$HOME/GNUstep}/Library/WindowMaker/{Themes,Styles}>.
+
+=cut
+
 sub get_styles_WMAKER {
     my $self = shift;
     my %styledirs = ();
@@ -564,4 +627,5 @@ sub get_styles_WMAKER {
 =cut
 
 1;
+
 # vim: sw=4 tw=72

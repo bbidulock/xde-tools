@@ -1,13 +1,43 @@
 package XDE::Autostart;
+require XDE::Context;
+use base qw(XDE::Context);
 use POSIX qw(setsid getpid :sys_wait_h);
 use Glib qw(TRUE FALSE);
 use Gtk2;
-use X11::Protocol;
-require XDE::Context;
+use X11::XDE;
 use strict;
 use warnings;
 
+=head1 NAME
+
+XDE::Autostart - perform XDG autostart functions
+
+=head1 SYNOPSIS
+
+ my $xde = XDE::Autostart->new(%OVERRIDES);
+ $xde->setup();
+ $xde->run();
+
+=head1 DESCRIPTION
+
+The B<XDE::Autostart> module provides the ability to perform XDG
+autostart functions for the X Desktop Environment.
+
+=head1 METHODS
+
+=over
+
+=item $xde = XDE::Autostart->B<new>(I<%OVERRIDES>) => blessed HASHREF
+
+=cut
+
 sub new {
+    my $self = XDE::Context::new(@_);
+    $self->getenv() if $self;
+    return $self;
+}
+
+sub old_new {
     my ($type,$xde,$ops) = @_;
     die 'usage: XDE::Chooser->new($xde,$ops)'
 	unless $xde and $xde->isa('XDE::Context') and
@@ -39,6 +69,12 @@ sub new {
     return $self;
 }
 
+=item $xde->B<newsnid>() => SCALAR
+
+Obtains a new unique startup notification id.
+
+=cut
+
 sub newsnid {
     my $self = shift;
     my $now = gettimeofday();
@@ -46,6 +82,13 @@ sub newsnid {
     $self->{ts} = $now;
     return "$self->{hostname}+$self->{pid}+$self->{ts}";
 }
+
+=item $xde->B<send_sn>(I<$msg>)
+
+Internal method to
+send a packed startup notification message.
+
+=cut
 
 sub send_sn {
     my ($self,$msg) = @_;
@@ -67,6 +110,13 @@ sub send_sn {
     }
 }
 
+=item B<sn_quote>($txt) => $quoted_txt
+
+Internal method to
+quote parameter C<$txt> according to XDG startup notification rules.
+
+=cut
+
 sub sn_quote {
     my $txt = shift;
     $txt =~ s{\\}{\\\\}g if $txt =~ m{\\};
@@ -74,6 +124,17 @@ sub sn_quote {
     $txt =~ "\"$txt\""   if $txt =~ m{ };
     return $txt;
 }
+
+=item $xde->B<send_sn_new>(I<$id>,{I<%msg_hash>})
+
+Internal method to
+send a startup notification C<new> message.  C<%msg_hash> contains a
+hash of the valid startup notification fields.  The C<new> message
+requires the C<ID>, C<NAME> and C<SCREEN> fields, and may optionally
+contain the C<BIN>, C<ICON>, C<DESKTOP>, C<TIMESTAMP>, C<DESCRIPTION>,
+C<WMCLASS> and C<SILENT> fields.
+
+=cut
 
 sub send_sn_new {
     my ($self,$id,$msg) = @_;
@@ -87,6 +148,18 @@ sub send_sn_new {
     $txt .= "\0";
     $self->send_sn($txt);
 }
+
+=item $xde->B<send_sn_change>(I<$id>,{I<%msg_hash>})
+
+Internal method to
+send a startup notification C<change> message.  C<%msg_hash> contains a
+hash of the valid startup notification fields.  The C<change> message
+requires the C<ID> field, and may optionally contain the C<NAME>,
+C<SCREEN>, C<BIN>, C<ICON>, C<DESKTOP>, C<TIMESTAMP>, C<DESCRIPTION>,
+C<WMCLASS> and C<SILENT> fields.
+
+=cut
+
 sub send_sn_change {
     my ($self,$id,$msg) = @_;
     my $txt = 'change:';
@@ -97,6 +170,15 @@ sub send_sn_change {
     $txt .= "\0";
     $self->send_sn($txt);
 }
+
+=item $xde->B<send_sn_remove>(I<$id>)
+
+Internal method to
+send a startup notification C<remove> message.  C<$id> is the startup
+notification identifier.
+
+=cut
+
 sub send_sn_remove {
     my ($self,$id) = @_;
     my $txt = 'remove:';
@@ -227,3 +309,10 @@ sub do_startup {
 
 }
 
+=back
+
+=cut
+
+1;
+
+# vim: sw=4 tw=72

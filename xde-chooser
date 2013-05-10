@@ -5,27 +5,23 @@ eval 'exec perl -S $0 ${1+"@"}'
     if $running_under_some_shell;
 
 my %OVERRIDES = ();
-my %DIRS = ();
-$DIRS{here} = $0; $DIRS{here} =~ s{/[^/]*$}{};
-if ($DIRS{here} =~ s{^\.}{}) {
-    chomp(my $cwd = `pwd`);
-    $DIRS{here} = "/$DIRS{here}" if $DIRS{here};
-    $DIRS{here} = "$cwd$DIRS{here}";
-}
-if ($DIRS{here} eq '/usr/bin') {
-    $DIRS{conf} = '/etc/xdg/xde';
-    $DIRS{data} = '/usr/share/xde';
-    $DIRS{icon} = '/usr/share/icons';
-} else {
-    $DIRS{conf} = "$DIRS{here}/xdg/xde";
-    $DIRS{data} = "$DIRS{here}/share/xde";
-    $DIRS{icon} = "$DIRS{here}/share/icons";
-    unshift @INC, "$DIRS{here}/lib";
-    %OVERRIDES = (
-	    XDG_CONFIG_PREPEND => "$DIRS{here}/xdg/xde:$DIRS{here}/xdg",
-	    XDG_DATA_PREPEND   => "$DIRS{here}/share/xde:$DIRS{here}/share",
-	    XDG_ICON_APPEND    => "$DIRS{here}/share/pixmaps",
-    );
+{
+	use strict;
+	use warnings;
+	my $here = $0; $here =~ s{/[^/]*$}{};
+	if ($here =~ s{^\.}{}) {
+	    chomp(my $cwd = `pwd`);
+	    $here = "/$here" if $here;
+	    $here = "$cwd$here";
+	}
+	unless ($here eq '/usr/bin') {
+	    unshift @INC, "$here/lib";
+	    %OVERRIDES = (
+		    XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
+		    XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
+		    XDG_ICON_APPEND    => "$here/share/pixmaps",
+	    );
+	}
 }
 
 use Getopt::Long;
@@ -46,7 +42,7 @@ B<xde-chooser> [I<OPTIONS>] [I<SESSION>]
 
 =head1 DESCRIPTION
 
-B<xde-chooser> is a gtk-perl application that can be launched from
+B<xde-chooser> is a gtk2-perl application that can be launched from
 F<~/.xinitrc> to choose the X session that will be launched, or can be
 launched from a window manager or session logout script to switch the
 sessions.  The menu can also provide the choice for the user to perform
@@ -61,8 +57,6 @@ exit status is returned.
 
 =cut
 
-my $xde = XDE::Chooser->new(%OVERRIDES);
-
 =head1 OPTIONS
 
 B<xde-chooser> accepts the following options:
@@ -76,7 +70,7 @@ and exit.
 
 =item B<--verbose>, B<-v>
 
-Print debugging inforamtion to standard error during operation.
+Print debugging information to standard error during operation.
 
 =item B<--prompt>, B<-p>
 
@@ -154,16 +148,21 @@ my %ops = (
     help	=> '',
     verbose	=> '',
     prompt	=> '',
-    banner      => $xde->default_banner(),
+    banner      => '',
     noask	=> '',
     charset	=> langinfo(CODESET),
     language	=> setlocale(LC_MESSAGES),
     setdflt     => '',
-    default	=> read_string($xde->{XDE_DEFAULT_FILE}),
-    current	=> read_string($xde->{XDE_CURRENT_FILE}),
+    default	=> '',
+    current	=> '',
     choice	=> '',
-    vendor	=> $xde->{XDG_VENDOR_ID},
+    vendor	=> '',
 );
+
+my $xde = XDE::Chooser->new(%OVERRIDES,ops=>\%ops);
+
+$ops{default} = read_string($xde->{XDE_DEFAULT_FILE});
+$ops{current} = read_string($xde->{XDE_CURRENT_FILE});
 
 use constant {
     SIDES=>{top=>1,bottom=>2,left=>3,right=>4},

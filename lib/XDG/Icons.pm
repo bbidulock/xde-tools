@@ -1,7 +1,7 @@
+package XDG::Icons;
+use base qw(XDG::Context);
 require XDG::IconTheme;
 require XDG::IconData;
-
-package XDG::Icons;
 use strict;
 use warnings;
 
@@ -16,6 +16,10 @@ XDG::Icons - read XDG icon directories
  my $best = $icons->FindBestIcon(['start-here','about'],16);
 
 =head1 DESCRIPTION
+
+The following is from the XDG Icon specification:
+
+=over
 
 By default, apps should look in F<$HOME/.icons> (for backward
 compatibility), in F<$XDG_DATA_DIRS/icons> and in F</usr/share/pixmaps>
@@ -43,12 +47,11 @@ index.theme that describes the theme.  The first index.theme found while
 searching the base directories in order is used.  This file describes
 the general attributes of the theme.
 
-In the theme directory are also a set of subdirectories containing
-image files.  Each directory contains icons designed for a certain
-nominal icon size, as described by the index.theme file.  The
-subdirectories are allowed to be several levels deep, e.g. the
-subdirectory F<48x48/apps> in the theme F<hicolor> would end up at
-F<$basedir/hicolor/48x48/apps>.
+In the theme directory are also a set of subdirectories containing image
+files.  Each directory contains icons designed for a certain nominal
+icon size, as described by the index.theme file.  The subdirectories are
+allowed to be several levels deep, e.g. the subdirectory F<48x48/apps>
+in the theme F<hicolor> would end up at F<$basedir/hicolor/48x48/apps>.
 
 The image files must be one of the types: PNG, XPM, or SVG, and the
 extension must be F<.png>, F<.xpm>, or F<.svg> (lower case).  The
@@ -97,6 +100,9 @@ arrayref or a scalar comma-separated list of extensions.
 =cut
 
 sub new {
+}
+
+sub old_new {
     my $self = bless {}, shift;
     my $options = shift; $options = {} unless $options;
     $self->{dirs} = [];
@@ -343,3 +349,4 @@ L<XDG::IconTheme(3pm)>
 =cut
 
 1;
+# vim: sw=4 tw=72

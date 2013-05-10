@@ -5,28 +5,25 @@ eval 'exec perl -S $0 ${1+"@"}'
 	if $running_under_some_shell;
 
 my %OVERRIDES = ();
-my %DIRS = ();
-$DIRS{here} = $0; $DIRS{here} =~ s{/[^/]*$}{};
-if ($DIRS{here} =~ s{^\.}{}) {
-    chomp(my $cwd = `pwd`);
-    $DIRS{here} = "/$DIRS{here}" if $DIRS{here};
-    $DIRS{here} = "$cwd$DIRS{here}";
+{
+	use strict;
+	use warnings;
+	my $here = $0; $here =~ s{/[^/]*$}{};
+	if ($here =~ s{^\.}{}) {
+	    chomp(my $cwd = `pwd`);
+	    $here = "/$here" if $here;
+	    $here = "$cwd$here";
+	}
+	unless ($here eq '/usr/bin') {
+	    unshift @INC, "$here/lib";
+	    %OVERRIDES = (
+		    XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
+		    XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
+		    XDG_ICON_APPEND    => "$here/share/pixmaps",
+	    );
+	}
 }
-if ($DIRS{here} eq '/usr/bin') {
-    $DIRS{conf} = '/etc/xdg/xde';
-    $DIRS{data} = '/usr/share/xde';
-    $DIRS{icon} = '/usr/share/icons';
-} else {
-    $DIRS{conf} = "$DIRS{here}/xdg/xde";
-    $DIRS{data} = "$DIRS{here}/share/xde";
-    $DIRS{icon} = "$DIRS{here}/share/icons";
-    unshift @INC, "$DIRS{here}/lib";
-    %OVERRIDES = (
-	    XDG_CONFIG_PREPEND => "$DIRS{here}/xdg/xde:$DIRS{here}/xdg",
-	    XDG_DATA_PREPEND   => "$DIRS{here}/share/xde:$DIRS{here}/share",
-	    XDG_ICON_APPEND    => "$DIRS{here}/share/pixmaps",
-    );
-}
+
 
 use Getopt::Long;
 use Encode;
