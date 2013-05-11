@@ -121,7 +121,7 @@ sub ungrabbed_window {
 sub areyousure {
     my $self = shift;
     my ($w,$msg) = @_;
-    ungrabbed_window($w);
+    $self->ungrabbed_window($w);
     my $d = Gtk2::MessageDialog->new($w,'modal','question','yes-no',$msg);
     $d->set_title('Are you sure?');
     $d->set_modal(TRUE);

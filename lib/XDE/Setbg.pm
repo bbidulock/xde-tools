@@ -8,9 +8,28 @@ use warnings;
 
 =head1 NAME
 
+XDE::Setbg -- set backgrounds on multiple desktops or workspaces
+
 =head1 SYNOPSIS
 
+ use XDE::Setbg;
+
+ my $xde = XDE::Setbg->new();
+ $xde->init;
+ $xde->set_backgrounds(qw(
+    /usr/share/fluxbox/backgrounds/fighter_jets.jpg
+    /usr/share/fluxbox/backgrounds/emerald_coast.jpg
+    /usr/share/fluxbox/backgrounds/blackbird.jpg));
+ $xde->main;
+
 =head1 DESCRIPTION
+
+Provides a module that runs out of the Glib::Mainloop that will set the
+backgrounds on a lightweight desktop and monitor for desktop changes.
+When the desktop changes, the modules will set the image for that
+desktop against the root window.  It basically provides a wallpaper per
+desktop.  It also remembers the image for a desktop when L<hsetroot(1)>
+or some other tool is used to set the background.
 
 =head1 METHODS
 
@@ -20,11 +39,24 @@ use warnings;
 
 =item $xde = XDE::Setbg->B<new>(I<%OVERRIDES>)
 
+Creates an instance of an XDE::Setbg object.  The XDE::Setbg module
+uses the L<XDE::Context(3pm)> module as a base, so the C<%OVERRIDES> are
+simply passed to the L<XDE::Context(3pm)> module.
+
 =cut
 
 sub new {
     return XDE::Context::new(@_);
 }
+
+=item $xde->B<setup>(I<%OVERRIDES>) => $xde
+
+Provides the setup method that is called by L<XDE::Context(3pm)> when
+the instance is created.  This examines environment variables and
+initializes the L<XDE::Context(3pm)> in accordance with those
+environment variables and I<%OVERRIDES>.
+
+=cut
 
 sub setup {
     my $self = shift;
@@ -32,6 +64,15 @@ sub setup {
     $self->getenv();
     return $self;
 }
+
+=item $xde->B<init>()
+
+Initialization routine that is called like Gtk->init.  It establishes
+the X11::Protocol connection to the X Server and determines the initial
+values and settings of the root window on each screen of the display for
+later displaying the background images.
+
+=cut
 
 sub init {
     my $self = shift;
@@ -41,6 +82,7 @@ sub init {
     $X->init($self);
     $X->SetCloseDownMode('RetainTemporary');
     my $emask = $X->pack_event_mask('PropertyChange');
+    my $smask = $X->pack_event_mask('PropertyChange','StructureNotify');
     $X->ChangeWindowAttributes($X->root, event_mask=>$emask);
     for (my $n=0;$n<@{$X->{screens}};$n++) {
 	my $screen = $self->{screen}[$n];
@@ -57,10 +99,22 @@ sub init {
 	($val,$type) = $X->GetProperty($root,
 		$X->atom('_NET_CURRENT_DESKTOP'),
 		$X->atom('CARDINAL'), 0, 1);
-	$screen->{current} = $type ?  unpack('L',substr($val,0,4)) : 0;
-	printf STDERR "Current desktop is %d\n", $screen->{current}
+	$screen->{desktop} = $type ?  unpack('L',substr($val,0,4)) : 0;
+	printf STDERR "Current desktop is %d\n", $screen->{desktop}
 	    if $ops{verbose};
-	my $d = $screen->{current};
+	($val,$type) = $X->GetProperty($root,
+		$X->atom('_WIN_WORKSPACE_COUNT'),
+		$X->atom('CARDINAL'), 0, 1);
+	$screen->{workspaces} = $type ? unpack('L',substr($val,0,4)) : 1;
+	printf STDERR "Number of workspaces is %d\n", $screen->{workspaces}
+	    if $ops{verbose};
+	($val,$type) = $X->GetProperty($root,
+		$X->atom('_WIN_WORKSPACE'),
+		$X->atom('CARDINAL'), 0, 1);
+	$screen->{workspace} = $type ? unpack('L',substr($val,0,4)) : 0;
+	printf STDERR "Current workspace is %d\n", $screen->{workspace}
+	    if $ops{verbose};
+	my $d = $screen->{desktop};
 	($val,$type) = $X->GetProperty($root,
 		$X->atom('_XROOTPMAP_ID'),
 		$X->atom('PIXMAP'), 0, 1);
@@ -70,6 +124,25 @@ sub init {
 	for (my $i=0;$i<$screen->{desktops};$i++) {
 	    $screen->{pmids}[$i] = \$pmid;
 	}
+	# test for a button proxy
+	($val,$type) = $X->GetProperty($root,
+		$X->atom('_WIN_DESKTOP_BUTTON_PROXY'),
+		$X->atom('WINDOW'), 0, 1);
+	my $proxy = $screen->{proxy} = $type ? unpack('L',substr($val,0,4)) : 0;
+	unless ($proxy) {
+	    my $win = $screen->{win} = $X->new_rsrc;
+	    $proxy = $screen->{proxy} = $win;
+	    $X->CreateWindow($win,$root,'InputOutput',$X->root_depth,
+		    'CopyFromParent',(0,0),1,1,0);
+	    $X->ChangeProperty($win,
+		    $X->atom('_WIN_DESKTOP_BUTTON_PROXY'),
+		    $X->atom('WINDOW'), 32, 'Replace', pack('L',$win));
+	    $X->ChangeProperty($root,
+		    $X->atom('_WIN_DESKTOP_BUTTON_PROXY'),
+		    $X->atom('WINDOW'), 32, 'Replace', pack('L',$win));
+	}
+	$X->ChangeWindowAttributes($proxy, event_mask=>$smask);
+	$self->{roots}{$proxy} = $n;
     }
 }
 
@@ -87,26 +160,83 @@ is currently set as _XROOTPMAP_ID.
 
 sub term {
     my $self = shift;
+    my $X = $self->{X};
+    for (my $i=0;$i<$self->{screens};$i++) {
+	my $screen = $self->{screen}[$i];
+	for (my $d=0;$d<@{$screen->{pmids}};$d++) {
+	    if ($screen->{win} and $screen->{proxy} == $screen->{win}) {
+		$X->DeleteProperty($screen->{root},
+			$X->atom('_WIN_DESKTOP_BUTTON_PROXY'));
+	    }
+	    if ($d == $screen->{desktop}) {
+		${$screen->{pmids}[$d]} = 0;
+	    }
+	    elsif ($screen->{pmids}[$d] and
+		    my $pmid = ${$screen->{pmids}}[$d]) {
+		$X->FreePixmap($pmid);
+		$X->flush;
+		${$screen->{pmids}[$d]} = 0;
+	    }
+	}
+    }
+    $X->term();
 }
 
+=item $xde->B<main>()
+
+Run the main loop and wait for events, detecting when backgrounds are
+changed or when desktops or workspaces are changed.
+
+=cut
+
+sub main {
+    my $self = shift;
+    my $X = $self->{X};
+    $X->xde_process_errors;
+    $X->xde_process_events;
+    return $self->SUPER::main;
+}
+
+=item $xde->B<set_pixmap>(I<$root>,I<$pmid>)
+
+Sets the pixmap specified by pixmap id, C<$pmid>, on the root window
+specified by C<$root>.  This is normally only called internally.
+
+=cut
+
 sub set_pixmap {
-    my ($self,$screen,$pmid) = @_;
+    my ($self,$root,$pmid) = @_;
     my $X = $self->{X};
     my %ops = %{$self->{ops}};
     printf STDERR "setting root window 0x%08x to pixmap 0x%08x\n",
-	   $screen->{root}, $pmid if $ops{verbose};
+	   $root, $pmid if $ops{verbose};
     $X->GrabServer   if $self->{ops}{grab};
-    $X->ChangeWindowAttributes($screen->{root},
+    $X->ChangeWindowAttributes($root,
 	    background_pixmap=>$pmid);
+    $X->ClearArea($root,0,0,0,0,'True');
     my $data = pack('L',$pmid);
     foreach (qw(_XROOTPMAP_ID ESETROOT_PMAP_ID _XSETROOT_ID
 		_XROOTMAP_ID)) {
-	$X->ChangeProperty($screen->{root}, $X->atom($_),
+	$X->ChangeProperty($root, $X->atom($_),
 		$X->atom('PIXMAP'), 32, 'Replace', $data);
     }
     $X->flush;
     $X->UngrabServer if $self->{ops}{grab};
 }
+
+=item $xde->B<set_backgrounds>(I<@files>)
+
+Sets the backgrounds for the desktops according to the list of files
+specified with C<@files>.  Each filename may be prefixed by a display
+type and a colon, where the display type is one of C<center>, C<tile>,
+C<full> or C<fill>.  If a display type is not specified, it will be
+automatically determined from the size and aspect of the image and the
+size and aspect of the display.  Filenames may be specified as relative
+paths from the current working directory, absolute paths, or simply base
+file names (with or without the suffix).  Base file names will be
+searched in the background directories of the XDE::Context.
+
+=cut
 
 sub set_backgrounds {
     my ($self,@files) = @_;
@@ -115,7 +245,6 @@ sub set_backgrounds {
 
     my $n = $self->{defined} = scalar(@files);
     return unless $n;
-    $X->_queue_events;
     print STDERR "There are $n files\n" if $ops{verbose};
     my $screens = scalar @{$X->{screens}};
     print STDERR "There are $screens screens\n" if $ops{verbose};
@@ -152,16 +281,16 @@ sub set_backgrounds {
 	print STDERR "using file '$file'\n" if $ops{verbose};
 	my $pixbuf;
 	if ($mode eq 'fill') {
-	    eval {
+	     eval {
 		$pixbuf =
 		    Gtk2::Gdk::Pixbuf->new_from_file_at_scale($file,$w,$h,FALSE);
-	    };
+	     } or print STDERR "$!\n";
 	}
 	elsif ($mode eq 'full') {
-	    eval {
+	     eval {
 		$pixbuf =
-		    Gtk2::Gdk::Pixbuf->new_from_file_at_size($file,$w,$h,FALSE);
-	    };
+		    Gtk2::Gdk::Pixbuf->new_from_file_at_size($file,$w,$h);
+	     } or print STDERR "$!\n";
 	}
 	unless ($pixbuf) {
 	    print STDERR "could not get pixbuf for file '$file'\n";
@@ -209,8 +338,8 @@ sub set_backgrounds {
 	$display->flush;
 	$display->sync;
 	$screen->{pmids}[$i] = \$pmid;
-	if ($i == $screen->{current}) {
-	    $self->set_pixmap($screen,$pmid);
+	if ($i == $screen->{desktop}) {
+	    $self->set_pixmap($screen->{root},$pmid);
 	}
     }
     my $k = $screen->{desktops};
@@ -220,25 +349,49 @@ sub set_backgrounds {
 	    next unless $i >= $n;
 	    my $j = $i % $n;
 	    $screen->{pmids}[$i] = $screen->{pmids}[$j];
-	    if ($i == $screen->{current}) {
-		$self->set_pixmap($screen,${$screen->{pmids}[$i]});
+	    if ($i == $screen->{desktop}) {
+		$self->set_pixmap($screen->{root},${$screen->{pmids}[$i]});
 	    }
 	}
     }
-    $self->{ignore_xrootpmap_id_change} = 1;
-    $X->_process_queue;
-    delete $self->{ignore_xrootpmap_id_change};
 }
 
 =item $xde->B<changed_XROOTPMAP_ID>(I<$screen>,I<$event>)
+
+Internal function that handles when the B<_XROOTPMAP_ID> property
+changes on the root window of any screen.  This is how XDE::Setbg
+determines that another root setting tool has been used to set the
+background.
 
 =cut
 
 sub changed_XROOTPMAP_ID {
     my ($self,$screen,$e) = @_;
-    return if $self->{ignore_xrootpmap_id_change};
     my $X = $self->{X};
-    my $d = $screen->{current};
+    my $d = $screen->{desktop};
+    my ($val,$type) = $X->GetProperty($e->{window}, $e->{atom},
+	    $X->atom('PIXMAP'), 0, 1);
+    my $pmid = $type ? unpack('L',substr($val,0,4)) : 0;
+    my $oldid = ${$screen->{pmids}[$d]};
+    if ($pmid != $oldid) {
+	# hsetroot and others free the old pixmap
+	${$screen->{pmids}[$d]} = $pmid;
+    }
+}
+
+=item $xde->B<changed_XSETROOT_ID>(I<$screen>,I<$event>)
+
+Internal function that handles when the B<_XSETROOT_ID> property
+changes on the root window of any screen.  This is how XDE::Setbg
+determines that another root setting tool has been used to set the
+background.  This is for backward compatability with older root setters.
+
+=cut
+
+sub changed_XSETROOT_ID {
+    my ($self,$screen,$e) = @_;
+    my $X = $self->{X};
+    my $d = $screen->{desktop};
     my ($val,$type) = $X->GetProperty($e->{window}, $e->{atom},
 	    $X->atom('PIXMAP'), 0, 1);
     my $pmid = $type ? unpack('L',substr($val,0,4)) : 0;
@@ -251,41 +404,50 @@ sub changed_XROOTPMAP_ID {
 
 =item $xde->B<changed_NET_CURRENT_DESKTOP>(I<$screen>,I<$event>)
 
+Internal function that handles when the B<_NET_CURRENT_DESKTOP> property
+changes on the root window of any screen.  This is how XDE::Setbg
+determines that the desktop has changed.
+
 =cut
 
 sub changed_NET_CURRENT_DESKTOP {
     my ($self,$screen,$e) = @_;
     my $X = $self->{X};
-    my %ops = %{$self->{ops}};
+    my $v = $self->{ops}{verbose};
     my ($val,$type) = $X->GetProperty($e->{window}, $e->{atom},
 	    $X->atom('CARDINAL'), 0, 1);
-    my $current = $type ? unpack('L',substr($val,0,4)) : 0;
-    my $d = $screen->{current};
-    printf STDERR "new desktop %d (was %d)\n", $current, $d
-	if $ops{verbose};
-    if ($current != $d) {
+    my $desktop = $type ? unpack('L',substr($val,0,4)) : 0;
+    my $d = $screen->{desktop};
+    printf STDERR "new desktop %d (was %d)\n", $desktop, $d if $v;
+    if ($desktop != $d) {
 	my $oldid = ${$screen->{pmids}[$d]};
-	my $newid = ${$screen->{pmids}[$current]};
-	printf STDERR "new pixmap 0x%08x (was 0x%08x)\n", $newid, $oldid
-	    if $ops{verbose};
+	my $newid = ${$screen->{pmids}[$desktop]};
+	printf STDERR "new pixmap 0x%08x (was 0x%08x)\n", $newid, $oldid if $v;
 	if ($newid != $oldid) {
 	    # need to change pixmap on root
-	    $self->set_pixmap($screen,$newid);
+	    $self->set_pixmap($screen->{root},$newid);
 	}
+	$screen->{desktop} = $desktop;
     }
 }
 
 =item $xde->B<changed_NET_NUMBER_OF_DESKTOPS>(I<$screen>,I<$event>)
+
+Internal function that handles when the B<_NET_NUMBER_OF_DESKTOPS>
+property changes on the root window of any screen.  This is how
+XDE::Setbug determines the total number of desktops.
 
 =cut
 
 sub changed_NET_NUMBER_OF_DESKTOPS {
     my ($self,$screen,$e) = @_;
     my $X = $self->{X};
+    my $v = $self->{ops}{verbose};
     my ($val,$type) = $X->GetProperty($e->{window}, $e->{atom},
 	    $X->atom('CARDINAL'), 0, 1);
     my $desktops = $type ? unpack('L',substr($val,0,4)) : 1;
     my $n = $screen->{desktops};
+    printf STDERR "new number of desktops %d (was %d)\n", $desktops, $n if $v;
     if ($desktops != $n) {
 	if ($desktops > $n) {
 	    # modulate the backgrounds over the new desktops
@@ -299,7 +461,116 @@ sub changed_NET_NUMBER_OF_DESKTOPS {
     }
 }
 
-=item $xde->B<_handle_event>(I<$event>)
+=item $xde->B<changed_WIN_WORKSPACE>(I<$screen>,I<$event>)
+
+Internal function that handles when the B<_WIN_WORKSPACE> property
+changes on the root window of any screen.  This is how XDE::Setbg
+determines that the workspace has changed.
+This is for compatablity with older window managers (such as
+L<wmaker(1)>).
+
+=cut
+
+sub changed_WIN_WORKSPACE {
+    my ($self,$screen,$e) = @_;
+    my $X = $self->{X};
+    my $v = $self->{ops}{verbose};
+    my ($val,$type) = $X->GetProperty($e->{window}, $e->{atom},
+	    $X->atom('CARDINAL'), 0, 1);
+    my $workspace = $type ? unpack('L',substr($val,0,4)) : 0;
+    my $d = $screen->{workspace};
+    printf STDERR "new workspace %d (was %d)\n", $workspace, $d if $v;
+    if ($workspace != $d) {
+	if (0) {
+	my $oldid = ${$screen->{pmids}[$d]};
+	my $newid = ${$screen->{pmids}[$workspace]};
+	printf STDERR "new pixmap 0x%08x (was 0x%08x)\n", $newid, $oldid if $v;
+	if ($newid != $oldid) {
+	    # need to change pixmap on root
+	    $self->set_pixmap($screen->{root},$newid);
+	}
+	}
+	$screen->{workspace} = $d;
+    }
+}
+
+=item $xde->B<changed_WIN_WORKSPACE_COUNT>(I<$screen>,I<$event>)
+
+Internal function that handles when the B<_WIN_WORKSPACE_COUNT> property
+changes on the root window of any screen.  This is how XDE::Setbug
+determines the total number of workspaces.
+This is for compatablity with older window managers (such as
+L<wmaker(1)>).
+
+=cut
+
+sub changed_WIN_WORKSPACE_COUNT {
+    my ($self,$screen,$e) = @_;
+    my $X = $self->{X};
+    my $v = $self->{ops}{verbose};
+    my ($val,$type) = $X->GetProperty($e->{window}, $e->{atom},
+	    $X->atom('CARDINAL'), 0, 1);
+    my $workspaces = $type ? unpack('L',substr($val,0,4)) : 1;
+    my $n = $screen->{workspaces};
+    printf STDERR "new number of workspaces %d (was %d)\n",
+	   $workspaces, $n if $v;
+    if ($workspaces != $n) {
+	if ($workspaces > $n) {
+	    if (0) {
+	    # modulate the backgrounds over the new workspaces
+	    for (my $i=0;$i<$workspaces;$i++) {
+		next unless $i >= $n;
+		my $d = $i % $n;
+		$screen->{pmids}[$i] = $screen->{pmids}[$d];
+	    }
+	    }
+	}
+	$screen->{workspaces} = $workspaces;
+    }
+}
+
+sub _handle_event_PropertyNotify {
+    my ($self,$e) = @_;
+    my $X = $self->{X};
+    my $v = $self->{ops}{verbose};
+    print STDERR "getting atom name...\n" if $v;
+    my $name = $X->GetAtomName($e->{atom});
+    print STDERR "got name $name\n" if $v;
+    print STDERR "atom: ",$X->atom_name($e->{atom}),"\n" if $v;
+    return unless exists $self->{roots}{$e->{window}};
+    my $n = $self->{roots}{$e->{window}};
+    my $screen = $self->{screen}[$n] or return;
+    return unless $e->{window} == $X->{screens}[$n]{root};
+    my $action = "changed".$X->atom_name($e->{atom});
+    print STDERR "Action is: '$action'\n" if $v;
+    return $self->$action($screen,$e) if $self->can($action);
+}
+
+sub _handle_event_ButtonPress {
+    my ($self,$e) = @_;
+    my $X = $self->{X};
+    return unless exists $self->{roots}{$e->{window}};
+    my $n = $self->{roots}{$e->{window}};
+    my $screen = $self->{screen}[$n] or return;
+    return unless $e->{window} == $screen->{proxy};
+}
+
+sub _handle_event_ButtonRelease {
+    my ($self,$e) = @_;
+    my $X = $self->{X};
+    return unless exists $self->{roots}{$e->{window}};
+    my $n = $self->{roots}{$e->{window}};
+    my $screen = $self->{screen}[$n] or return;
+    return unless $e->{window} == $screen->{proxy};
+    if ($e->{detail} == 4) {
+	# increase desktop number
+    }
+    elsif ($e->{detail} == 5) {
+	# decrease desktop number
+    }
+}
+
+=item $xde->B<event_handler>(I<$event>)
 
 Internal event handler for the XDE::Setbg module.  This is an
 L<X11::Protocol(3pm)> handler that is invoked either by direct requests
@@ -309,31 +580,42 @@ C<$event> is the unpacked X11::Protocol event.
 
 =cut
 
-sub _handle_event {
+sub event_handler {
     my ($self,%e) = @_;
     my $X = $self->{X};
-    my %ops = %{$self->{ops}};
-    print STDERR "Received event: ", join(',',%e), "\n"
-	if $ops{verbose};
-    return unless $e{name} eq 'PropertyNotify';
-    print STDERR "atom: ",$X->atom_name($e{atom}),"\n" if $ops{verbose};
-    return unless exists $self->{roots}{$e{window}};
-    my $n = $self->{roots}{$e{window}};
-    my $screen = $self->{screen}[$n] or return;
-    return unless $e{window} == $X->{screens}[$n]{root};
-    my $action = "changed".$X->atom_name($e{atom});
-    print STDERR "Action is: '$action'\n" if $ops{verbose};
-    return $self->$action($screen,\%e) if $self->can($action);
-    return;
+    my $v = $self->{ops}{verbose};
+    print STDERR "-----------------\nReceived event: ", join(',',%e), "\n" if $v;
+    my $handler = "_handle_event_$e{name}";
+    print STDERR "Handler is: '$handler'\n" if $v;
+    if ($self->can($handler)) {
+	$self->$handler(\%e);
+	return;
+    }
+    print STDERR "Discarding event...\n" if $v;
 }
 
-sub _handle_error {
-    my ($self,$X,$e) = @_;
+=item $xde->B<error_handler>(I<$X>,I<$error>)
+
+Internal error handler for the XDE::Setbg module.  This is an
+L<X11::Protocol(3pm)> handler that is invoked either by direct requests
+made of the X11::Protocol object ($self->{X}) or by Glib::Mainloop when
+it triggers an input watcher on the X11::Protocol::Connection.
+C<$error> is the packed error message.
+
+=cut
+
+sub error_handler {
+    my ($self,$e) = @_;
+    my $X = $self->{X};
     print STDERR "Received error: \n",
 	  $X->format_error_msg($e), "\n";
 }
 
 =back
+
+=head1 SEE ALSO
+
+L<XDE::Context(3pm)>, L<XDE::X11(3pm)>
 
 =cut
 
