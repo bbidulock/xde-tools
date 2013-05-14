@@ -1,0 +1,211 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+    if $running_under_some_shell;
+
+my %OVERRIDES = ();
+BEGIN {
+	use strict;
+	use warnings;
+	my $here = $0; $here =~ s{/[^/]*$}{};
+	if ($here =~ s{^\.}{}) {
+	    chomp(my $cwd = `pwd`);
+	    $here = "/$here" if $here;
+	    $here = "$cwd$here";
+	}
+	unless ($here eq '/usr/bin') {
+	    unshift @INC, "$here/lib";
+	    %OVERRIDES = (
+		    XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
+		    XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
+		    XDG_ICON_APPEND    => "$here/share/pixmaps",
+	    );
+	}
+}
+
+use Getopt::Long;
+use Encode;
+use I18N::Langinfo qw(langinfo CODESET);
+use POSIX qw(locale_h);
+require XDE::Settings;
+use strict;
+use warnings;
+
+__END__
+
+=head1 NAME
+
+xde-settings -- an XSETTINGS daemon for the X Desktop Environment
+
+=head1 SYNOPSIS
+
+B<xde-settings> [I<OPTIONS>]
+
+=head1 DESCRIPTION
+
+B<xde-settings> is a gtk2-perl application that implements an XSETTINGS
+daemon for the X Desktop Environment.
+
+On startup, the script determines if it is a unique instance of
+B<xde-setting>.  If it is not, it passes its arguments to the running
+instance and exits.
+
+When first starting up, the script reads the last current or default
+XSETTINGS from its configuration file.  The configuration file can also
+be specified as an option.  After reading the file, the daemon takes
+ownership of the C<_XSETTINGS_S[n]> selection for each screen on the
+display and manages settings according to the XSETTINGS protocol.
+
+When the program cannot obtain ownership of the C<_XSETTINGS_S[n]>
+selection, it monitors for ownership changes and assumes ownership once
+it is relinquished.  An option can be specified that will cause the
+program to kill the current owner of the selection if it cannot obtain
+it.
+
+Once it has ownership of the selection, the daemon manages settings and
+converts selections requested by other XDE applications in accordance
+with the ICCM and the XSETTINGS protocol, until the selection is either
+taken away, or the program terminates.  An option can be set to made
+B<xde-settings> persist after losing ownership.
+
+Upon choosing to exit or after receiving a C<$SIG{TERM}>, before exiting
+gracefully, the daemon writes the current settings back to the
+configuration file.
+
+=head1 OPTIONS
+
+=over
+
+=item B<--help>, B<-h>
+
+Print usage information to standard error containing current defaults
+and exits.
+
+=item B<--verbose>, B<-v>
+
+Print debugging information to standard error during operation.
+
+=item B<--vendor>, B<-V>
+
+Override the B<XDG_VENDOR_ID> and B<XDG_MENU_PREFIX> environment
+variables and internal default settings.
+
+=item B<--desktop>, B<-e> I<DESKTOP>
+
+Override the B<XDG_CURRENT_DESKTOP> environment variables and internal
+default settings.
+
+=item B<--charset>, B<-c> I<CHARSET>
+
+Specify the character set to use when generating output.  Defaults to
+the character set in use by the current locale.
+
+=item B<--language>, B<-l> I<LANGUAGE>
+
+Specify the language to use when generating output.  Defaults to the
+language in use by the current locale.
+
+=item B<--file>, B<-f> I<FILENAME>
+
+Specify the configuration file to use.
+
+=item B<--notake-selection>, B<--take-selection>
+
+The default is to take ownership of the C<_XSETTNIGS_S[n]> selections
+away from an existing owner.  This option causes B<xde-settings> to
+monitor for relinquishment of the selections rather than taking
+ownership.
+
+=item B<--nopersist-on-loss>, B<--persist-on-loss>
+
+The default is to persist after losing the last C<_XSETTINGS_S[n]>
+selection and monitor for loss of ownership.  The default can be
+overridden with this option.  When specified, B<xde-settings> will exit
+gracefully once the selection is lost.
+
+=item B<--kill-owner>, B<--nokill-owner>
+
+The default when ownership of the C<_XSETTINGS_S[n]> selections cannot
+be acheived is to allow the existing owner to retain the selection and
+monitor for changes.  This option causes B<xde-settings> to perform a
+I<XKillClient> on the current owner.  This is rather drastic, and should
+not normally be done.  B<--kill-owner> implies B<--take-selection>.
+
+=back
+
+=head1 CONFIGURATION
+
+The configuration file is an F<.ini> fomratted file with two sections:
+
+=over
+
+=item C<[Options]>
+
+The options section contains options that could be passed via the
+command line.  The key field is the case-insensitive name of the long
+option (with all dashes removed).  The value is the value that would
+have been passed with the command line option.  For options that are of
+the form B<--option>/B<--nooption>, the key field is the
+case-insensitive positive form of the option name (with all dashes
+removed); the value field is a case-insensitive boolean: one of C<true>,
+C<false>, C<yes>, C<no>, C<0>, C<1>.  Following is an example of the
+C<[Options]> section:
+
+ [Options]
+ Charset=UTF-8
+ Language=en_CA
+ File=~/.xde-settings
+ Vendor=unexicon
+ Desktop=FLUXBOX
+ Verbose=true
+ TakeSelection=true
+ PersistOnLoss=true
+ KillOwner=true
+
+=item C<[Xsettings]>
+
+The XSETTINGS section contains key-value pairs that are used to populate
+the _XSETTINGS_XSETTING property.  The key fields are the exact text of
+the XSETTING property with an optional type character prefixed.  The
+type character specifies the type of the value field and is one of C<i>
+(for integer), C<s> (for string), or C<c> (for color).  If not
+specified, the property will be set as an integer if it is an integer,
+octal, hexadecimal or binary number expression.  When it is not an
+integer, it will be parsed to see if it is a color specificiation (i.e.
+#RRGGBB, #RRGGBBAA, #RRRRGGGGBBBB, #RRRRGGGGBBBBAAAA, rgb: RR/GG/BB, or
+rgb: colorname), in which case a color is used.  When not a color, a
+string wil be used.  About the only time that the prefix character is
+required is when a color is specified as a simple color name, or a
+string is a digit string.  Following is an example of the C<[Xsettings]>
+section:
+
+ [Xsettings]
+ cXde/BackgroundColor=#516A79
+ sXde/ThemeName=Penguins
+ sGtk/ColorScheme=
+ sGtk/CursorThemeName=
+ iGtk/CursorThemeSize=18
+ iGtk/EnableEventSounds=1
+ iGtk/EnableEventInputFeedbackSounds=1
+ sGtk/FallbackIconTheme=
+ sGtk/FontName=Liberation Sans 9
+ Gtk/IconSizes=
+ sGtk/IconThemeName=Mist
+ sGtk/KeyThemeName=
+ sGtk/MenuBarAccel=F10
+ sGtk/SoundThemeName=freedesktop
+ sGtk/ThemeName=Mist
+ iGtk/ToolbarIconSize=2
+ iGtk/ToolbarStyle=2
+ iNet/EnableEventSounds=1
+ iNet/EnableInputFeedbackSounds=1
+ sNet/IconThemeName=Mist
+ sNet/ThemeName=Mist
+
+=back
+
+=cut
+
+
+# vim: sw=4 tw=72
