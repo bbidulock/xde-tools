@@ -5,7 +5,7 @@ eval 'exec perl -S $0 ${1+"@"}'
     if $running_under_some_shell;
 
 my %OVERRIDES = ();
-{
+BEGIN {
 	use strict;
 	use warnings;
 	my $here = $0; $here =~ s{/[^/]*$}{};
@@ -17,6 +17,7 @@ my %OVERRIDES = ();
 	unless ($here eq '/usr/bin') {
 	    unshift @INC, "$here/lib";
 	    %OVERRIDES = (
+                    HERE               => "$here",
 		    XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
 		    XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
 		    XDG_ICON_APPEND    => "$here/share/pixmaps",
@@ -28,7 +29,7 @@ use Getopt::Long;
 use Encode;
 use I18N::Langinfo qw(langinfo CODESET);
 use POSIX qw(locale_h);
-require XDE::Chooser;
+use XDE::Chooser;
 use strict;
 use warnings;
 

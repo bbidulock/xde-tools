@@ -17,6 +17,7 @@ WriteMakefile(
 		'xde-session-run',
 		'xde-setbg',
 		'xde-setup',
+		'xde-settings',
 		'xde-startup',
 		'xde-theme',
 		'xde-traymenu',

@@ -248,7 +248,9 @@ environment variables.
 
 sub getenv {
     my $self = shift;
-    foreach my $var (@{&MYENV}) { $self->{$var} = $ENV{$var} }
+    foreach my $var (@{&MYENV}) {
+        $self->{$var} = $ENV{$var}
+    }
     $self->default;
     return $self;
 }

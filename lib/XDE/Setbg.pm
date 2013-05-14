@@ -76,9 +76,9 @@ later displaying the background images.
 
 sub init {
     my $self = shift;
-    $self->SUPER::init();
+    $self->SUPER::init(@_);
     my $X = $self->{X} = XDE::X11->new();
-    my %ops = %{$self->{ops}};
+    my $verbose = $self->{ops}{verbose};
     $X->init($self);
     $X->SetCloseDownMode('RetainTemporary');
     my $emask = $X->pack_event_mask('PropertyChange');
@@ -95,32 +95,32 @@ sub init {
 		$X->atom('CARDINAL'), 0, 1);
 	$screen->{desktops} = $type ?  unpack('L',substr($val,0,4)) : 1;
 	printf STDERR "Number of desktops is %d\n", $screen->{desktops}
-	    if $ops{verbose};
+	    if $verbose;
 	($val,$type) = $X->GetProperty($root,
 		$X->atom('_NET_CURRENT_DESKTOP'),
 		$X->atom('CARDINAL'), 0, 1);
 	$screen->{desktop} = $type ?  unpack('L',substr($val,0,4)) : 0;
 	printf STDERR "Current desktop is %d\n", $screen->{desktop}
-	    if $ops{verbose};
+	    if $verbose;
 	($val,$type) = $X->GetProperty($root,
 		$X->atom('_WIN_WORKSPACE_COUNT'),
 		$X->atom('CARDINAL'), 0, 1);
 	$screen->{workspaces} = $type ? unpack('L',substr($val,0,4)) : 1;
 	printf STDERR "Number of workspaces is %d\n", $screen->{workspaces}
-	    if $ops{verbose};
+	    if $verbose;
 	($val,$type) = $X->GetProperty($root,
 		$X->atom('_WIN_WORKSPACE'),
 		$X->atom('CARDINAL'), 0, 1);
 	$screen->{workspace} = $type ? unpack('L',substr($val,0,4)) : 0;
 	printf STDERR "Current workspace is %d\n", $screen->{workspace}
-	    if $ops{verbose};
+	    if $verbose;
 	my $d = $screen->{desktop};
 	($val,$type) = $X->GetProperty($root,
 		$X->atom('_XROOTPMAP_ID'),
 		$X->atom('PIXMAP'), 0, 1);
 	my $pmid = $type ?  unpack('L',substr($val,0,4)) : 0;
 	printf STDERR "Existing pixmap id is 0x%08x\n", $pmid
-	    if $ops{verbose};
+	    if $verbose;
 	for (my $i=0;$i<$screen->{desktops};$i++) {
 	    $screen->{pmids}[$i] = \$pmid;
 	}
@@ -207,10 +207,11 @@ specified by C<$root>.  This is normally only called internally.
 sub set_pixmap {
     my ($self,$root,$pmid) = @_;
     my $X = $self->{X};
-    my %ops = %{$self->{ops}};
+    my $verbose = $self->{ops}{verbose};
+    my $grab = $self->{ops}{grab};
     printf STDERR "setting root window 0x%08x to pixmap 0x%08x\n",
-	   $root, $pmid if $ops{verbose};
-    $X->GrabServer   if $self->{ops}{grab};
+	   $root, $pmid if $verbose;
+    $X->GrabServer   if $grab;
     $X->ChangeWindowAttributes($root,
 	    background_pixmap=>$pmid);
     $X->ClearArea($root,0,0,0,0,'True');
@@ -221,7 +222,7 @@ sub set_pixmap {
 		$X->atom('PIXMAP'), 32, 'Replace', $data);
     }
     $X->flush;
-    $X->UngrabServer if $self->{ops}{grab};
+    $X->UngrabServer if $grab;
 }
 
 =item $xde->B<set_backgrounds>(I<@files>)
@@ -241,13 +242,13 @@ searched in the background directories of the XDE::Context.
 sub set_backgrounds {
     my ($self,@files) = @_;
     my $X = $self->{X};
-    my %ops = %{$self->{ops}};
+    my $verbose = $self->{ops}{verbose};
 
     my $n = $self->{defined} = scalar(@files);
     return unless $n;
-    print STDERR "There are $n files\n" if $ops{verbose};
+    print STDERR "There are $n files\n" if $verbose;
     my $screens = scalar @{$X->{screens}};
-    print STDERR "There are $screens screens\n" if $ops{verbose};
+    print STDERR "There are $screens screens\n" if $verbose;
     $X->choose_screen(0);
     my $screen = $self->{screen}[0];
     my ($w,$h,$d) = (
@@ -278,7 +279,7 @@ sub set_backgrounds {
 	    print STDERR "could not find file '$file'\n";
 	    next;
 	}
-	print STDERR "using file '$file'\n" if $ops{verbose};
+	print STDERR "using file '$file'\n" if $verbose;
 	my $pixbuf;
 	if ($mode eq 'fill') {
 	     eval {
@@ -324,7 +325,7 @@ sub set_backgrounds {
 	 #$X->CreatePixmap($pmid,$X->root,$d,$w,$h);
 	 #$X->flush;
 	printf STDERR "Getting foreign pixmap id 0x%08x\n", $pmid
-	    if $ops{verbose};
+	    if $verbose;
 	my $display = Gtk2::Gdk::Display->get_default;
 	 #my $gtkscrn = $display->get_screen(0);
 	 #my $gtkroot = $gtkscrn->get_root_window;
@@ -333,7 +334,7 @@ sub set_backgrounds {
 	 #my $pixmap = Gtk2::Gdk::Pixmap->foreign_new_for_screen($gtkscrn, $pmid, $w, $h, $d);
 	 #my $pixmap = Gtk2::Gdk::Pixmap->new($gtkroot,$w,$h,$d);
 	printf STDERR "Drawing to pixmap id 0x%08x\n", $pmid
-	    if $ops{verbose};
+	    if $verbose;
 	$pixmap->draw_pixbuf(undef,$pixbuf,$x_src,$y_src,$x_dst,$y_dst,$w_box,$h_box,'none',0,0);
 	$display->flush;
 	$display->sync;
@@ -413,16 +414,16 @@ determines that the desktop has changed.
 sub changed_NET_CURRENT_DESKTOP {
     my ($self,$screen,$e) = @_;
     my $X = $self->{X};
-    my $v = $self->{ops}{verbose};
+    my $verbose = $self->{ops}{verbose};
     my ($val,$type) = $X->GetProperty($e->{window}, $e->{atom},
 	    $X->atom('CARDINAL'), 0, 1);
     my $desktop = $type ? unpack('L',substr($val,0,4)) : 0;
     my $d = $screen->{desktop};
-    printf STDERR "new desktop %d (was %d)\n", $desktop, $d if $v;
+    printf STDERR "new desktop %d (was %d)\n", $desktop, $d if $verbose;
     if ($desktop != $d) {
 	my $oldid = ${$screen->{pmids}[$d]};
 	my $newid = ${$screen->{pmids}[$desktop]};
-	printf STDERR "new pixmap 0x%08x (was 0x%08x)\n", $newid, $oldid if $v;
+	printf STDERR "new pixmap 0x%08x (was 0x%08x)\n", $newid, $oldid if $verbose;
 	if ($newid != $oldid) {
 	    # need to change pixmap on root
 	    $self->set_pixmap($screen->{root},$newid);
@@ -442,12 +443,12 @@ XDE::Setbug determines the total number of desktops.
 sub changed_NET_NUMBER_OF_DESKTOPS {
     my ($self,$screen,$e) = @_;
     my $X = $self->{X};
-    my $v = $self->{ops}{verbose};
+    my $verbose = $self->{ops}{verbose};
     my ($val,$type) = $X->GetProperty($e->{window}, $e->{atom},
 	    $X->atom('CARDINAL'), 0, 1);
     my $desktops = $type ? unpack('L',substr($val,0,4)) : 1;
     my $n = $screen->{desktops};
-    printf STDERR "new number of desktops %d (was %d)\n", $desktops, $n if $v;
+    printf STDERR "new number of desktops %d (was %d)\n", $desktops, $n if $verbose;
     if ($desktops != $n) {
 	if ($desktops > $n) {
 	    # modulate the backgrounds over the new desktops
@@ -474,17 +475,19 @@ L<wmaker(1)>).
 sub changed_WIN_WORKSPACE {
     my ($self,$screen,$e) = @_;
     my $X = $self->{X};
-    my $v = $self->{ops}{verbose};
+    my $verbose = $self->{ops}{verbose};
     my ($val,$type) = $X->GetProperty($e->{window}, $e->{atom},
 	    $X->atom('CARDINAL'), 0, 1);
     my $workspace = $type ? unpack('L',substr($val,0,4)) : 0;
     my $d = $screen->{workspace};
-    printf STDERR "new workspace %d (was %d)\n", $workspace, $d if $v;
+    printf STDERR "new workspace %d (was %d)\n", $workspace, $d
+        if $verbose;
     if ($workspace != $d) {
 	if (0) {
 	my $oldid = ${$screen->{pmids}[$d]};
 	my $newid = ${$screen->{pmids}[$workspace]};
-	printf STDERR "new pixmap 0x%08x (was 0x%08x)\n", $newid, $oldid if $v;
+	printf STDERR "new pixmap 0x%08x (was 0x%08x)\n", $newid, $oldid
+            if $verbose;
 	if ($newid != $oldid) {
 	    # need to change pixmap on root
 	    $self->set_pixmap($screen->{root},$newid);
@@ -507,13 +510,13 @@ L<wmaker(1)>).
 sub changed_WIN_WORKSPACE_COUNT {
     my ($self,$screen,$e) = @_;
     my $X = $self->{X};
-    my $v = $self->{ops}{verbose};
+    my $verbose = $self->{ops}{verbose};
     my ($val,$type) = $X->GetProperty($e->{window}, $e->{atom},
 	    $X->atom('CARDINAL'), 0, 1);
     my $workspaces = $type ? unpack('L',substr($val,0,4)) : 1;
     my $n = $screen->{workspaces};
     printf STDERR "new number of workspaces %d (was %d)\n",
-	   $workspaces, $n if $v;
+	   $workspaces, $n if $verbose;
     if ($workspaces != $n) {
 	if ($workspaces > $n) {
 	    if (0) {
@@ -532,17 +535,17 @@ sub changed_WIN_WORKSPACE_COUNT {
 sub _handle_event_PropertyNotify {
     my ($self,$e) = @_;
     my $X = $self->{X};
-    my $v = $self->{ops}{verbose};
-    print STDERR "getting atom name...\n" if $v;
+    my $verbose = $self->{ops}{verbose};
+    print STDERR "getting atom name...\n" if $verbose;
     my $name = $X->GetAtomName($e->{atom});
-    print STDERR "got name $name\n" if $v;
-    print STDERR "atom: ",$X->atom_name($e->{atom}),"\n" if $v;
+    print STDERR "got name $name\n" if $verbose;
+    print STDERR "atom: ",$X->atom_name($e->{atom}),"\n" if $verbose;
     return unless exists $self->{roots}{$e->{window}};
     my $n = $self->{roots}{$e->{window}};
     my $screen = $self->{screen}[$n] or return;
     return unless $e->{window} == $X->{screens}[$n]{root};
     my $action = "changed".$X->atom_name($e->{atom});
-    print STDERR "Action is: '$action'\n" if $v;
+    print STDERR "Action is: '$action'\n" if $verbose;
     return $self->$action($screen,$e) if $self->can($action);
 }
 
@@ -583,15 +586,15 @@ C<$event> is the unpacked X11::Protocol event.
 sub event_handler {
     my ($self,%e) = @_;
     my $X = $self->{X};
-    my $v = $self->{ops}{verbose};
-    print STDERR "-----------------\nReceived event: ", join(',',%e), "\n" if $v;
+    my $verbose = $self->{ops}{verbose};
+    print STDERR "-----------------\nReceived event: ", join(',',%e), "\n" if $verbose;
     my $handler = "_handle_event_$e{name}";
-    print STDERR "Handler is: '$handler'\n" if $v;
+    print STDERR "Handler is: '$handler'\n" if $verbose;
     if ($self->can($handler)) {
 	$self->$handler(\%e);
 	return;
     }
-    print STDERR "Discarding event...\n" if $v;
+    print STDERR "Discarding event...\n" if $verbose;
 }
 
 =item $xde->B<error_handler>(I<$X>,I<$error>)
@@ -612,6 +615,10 @@ sub error_handler {
 }
 
 =back
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
 
 =head1 SEE ALSO
 

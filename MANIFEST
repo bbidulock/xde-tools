@@ -1,4 +1,7 @@
 gtkrc-2.0
+lib/X11/Protocol/Ext/RANDR.pm
+lib/X11/Protocol/Ext/SYNC.pm
+lib/X11/Protocol/Ext/XKEYBOARD.pm
 lib/X11/XDG/StartupNotification.pm
 lib/X11/XDG/Xsettings.pm
 lib/X11/Xsm.pm
@@ -10,6 +13,7 @@ lib/XDE/Context.pm
 lib/XDE/Glib.pm
 lib/XDE/Gtk2.pm
 lib/XDE/Icons.pm
+lib/XDE/Input.pm
 lib/XDE/Logout.pm
 lib/XDE/Setbg.pm
 lib/XDE/Setroot.pm
@@ -18,6 +22,7 @@ lib/XDE/X11.pm
 lib/XDE/X11/Setbg.pm
 lib/XDE/X11/StartupNotification.pm
 lib/XDE/X11/Xsettings.pm
+lib/XDE/Xsettings.pm
 lib/XDG/Context.pm
 lib/XDG/IconData.pm
 lib/XDG/Icons.pm
@@ -332,6 +337,7 @@ share/xde/xsessions/xfce.desktop
 xde-chooser
 xde-icon
 xde-input
+xde-input-edit
 xde-logout
 xde-menugen
 xde-pager
@@ -343,6 +349,8 @@ xde-session-logout
 xde-session-menu
 xde-session-run
 xde-setbg
+xde-setbg2
+xde-settings
 xde-setup
 xde-startup
 xde-theme

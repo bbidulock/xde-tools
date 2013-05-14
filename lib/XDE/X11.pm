@@ -233,6 +233,8 @@ Internal error handler used by XDE::X11 on the X11::protocol connection.
 
 sub xde_error_handler {
     my ($self,$e) = @_;
+    print STDERR "Received error: \n",
+        $self->format_error_msg($e);
     push @{$self->{xde}{events}}, $e
 	unless $self->{xde}{discard_errors};
 }

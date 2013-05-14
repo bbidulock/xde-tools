@@ -72,6 +72,7 @@ Use this function instead of C<Gtk2->main> to run the event loop.
 sub main {
     my $self = shift;
     push @{$self->{retval}}, undef;
+    $SIG{TERM} = sub{Gtk2->main_quit};
     Gtk2->main;
     return pop @{$self->{retval}};
 }

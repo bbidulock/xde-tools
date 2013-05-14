@@ -5,7 +5,31 @@ eval 'exec perl -S $0 ${1+"@"}'
     if $running_under_some_shell;
 
 
+my %OVERRIDES = ();
+BEGIN {
+	use strict;
+	use warnings;
+	my $here = $0; $here =~ s{/[^/]*$}{};
+	if ($here =~ s{^\.}{}) {
+	    chomp(my $cwd = `pwd`);
+	    $here = "/$here" if $here;
+	    $here = "$cwd$here";
+	}
+	unless ($here eq '/usr/bin') {
+	    unshift @INC, "$here/lib";
+	    %OVERRIDES = (
+		    XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
+		    XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
+		    XDG_ICON_APPEND    => "$here/share/pixmaps",
+	    );
+	}
+}
+
 use Getopt::Long;
+use Encode;
+use I18N::Langinfo qw(langinfo CODESET);
+use POSIX qw(locale_h);
+require XDE::Theme;
 use strict;
 use warnings;
 
@@ -21,7 +45,10 @@ B<xde-theme> [I<OPTIONS>] [I<THEME>]
 
 B<xde-theme> is responsible for setting a new them in an XDE session,
 modifying configuration files as necessary, and restarting applications
-that depend on those configuration files.
+that depend on those configuration files.  It is also reponsible for
+controlling the window manager to effect the theme.
+
+When
 
 =cut
 
@@ -435,3 +462,7 @@ its own theme accordingly.
 =back
 
 =cut
+
+__END__
+
+# vim: sw=4 tw=72
