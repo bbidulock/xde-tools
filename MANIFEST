@@ -1,4 +1,5 @@
 gtkrc-2.0
+lib/X11/Protocol/Enhanced.pm
 lib/X11/Protocol/Ext/RANDR.pm
 lib/X11/Protocol/Ext/SYNC.pm
 lib/X11/Protocol/Ext/XKEYBOARD.pm

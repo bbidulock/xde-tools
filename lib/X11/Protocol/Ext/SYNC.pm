@@ -1,6 +1,6 @@
 
 # The X Sychronization Extension Protocol
-package X11::Protocol::Ext::XSYNC;
+package X11::Protocol::Ext::SYNC;
 
 use X11::Protocol qw(make_num_hash);
 use Carp;
@@ -11,13 +11,13 @@ $VERSION = 0.01;
 
 =head1 NAME
 
-X11::Protocol::Ext::XSYNC -- Perl extention module for X Synchronization Extension Protocol
+X11::Protocol::Ext::SYNC -- Perl extention module for X Synchronization Extension Protocol
 
 =head1 SYNOPSIS
 
  use X11::Protocol;
  $x = X11::Protocol->new($ENV{DISPLAY});
- $x->init_extension('XSYNC') or die;
+ $x->init_extension('SYNC') or die;
 
 =head1 DESCRIPTION
 
@@ -41,7 +41,7 @@ sub new
     
 =head1 CONSTANTS
 
-B<X11::Protocol::Ext::XSYNC> provides the following symbolic constants:
+B<X11::Protocol::Ext::SYNC> provides the following symbolic constants:
 
  ValueType  => [ 'Absolute', 'Relative' ]
  TestType   => [ 'PositiveTransition', 'NegativeTransition',
@@ -62,7 +62,7 @@ B<X11::Protocol::Ext::XSYNC> provides the following symbolic constants:
 
 =head1 ERRORS
 
-B<X11::Protocol::Ext::XSYNC> provides the folowing bad resource errors:
+B<X11::Protocol::Ext::SYNC> provides the folowing bad resource errors:
 C<Counter>, C<Alarm>, C<Fence>.
 
 =cut
@@ -77,37 +77,38 @@ C<Counter>, C<Alarm>, C<Fence>.
 
 =head1 REQUESTS
 
-B<X11::Protocol::Ext::XSYNC> provides the following requests:
+B<X11::Protocol::Ext::SYNC> provides the following requests:
 
 =cut
-    $x->{ext_request}{$request_base} =
-    [
+
 =pod
 
- $X->XsyncQueryVersion()
+ $X->XsyncInitialize($major,$minor)
  =>
  ($major,$minor)
 =cut
-	[XsyncQueryVersion => sub{	#  0
-	    pack('xxSCCxx',2,3,1);
+    $x->{ext_request}{$request_base}[0] =
+	[XsyncInitialize => sub{	#  0
+	    return pack('CCxx',@_[1..2]);
 	}, sub {
-	    unpack('xxxxxxxxCCxxxxxxxxxxxxxxxxxxxxxx',$_[1]);
-	}],
+	    return unpack('x[8]CCx[22]',$_[1]);
+	}];
 =pod
 
  $X->ListSystemCounters()
  =>
  ( [ $counter,$resolution_hi,$resolution_lo ], ... )
 =cut
+    $x->{ext_request}{$request_base}[1] =
 	[ListSystemCounters => sub{	#  1
-	    pack('xxS',0);
+	    return '';
 	}, sub {
 	    my ($x,$data) = @_;
 	    my ($llen,@counters) =
 		unpack('xxxxxxxxlxxxxxxxxxxxxxxxxxxxx',$data);
 	    my $counters = substr($data,32);
 	    while ($llen>0 and length($counters)>=16) {
-		my ($counter,$reshi,$reslo,$len,$name) =
+		my ($counter,$res_hi,$res_lo,$len,$name) =
 		    unpack('LLLS',$counters);
 		$counters = substr($counters,14);
 		$name = substr($counters,0,$len);
@@ -115,48 +116,51 @@ B<X11::Protocol::Ext::XSYNC> provides the following requests:
 		push @counters, [ $counter, $res_hi, $res_lo, $name, ];
 	    }
 	    return (@counters);
-	}],
+	}];
 =pod
 
  $X->CreateCounter($id,($initial_value_hi,$initial_value_lo))
 =cut
+    $x->{ext_request}{$request_base}[2] =
 	[CreateCounter => sub{		#  2
-	    pack('xxSLLL',4,$_[1..3]);
-	}],
+	    return pack('LLL',$_[1..3]);
+	}];
 =pod
 
  $X->SetCounter($counter,($value_hi,$value_lo))
 =cut
+    $x->{ext_request}{$request_base}[3] =
 	[SetCounter => sub{		#  3
-	    pack('xxSLLL',4,$_[1..3]);
-	}],
+	    return pack('LLL',$_[1..3]);
+	}];
 =pod
 
  $X->ChangeCounter($counter,($amount_hi,$amount_lo))
 =cut
+    $x->{ext_request}{$request_base}[4] =
 	[ChangeCounter => sub{		#  4
-	    pack('xxSLLL',4,$_[1..3]);
-	}],
-	undef,				#  5
+	    return pack('LLL',$_[1..3]);
+	}];
 =pod
 
  $X->DestroyCounter($counter)
  =>
  ($counter_hi,$counter_lo)
 =cut
+    $x->{ext_request}{$request_base}[6] =
 	[DestroyCounter => sub{		#  6
-	    pack('xxSL',2,$_[1]);
+	    return pack('L',$_[1]);
 	}, sub {
-	    unpack('xxxxxxxxLLxxxxxxxxxxxxxxxx',$_[1]);
-	}],
+	    return unpack('xxxxxxxxLLxxxxxxxxxxxxxxxx',$_[1]);
+	}];
 =pod
 
  $X->Await([$trigger,($thresh_hi,$thresh_lo)], ...)
 =cut
+    $x->{ext_request}{$request_base}[7] =
 	[Await => sub{			#  7
-	    shift; join('',pack('xxS',(1+7*scalar(@_))),
-		       map{pack('a[20]LL',@$_)}@_);
-	}],
+	    shift; return join('',map{pack('a[20]LL',@$_)}@_);
+	}];
 =pod
 
  $X->CreateAlarm($id,
@@ -167,6 +171,7 @@ B<X11::Protocol::Ext::XSYNC> provides the following requests:
     delta=>[$delta_hi,$delta_lo],
     events=>$events)
 =cut
+    $x->{ext_request}{$request_base}[8] =
 	[CreateAlarm => sub{		#  8
 	    my ($x,$id,%values) = @_;
 	    my ($i,$mask,$pack,$n) = (0,0,'',0);
@@ -187,8 +192,8 @@ B<X11::Protocol::Ext::XSYNC> provides the following requests:
 		    $n++;
 		}
 	    }
-	    pack('xxSL',3+$n,$id) . $pack;
-	}],
+	    return pack('L',$id) . $pack;
+	}];
 =pod
 
  $X->ChangeAlarm($id,
@@ -199,6 +204,7 @@ B<X11::Protocol::Ext::XSYNC> provides the following requests:
     delta=>[$delta_hi,$delta_lo],
     events=>$events)
 =cut
+    $x->{ext_request}{$request_base}[9] =
 	[ChangeAlarm => sub{		#  9
 	    my ($x,$id,%values) = @_;
 	    my ($i,$mask,$pack,$n) = (0,0,'',0);
@@ -219,106 +225,116 @@ B<X11::Protocol::Ext::XSYNC> provides the following requests:
 		    $n++;
 		}
 	    }
-	    pack('xxSL',3+$n,$id) . $pack;
-	}],
+	    return pack('L',$id) . $pack;
+	}];
 =pod
 
  $X->QueryAlarm($alarm)
  =>
  ($trigger,($delta_hi,$delta_lo),$events,$state)
 =cut
+    $x->{ext_request}{$request_base}[10] =
 	[QueryAlarm => sub{		# 10
-	    pack('xxSL',2,$_[1]);
+	    return pack('L',$_[1]);
 	}, sub {
 	    my $x = shift;
-	    @_ = unpack('xxxxxxxxa[20]LLCCxx',shift);
-	    $_[-2] = $x->num('Bool',$_[-2]);
-	    $_[-1] = $x->num('AlarmState',$_[-1]);
-	    @_;
-	}],
+	    my @vals = unpack('xxxxxxxxa[20]LLCCxx',shift);
+	    $vals[-2] = $x->interp('Bool',$vals[-2]);
+	    $vals[-1] = $x->interp('AlarmState',$vals[-1]);
+	    return @vals;
+	}];
 =pod
 
  $X->DestroyAlarm($alarm)
 =cut
+    $x->{ext_request}{$request_base}[11] =
 	[DestroyAlarm => sub{		# 11
-	    pack('xxSL',2,$_[1]);
-	}],
+	    return pack('L',$_[1]);
+	}];
 =pod
 
  $X->SetPriority($id,$priority)
 =cut
+    $x->{ext_request}{$request_base}[12] =
 	[SetPriority => sub{		# 12
-	    pack('xxSLl',3,$_[1..2]);
-	}],
+	    return pack('Ll',$_[1..2]);
+	}];
 =pod
 
  $X->GetPriority($id)
  =>
  ($priority)
 =cut
+    $x->{ext_request}{$request_base}[13] =
 	[GetPriority => sub{		# 13
-	    pack('xxSL',1,$_[1]);
+	    return pack('L',$_[1]);
 	}, sub {
-	    unpack('xxxxxxxxlxxxxxxxxxxxxxxxxxxxx',$_[1]);
-	}],
+	    return unpack('xxxxxxxxlxxxxxxxxxxxxxxxxxxxx',$_[1]);
+	}];
 =pod
 
  $X->CreateFence($drawable,$id,$initially_triggered)
 =cut
+    $x->{ext_request}{$request_base}[14] =
 	[CreateFence => sub{		# 14
-	    $_[3] = $_[0]->num('Bool',$_[3]);
-	    pack('xxSLLCxxx',4,$_[1..3]);
-	}],
+	    my ($x,@vals) = @_;
+	    $vals[2] = $x->num('Bool',$vals[2]);
+	    return pack('LLCxxx',@vals[0..2]);
+	}];
 =pod
 
  $X->TriggerFence($id)
 =cut
+    $x->{ext_request}{$request_base}[15] =
 	[TriggerFence => sub{		# 15
-	    pack('xxSL',2,$_[1]);
-	}],
+	    return pack('L',$_[1]);
+	}];
 =pod
 
  $X->ResetFence($id)
 =cut
+    $x->{ext_request}{$request_base}[16] =
 	[ResetFence => sub{		# 16
-	    pack('xxSL',2,$_[1]);
-	}],
+	    return pack('L',$_[1]);
+	}];
 =pod
 
  $X->DestroyFence($id)
 =cut
+    $x->{ext_request}{$request_base}[17] =
 	[DestroyFence => sub{		# 17
-	    pack('xxSL',2,$_[1]);
-	}],
+	    return pack('L',$_[1]);
+	}];
 =pod
 
  $X->QueryFence($id)
  =>
  ($triggered)
 =cut
+    $x->{ext_request}{$request_base}[18] =
 	[QueryFence => sub{		# 18
-	    pack('xxSL',2,$_[1]);
+	    return pack('L',$_[1]);
 	}, sub {
-	    $_[0]->num('Bool',unpack('xxxxxxxxCxxxxxxxxxxxxxxxxxxxxxxx',$_[1]));
-	}],
+	    return $_[0]->interp('Bool',unpack('xxxxxxxxCxxxxxxxxxxxxxxxxxxxxxxx',$_[1]));
+	}];
 =pod
 
  $X->AwaitFence(@ids)
 =cut
+    $x->{ext_request}{$request_base}[19] =
 	[AwaitFence => sub{		# 19
-	    shift; pack('xxSL*',1+scalar(@_),@_);
-	}],
-    ];
+	    shift; return pack('L*',@_);
+	}];
 
-    for (my $i=0;$i<scalar(@{$x->{ext_requests}{$request_base}});$i++) {
-	my $req = $x->{ext_requests}{$request_next}[$i];
+    for (my $i=0;$i<scalar(@{$x->{ext_request}{$request_base}});$i++) {
+	my $req = $x->{ext_request}{$request_base}[$i];
 	next unless $req;
 	$x->{ext_request_num}{$req->[0]} = [$request_base, $i];
     }
 
 =head1 EVENTS
 
-B<X11::Protocol::Ext::XSYNC> provides the following events:
+B<X11::Protocol::Ext::SYNC> provides the following events:
 
  CounterNotify => {
      counter=>$counter,
@@ -337,13 +353,13 @@ B<X11::Protocol::Ext::XSYNC> provides the following events:
 	$h{counter_value} = [$_[3..4]];
 	$h{time} = $_[5];
 	$h{count} = $_[6];
-	$h{destroyed} = $x->num('Bool',$_[7]);
+	$h{destroyed} = $x->interp('Bool',$_[7]);
 	return %h;
     }, sub{
 	my ($x,%h) = @_;
 	my $data = pack('xxxxLLLLLLSCx', $h{counter}, @{$h{wait_value}},
 			@{$h{counter_value}}, $h{time}, $h{count},
-			$x->num('Bool',$h{destroyed}));
+			$x->interp('Bool',$h{destroyed}));
 	return ($data,1);
     }];
 =pod
@@ -363,19 +379,19 @@ B<X11::Protocol::Ext::XSYNC> provides the following events:
 	$h{counter_value} = [$_[1..2]];
 	$h{alarm_value} = [$_[3..4]];
 	$h{time} = $_[5];
-	$h{state} = $x->num('AlarmState', $_[5]);
+	$h{state} = $x->interp('AlarmState', $_[5]);
 	return %h;
     }, sub{
 	my ($x,%h) = @_;
 	my $data = pack('xxxxLLLLLLCxxx', $h{alarm},
 	                @{$h{counter_value}}, @{$h{alarm_value}},
-			$h{time}, $x->num('AlarmState', $h{state}));
+			$h{time}, $x->interp('AlarmState', $h{state}));
 	return ($data,1);
     }];
 
-    ($self->{major},$self->{minor}) = $x->req('XsyncQueryVersion');
+    ($self->{major},$self->{minor}) = $x->req('XsyncInitialize',3,1);
     if ($self->{major} != 3) {
-	carp "Wrong XSYNC version ($self->{major} != 3)";
+	carp "Wrong SYNC version ($self->{major} != 3)";
 	return 0;
     }
     return $self;

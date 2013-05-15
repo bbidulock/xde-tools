@@ -7,8 +7,10 @@ package X11::Protocol::Ext::XKEYBOARD;
 #	and receiving events.
 
 use X11::Protocol qw(pad padding padded make_num_hash);
+use X11::Protocol::Enhanced;
 use Carp;
 use strict;
+use warnings;
 use vars '$VERSION';
 $VERSION = 0.01;
 
@@ -1051,9 +1053,9 @@ B<X11::Protocol::Ext::KEYBOARD> provides the folloing requests:
 	    return pack('SS',@_[1..2]);
 	}, sub{
             my ($x,$data) = @_;
-	    @_ = unpack('xCxxxxxxSSxxxxxxxxxxxxxxxxxxxx',$data);
-	    $_[0] = $x->interp(Bool=>$_[0]);
-	    return @_;
+	    my @vals = unpack('xCxxxxxxSSxxxxxxxxxxxxxxxxxxxx',$data);
+	    $vals[0] = $x->interp(Bool=>$vals[0]);
+	    return @vals;
 	}];
 =pod
 
@@ -1072,6 +1074,7 @@ B<X11::Protocol::Ext::KEYBOARD> provides the folloing requests:
     $x->{ext_request}{$request_base}[1] =
 	[XkbSelectEvents => sub{
             my($x, $deviceSpec, %ad) = @_;
+	    %ad = () unless %ad;
 
 	    $deviceSpec  = $x->num(XkbDeviceSpec=>$deviceSpec);
             $ad{XkbMapNotify} = [ [], [] ] unless $ad{XkbMapNotify};
@@ -1079,7 +1082,7 @@ B<X11::Protocol::Ext::KEYBOARD> provides the folloing requests:
             my @topack = ();
             my $pack = 'SSSS';
             my $vlen = 0;
-            for my $i (1, 0, 2 .. scalar(@$XkbEventType)) {
+            for my $i (1, 0, 2 .. $#{$XkbEventType}) {
                 my $mask = (1<<$i);
                 if (my $val = $ad{$XkbEventType->[$i]}) {
                     $mask = (1<<$i);
@@ -1112,14 +1115,13 @@ B<X11::Protocol::Ext::KEYBOARD> provides the folloing requests:
 =cut
     $x->{ext_request}{$request_base}[3] =
 	[XkbBell => sub{
-	    my ($x) = @_;
-	    my $x = shift;
-	    $_[1] = $x->num(XkbDeviceSpec=>$_[1]);
-	    $_[2] = $x->num(XkbBellClassSpec=>$_[2]);
-	    $_[3] = $x->num(XkbIDSpec=>$_[3]);
-	    $_[5] = $x->num(Bool=>$_[5]);
-	    $_[6] = $x->num(Bool=>$_[6]);
-	    return pack('SSSCCCxSSxxLL',@_[1..10]);
+	    my ($x,@vals) = @_;
+	    $vals[0] = $x->num(XkbDeviceSpec=>$vals[0]);
+	    $vals[1] = $x->num(XkbBellClassSpec=>$vals[1]);
+	    $vals[2] = $x->num(XkbIDSpec=>$vals[2]);
+	    $vals[4] = $x->num(Bool=>$vals[4]);
+	    $vals[5] = $x->num(Bool=>$vals[5]);
+	    return pack('SSSCCCxSSxxLL',@vals);
 	}];
 =pod
 
@@ -1132,9 +1134,9 @@ B<X11::Protocol::Ext::KEYBOARD> provides the folloing requests:
 =cut
     $x->{ext_request}{$request_base}[4] =
 	[XkbGetState => sub{
-	    my ($x) = @_;
-	    $_[1] = $x->num(XkbDeviceSpec=>$_[1]);
-	    return pack('Sxx',$_[1]);
+	    my ($x,@vals) = @_;
+	    $vals[0] = $x->num(XkbDeviceSpec=>$vals[0]);
+	    return pack('Sxx',$vals[0]);
 	}, sub{
 	    return unpack('xCxxxxxxCCCCCCssCCCCCxSxxxxxx',$_[1]);
 	}];
@@ -1156,16 +1158,16 @@ B<X11::Protocol::Ext::KEYBOARD> provides the folloing requests:
 =cut
     $x->{ext_request}{$request_base}[5] =
 	[XkbLatchLockState => sub{
-            my ($x) = @_;
-            $_[1] = $x->num(XkbDeviceSpec=>$_[1]);
-            $_[2] = $x->pack_mask(XkbKeyMask=>$_[2]);
-            $_[3] = $x->pack_mask(XkbKeyMask=>$_[3]);
-            $_[4] = $x->num(Bool=>$_[4]);
-            $_[5] = $x->num(XkbGroup=>$_[5]);
-            $_[6] = $x->pack_mask(XkbKeyMask=>$_[6]);
-            $_[7] = $x->pack_mask(XkbKeyMask=>$_[7]);
-            $_[8] = $x->num(Bool=>$_[8]);
-            return pack('SCCCCCCCxS',@_[1..9]);
+            my ($x,@vals) = @_;
+            $vals[0] = $x->num(XkbDeviceSpec=>$vals[0]);
+            $vals[1] = $x->pack_mask(XkbKeyMask=>$vals[1]);
+            $vals[2] = $x->pack_mask(XkbKeyMask=>$vals[2]);
+            $vals[3] = $x->num(Bool=>$vals[3]);
+            $vals[4] = $x->num(XkbGroup=>$vals[4]);
+            $vals[5] = $x->pack_mask(XkbKeyMask=>$vals[5]);
+            $vals[6] = $x->pack_mask(XkbKeyMask=>$vals[6]);
+            $vals[7] = $x->num(Bool=>$vals[7]);
+            return pack('SCCCCCCCxS',@vals);
 	}];
 =pod
 
@@ -1238,25 +1240,25 @@ B<X11::Protocol::Ext::KEYBOARD> provides the folloing requests:
 =cut
     $x->{ext_request}{$request_base}[7] =
 	[XkbSetControls => sub{
-            my ($x) = @_;
-            $_[ 1] = $x->num(XkbDeviceSpec=>$_[ 1]);
-            $_[ 2] = $x->pack_mask(XkbKeyMask=>$_[ 2]);
-            $_[ 3] = $x->pack_mask(XkbKeyMask=>$_[ 3]);
-            $_[ 4] = $x->pack_mask(XkbKeyMask=>$_[ 4]);
-            $_[ 5] = $x->pack_mask(XkbKeyMask=>$_[ 5]);
-            $_[ 6] = $x->pack_mask(XkbVMod=>$_[ 6]);
-            $_[ 7] = $x->pack_mask(XkbVMod=>$_[ 7]);
-            $_[ 8] = $x->pack_mask(XkbVMod=>$_[ 8]);
-            $_[ 9] = $x->pack_mask(XkbVMod=>$_[ 9]);
-            $_[12] = $x->pack_mask(XkbAXOption=>$_[12]);
-            $_[13] = $x->pack_mask(XkbBoolCtrl=>$_[13]);
-            $_[14] = $x->pack_mask(XkbBoolCtrl=>$_[14]);
-            $_[15] = $x->pack_mask(XkbControl=>$_[15]);
-            $_[26] = $x->pack_mask(XkbBoolCtrl=>$_[26]);
-            $_[27] = $x->pack_mask(XkbBoolCtrl=>$_[27]);
-            $_[28] = $x->pack_mask(XkbAXOption=>$_[28]);
-            $_[29] = $x->pack_mask(XkbAXOption=>$_[29]);
-            return pack('SCCCCSSSSCCSxxLLLSSSSSSSSsSLLSSa[32]', @_[1..30]);
+            my ($x,@vals) = @_;
+            $vals[ 0] = $x->num(XkbDeviceSpec       =>$vals[ 0]);
+            $vals[ 1] = $x->pack_mask(XkbKeyMask    =>$vals[ 1]);
+            $vals[ 2] = $x->pack_mask(XkbKeyMask    =>$vals[ 2]);
+            $vals[ 3] = $x->pack_mask(XkbKeyMask    =>$vals[ 3]);
+            $vals[ 4] = $x->pack_mask(XkbKeyMask    =>$vals[ 4]);
+            $vals[ 5] = $x->pack_mask(XkbVMod       =>$vals[ 5]);
+            $vals[ 6] = $x->pack_mask(XkbVMod       =>$vals[ 6]);
+            $vals[ 7] = $x->pack_mask(XkbVMod       =>$vals[ 7]);
+            $vals[ 8] = $x->pack_mask(XkbVMod       =>$vals[ 8]);
+            $vals[11] = $x->pack_mask(XkbAXOption   =>$vals[11]);
+            $vals[12] = $x->pack_mask(XkbBoolCtrl   =>$vals[12]);
+            $vals[13] = $x->pack_mask(XkbBoolCtrl   =>$vals[13]);
+            $vals[14] = $x->pack_mask(XkbControl    =>$vals[14]);
+            $vals[25] = $x->pack_mask(XkbBoolCtrl   =>$vals[25]);
+            $vals[26] = $x->pack_mask(XkbBoolCtrl   =>$vals[26]);
+            $vals[27] = $x->pack_mask(XkbAXOption   =>$vals[27]);
+            $vals[28] = $x->pack_mask(XkbAXOption   =>$vals[28]);
+            return pack('SCCCCSSSSCCSxxLLLSSSSSSSSsSLLSSa[32]', @vals);
 	}];
 =pod
 
@@ -1308,12 +1310,12 @@ B<X11::Protocol::Ext::KEYBOARD> provides the folloing requests:
 =cut
     $x->{ext_request}{$request_base}[8] =
 	[XkbGetMap => sub{
-            my ($x) = @_;
-            $_[1] = $x->num(XkbDeviceSpec=>$_[1]);
-            $_[2] = $x->pack_mask(XkbMapPart=>$_[2]);
-            $_[3] = $x->pack_mask(XkbMapPart=>$_[3]);
-            $_[12] = $x->pack_mask(XkbVMod=>$_[12]);
-            return pack('SSSCCCCCCCCSCCCCCCxx',@_[1..18]);
+            my ($x,@vals) = @_;
+            $vals[0] = $x->num(XkbDeviceSpec=>$vals[0]);
+            $vals[1] = $x->pack_mask(XkbMapPart=>$vals[1]);
+            $vals[2] = $x->pack_mask(XkbMapPart=>$vals[2]);
+            $vals[11] = $x->pack_mask(XkbVMod=>$vals[11]);
+            return pack('SSSCCCCCCCCSCCCCCCxx',@vals);
 	}, sub{
             my ($x,$data) = @_;
             my $off = 0;
@@ -1328,8 +1330,8 @@ B<X11::Protocol::Ext::KEYBOARD> provides the folloing requests:
                     my $map = [];
                     my $preserve = [];
                     my @keytype =
-                        unpack('CCSCCCx',substr($data,$off,8)),
-                        $map, $preserve;
+                        (unpack('CCSCCCx',substr($data,$off,8)),
+                        $map, $preserve);
                     $off += 8;
                     my $m = $keytype[4];
                     for (my $j=0;$j<$m;$j++) {
@@ -1353,8 +1355,8 @@ B<X11::Protocol::Ext::KEYBOARD> provides the folloing requests:
                 $h{XkbKeySyms} = [];
                 for (my $i=0;$i<$n;$i++) {
                     my @keysym =
-                        [ unpack('CCCC',substr($data,$off,4)) ],
-                        unpack('CCS',substr($data,$off+4,4));
+                        ([ unpack('CCCC',substr($data,$off,4)) ],
+                        unpack('CCS',substr($data,$off+4,4)));
                     $off += 8;
                     if (my $m = $keysym[-1]) {
                         push @keysym,
@@ -1530,14 +1532,14 @@ B<X11::Protocol::Ext::KEYBOARD> provides the folloing requests:
             return pack('SSSxxL',$deviceSpec,$ledClass,$ledID,$indicator);
 	}, sub{
             my ($x,$data) = @_;
-            @_ = unpack('xCxxxxxxLCCCCxxxxxxxxxxxxxxxx',$data),
-               [ unpack('xxxxxxxxxxxxxxxxCCCCCCSLxxxx',$data) ],
-                 unpack('xxxxxxxxxxxxxxxxxxxxxxxxxxxxCxxx',$data);
-            $_[2] = $x->interp(Bool=>$_[2]);
-            $_[3] = $x->interp(Bool=>$_[3]);
-            $_[2] = $x->interp(Bool=>$_[2]);
-            $_[7] = $x->interp(Bool=>$_[7]);
-            return @_;
+            my @vals = ( unpack('xCxxxxxxLCCCCxxxxxxxxxxxxxxxx',$data),
+                       [ unpack('xxxxxxxxxxxxxxxxCCCCCCSLxxxx',$data) ],
+                         unpack('xxxxxxxxxxxxxxxxxxxxxxxxxxxxCxxx',$data));
+            $vals[2] = $x->interp(Bool=>$vals[2]);
+            $vals[3] = $x->interp(Bool=>$vals[3]);
+            $vals[4] = $x->interp(Bool=>$vals[4]);
+            $vals[7] = $x->interp(Bool=>$vals[7]);
+            return @vals;
 	}];
 =pod
 
@@ -1551,14 +1553,14 @@ B<X11::Protocol::Ext::KEYBOARD> provides the folloing requests:
 =cut
     $x->{ext_request}{$request_base}[16] =
 	[XkbSetNamedIndicator => sub{
-            my ($x) = @_;
-            $_[1] = $x->num(XkbDeviceSpec=>$_[1]);
-            $_[2] = $x->num(XkbLEDClassSpec=>$_[2]);
-            $_[3] = $x->num(XkbIDSpec=>$_[3]);
-            $_[5] = $x->num(Bool=>$_[5]);
-            $_[6] = $x->num(Bool=>$_[6]);
-            $_[7] = $x->num(Bool=>$_[7]);
-            $_[8] = $x->num(Bool=>$_[8]);
+            my ($x,@vals) = @_;
+            $vals[0] = $x->num(XkbDeviceSpec=>$vals[0]);
+            $vals[1] = $x->num(XkbLEDClassSpec=>$vals[1]);
+            $vals[2] = $x->num(XkbIDSpec=>$vals[2]);
+            $vals[4] = $x->num(Bool=>$vals[4]);
+            $vals[5] = $x->num(Bool=>$vals[5]);
+            $vals[6] = $x->num(Bool=>$vals[6]);
+            $vals[7] = $x->num(Bool=>$vals[7]);
             my $map = $_[9];
             $map->[0] = $x->pack_mask(XkbIMFlags=>$map->[0]);
             $map->[1] = $x->pack_mask(XkbIMGroupsWhich=>$map->[1]);
@@ -1567,7 +1569,7 @@ B<X11::Protocol::Ext::KEYBOARD> provides the folloing requests:
             $map->[4] = $x->pack_mask(XkbKeyMask=>$map->[4]);
             $map->[5] = $x->pack_mask(XkbVMod=>$map->[5]);
             $map->[6] = $x->pack_mask(XkbBoolCtrl=>$map->[6]);
-            return pack('SSSxxLCCCCxCCCCCCSL',@_[1..8],@{$_[9]});
+            return pack('SSSxxLCCCCxCCCCCCSL',@vals[0..7],@$map);
 	}];
 =pod
 
@@ -1604,18 +1606,23 @@ B<X11::Protocol::Ext::KEYBOARD> provides the folloing requests:
  =>
  ($deviceID, $supported, $value, $autoCtrls, $autoCtrlValues)
 
-     $deviceSpec => $XkbDeviceSpec
+     $deviceSpec     => $XkbDeviceSpec
+     $change         => $XkbPerClientFlag    # mask
+     $value          => $XkbPerClientFlag    # mask
+     $ctrlsToChange  => $XkbBoolCtrl         # mask
+     $autoCtrls      => $XkbBoolCtrl         # mask
+     $autoCtrlValues => $XkbBoolCtrl         # mask
 =cut
     $x->{ext_request}{$request_base}[21] =
 	[XkbPerClientFlags => sub{
-            my ($x) = @_;
-            $_[1] = $x->num(XkbDeviceSpec=>$_[1]);
-            $_[2] = $x->pack_mask(XkbPerClientFlag=>$_[2]);
-            $_[3] = $x->pack_mask(XkbPerClientFlag=>$_[3]);
-            $_[4] = $x->pack_mask(XkbBoolCtrl=>$_[4]);
-            $_[5] = $x->pack_mask(XkbBoolCtrl=>$_[5]);
-            $_[6] = $x->pack_mask(XkbBoolCtrl=>$_[6]);
-            return pack('SxxLLLLL',@_[1..6]);
+            my ($x,@vals) = @_;
+            $vals[0] = $x->num(XkbDeviceSpec=>$vals[0]);
+            $vals[1] = $x->pack_mask(XkbPerClientFlag=>$vals[1]);
+            $vals[2] = $x->pack_mask(XkbPerClientFlag=>$vals[2]);
+            $vals[3] = $x->pack_mask(XkbBoolCtrl=>$vals[3]);
+            $vals[4] = $x->pack_mask(XkbBoolCtrl=>$vals[4]);
+            $vals[5] = $x->pack_mask(XkbBoolCtrl=>$vals[5]);
+            return pack('SxxLLLLL',@vals);
 	}, sub{
             return unpack('xCxxxxxxLLLLxxxxxxxx',$_[1]);
 	}];
@@ -1675,180 +1682,7 @@ B<X11::Protocol::Ext::KEYBOARD> provides the folloing requests:
     return $self;
 }
 
-=head1 METHODS
-
-L<X11::Protocol(3pm)> does not provide a way to pack and unpack masks using
-symbolic constants, except for event masks.
-B<X11::Protocol::Ext::KEYBOARD> uses so many masks that either we needed
-to define bitmap mask constants in perl, or we needed a way to pack and
-unpack masks.  To provide this capability, the
-B<X11::Protocol::Ext::KEYBOARD> module adds the following methods to the
-C<X11::Protocol(3pm)> object:
-
-=over
-
-=item $mask = $X->B<pack_mask>(I<$typename>,@constants)
-
-Where, I<$typename> is a symbolic constant type name like C<Bool> or
-C<XkbControl>, and C<@constants> is a list of symbolic constants
-defined for I<$typename> or bit numbers.  B<pack_mask> returns a numeric
-value representing the mask with the appropriate bits set.
-
-This function is similar to B<pack_event_mask> with the exception that
-it can be used where I<$typename> is not equal to 'EventMask'.
-
-B<pack_mask> is called by the request functions in this module on may of
-the arguments passed into the request.  Therefore, the arguments passed
-to the request can either be the numeric bit mask, or can be an array or
-hash of bit values.
-
-=cut
-sub pack_mask {
-    my $self = shift;
-    my($typename,@x) = @_;
-    my $type = $self->{const_num}{$typename};
-    $type = $self->{ext_const_num}{$typename} unless $type;
-    if (not $type) {
-        if ($self->{const}{$typename}) {
-            $type = $self->{const_num}{$typename} =
-            {make_num_hash($self->{const}{$typename})};
-        }
-        elsif ($self->{ext_const}{$typename}) {
-            $type = $self->{ext_const_num}{$typename} =
-            {make_num_hash($self->{ext_const}{$typename})};
-        }
-    }
-    my($i, $mask);
-    $mask = 0;
-    for $i (@x) {
-        $i = $type->{$i} if $type and exists $type->{$i};
-        if ($i =~ m{^\d+$} and $i<32) {
-            $mask |= 1<<$i;
-        }
-    }
-    return $mask;
-}
-
-*X11::Protocol::pack_mask =
-\&X11::Protocol::Ext::XKEYBOARD::pack_mask;
-
-=item $mask = $X->B<unpack_mask>(I<$typename>,I<$mask>)
-
-Where, I<$typename> is a symbolic constant type name like C<Bool> or
-C<XkbBoolCtrl>, and I<$mask> is a numerical representation of the bit
-mask.  The bit positions in the number are converted into a HASH where
-the keys of the hash are the symbolic names of the bits set to 1 or the
-bit number when no symbolic name for the bit appears in I<$typename>.
-The value associated with the key is always 1.  The HASH is returned.
-
-If you would prefer the ARRAY form as was passed to B<pack_mask>, this
-trick will do:
-
-  %mask = $X->unpack_mask($typename,$mask);
-  @mask = keys %mask;
-
-Masks are not automatically unpacked by the event routines, nor for
-responses to requests.  You will need to unpack returned fields
-yourself using this function.  Refer to the specification to see which
-symbolic constant I<$typename> to use when unpacking.
-
-=cut
-sub unpack_mask {
-    my $self = shift;
-    my($typename,$mask) = @_;
-    my $type = $self->{const}{$typename};
-    $type = $self->{ext_const}{$typename} unless $type;
-    carp "Could not find typename '$typename'" unless $type;
-    my $i = 0;
-    my %h = ();
-    while ($mask) {
-        if ($mask & 0x1) {
-            if ($type and $type->[$i]) {
-                $h{$type->[$i]} = 1;
-            } else {
-                $h{$i} = 1;
-            }
-        }
-        $i++;
-        $mask >>= 1;
-    }
-    return %h;
-}
-
-*X11::Protocol::unpack_mask =
-\&X11::Protocol::Ext::XKEYBOARD::unpack_mask;
-
-=item $num = $X->B<pack_enum>(I<$typename>,I<$nameornum>)
-
-Where I<$typename> is a symbolic constant type name like C<Bool> or
-C<XkbBoolCtrl>, and I<$nameornum> is a symbolic constant name under
-I<$typename> or a simple number.  The number corresponding to the
-symbolic constant name is returned.
-
-B<X11::Protocol::Ext::XKEYBOARD> also overrides the L<X11::Protocol(3pm)>
-B<num> method with this method.  (The L<X11::Protocol(3pm)> B<num>
-method cannot handle special names for a few numbers.>
-
-=cut
-sub pack_enum($$) {
-    my $self = shift;
-    my ($typename,$x) = @_;
-    my $type = $self->{const_num}{$typename};
-    $type = $self->{ext_const_num}{$typename} unless $type;
-    if (not $type) {
-        if ($self->{const}{$typename}) {
-            $type = $self->{const_num}{$typename} =
-            {make_num_hash($self->{const}{$typename})};
-        }
-        elsif ($self->{ext_const}{$typename}) {
-            $type = $self->{ext_const_num}{$typename} =
-            {make_num_hash($self->{ext_const}{$typename})};
-        }
-    }
-    $x = $type->{$x} if $type and exists $type->{$x};
-}
-
-*X11::Protocol::pack_enum =
-\&X11::Protocol::Ext::XKEYBOARD::pack_enum;
-
-*X11::Protocol::num =
-\&X11::Protocol::Ext::XKEYBOARD::pack_enum;
-
-=item $nameornum = $X->B<unpack_enum>(I<$typename>,I<$num>)
-
-Where I<$typename> is a symbolic constnat type name like C<Bool> or
-C<XkbControl>, and I<$num> is a simple number.  The name corresponding
-ot the symbolic constant is returned if it is defined, and the number is
-returned otherwise.
-
-B<X11::Protocol::Ext::XKEYBOARD> also overrides the L<X11::Protocol(3pm)>
-B<interp> method with this method.  (The L<X11::Protocol(3pm)> B<interp>
-method cannot handle special names for a few numbers.>
-
-=cut
-sub unpack_enum {
-    my $self = shift;
-    my ($typename,$num) = @_;
-    if ($self->{do_interp}) {
-        my $type = $self->{const}{$typename};
-        $type = $self->{ext_const}{$typename} unless $type;
-        $num = $type->[$num] if $type and $type->[$num];
-    }
-    return $num;
-}
-
-*X11::Protocol::unpack_enum =
-\&X11::Protocol::Ext::XKEYBOARD::unpack_enum;
-
-*X11::Protocol::interp =
-\&X11::Protocol::Ext::XKEYBOARD::unpack_enum;
-
-=back
-
-=cut
-
 1;
-__END__
 
 =head1 BUGS
 
