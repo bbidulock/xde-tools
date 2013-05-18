@@ -1628,11 +1628,44 @@ B<X11::Protocol::Ext::KEYBOARD> provides the folloing requests:
 	}];
 =pod
 
- $X->XkbListComponents(...)
-         too complex (not implemented yet)
+ $X->XkbListComponents($deviceSpec, $maxNames, $keymaps, $keycodes,
+	 $types, $compatMap, $symbols, $geometry)
+ =>
+ ($deviceID, $keymaps, $keycodes, $types, $compatMaps, $symbols,
+  $geometries, $extra)
+
+     $keymaps	 => [ $kblisting, ... ]
+     $keycodes	 => [ $kblisting, ... ]
+     $types	 => [ $kblisting, ... ]
+     $compatMaps => [ $kblisting, ... ]
+     $symbols	 => [ $kblisting, ... ]
+
+     $kblisting => [ $flags, $string ]
 =cut
-    $x->{ext_request}{$request_base}[22] =
-        undef; # XkbListComponents too complex
+    $x->{ext_request}{$request_base}[22] = [XkbListComponents=>sub{
+	    my ($x,$deviceSpec,$maxNames,@vals) = @_;
+	    $deviceSpec = $x->num(XkbDeviceSpe=>$deviceSpec);
+	    my $data = pack('SSC(a*)C(a*)C(a*)C(a*)C(a*)C(a*)',
+		    $deviceSpec,$maxNames, map{(length($_),$_)} @vals);
+	    $data .= "\0" x ((-length($data))&3);
+	    return $data;
+	}, sub {
+	    my ($x,$data) = @_;
+	    my @vals = unpack('xCxxxxxxSSSSSSSx10',$data);
+	    my $off = 32;
+	    for (my $i=0;$i<6;$i++) {
+		my $cnt = $vals[3+$i];
+		my $list = $vals[3+$i] = [];
+		for (my $j=0;$j<$cnt;$j++) {
+		    my ($flags,$n) = unpack('SS',substr($data,$off,4));
+		    $off += 4;
+		    my $string = substr($data,$off,$n);
+		    $off += $n + (-$n&3);
+		    push @$list, [ $flags, $string ];
+		}
+	    }
+	    return @vals;
+	}];
 =pod
 
  $X->XkbGetKbdByName(...)

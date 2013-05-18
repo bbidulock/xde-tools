@@ -36,73 +36,6 @@ use Gtk2::Unique;
 use strict;
 use warnings;
 
-=head1 NAME
-
-xde-input - X settings for the X Desktop Environment
-
-=head1 SYNOPSIS
-
-B<xde-input> [I<OPTIONS>]
-
-=cut
-
-=head1 DESCRIPTION
-
-B<xde-input> is a X Display mouse and keyboard settings tool for the X
-Desktop Environment.  It can be used to set initial X Display settings
-from a configuration file, or can launch a dialogue to interactively set
-X Desktop input settings.  B<xde-input> runs as a daemon and monitors
-for changes made by other configuration tools (such as L<xset(1)> or
-L<lxinput(1)>) and log changes to its configuration file.
-
-The settings that can be set are those that can normally be performed
-with L<xset(1)>, and are as follows:
-
-=over
-
-=item I<Keyboard>
-
-Setting the keyboard I<LEDS> on or off.  The I<Keyclick> volume and
-whether key clicks are on or off.  The I<Bell> volume, pitch and
-duration.  Whether the I<Bell> is on or off.  Setting the I<Autorepeat>
-delay and rate.  Turning I<Autorepeat> on or off.  Access to a wide
-range of keyboard controls is available through the B<XKEYBOARD> X
-Server extension.
-
-=cut
-
-=item I<Pointer>
-
-Setting I<Mouse> acceleration (multiplier and divisor) and threshold.
-Resetting the I<Mouse> to default acceleration and threshold.
-
-=item I<Screen Saver>
-
-Setting the I<Screen Saver> timeout and cycle.  Setting the I<Screen
-Saver> to blank, expose, activate, default, not blank, not expose,
-reset.  Setting the I<Screen Saver> on or off.
-
-=item I<Colors>
-
-Setting pixel values to a colour name.
-
-=item I<Font Path>
-
-Setting the I<Font Path>, or restoring the default font path.  Making
-the server reread the font database.  Adding or removing elements to or
-from the I<Font Path>.
-
-=item I<DPMS (Energy Star)>
-
-I<Standby> setting in seconds; I<Suspend> setting in seconds; I<Off>
-setting in seconds.  Whether I<DPMS> is enabled or not.  Whether the
-I<Monitor> is on or off.  Forcing the I<Monitor> to on, standby, suspend
-or off.
-
-=back
-
-=cut
-
 my $program = $0; $program =~ s{^.*/}{};
 my $editor = ($program eq 'xde-input-edit') ? 1 : 0;
 
@@ -228,6 +161,67 @@ $xde->main;
 1;
 
 __END__
+
+=head1 NAME
+
+xde-input - X settings for the X Desktop Environment
+
+=head1 SYNOPSIS
+
+B<xde-input> [I<OPTIONS>]
+
+=head1 DESCRIPTION
+
+B<xde-input> is a X Display mouse and keyboard settings tool for the X
+Desktop Environment.  It can be used to set initial X Display settings
+from a configuration file, or can launch a dialogue to interactively set
+X Desktop input settings.  B<xde-input> runs as a daemon and monitors
+for changes made by other configuration tools (such as L<xset(1)> or
+L<lxinput(1)>) and log changes to its configuration file.
+
+The settings that can be set are those that can normally be performed
+with L<xset(1)>, and are as follows:
+
+=over
+
+=item I<Keyboard>
+
+Setting the keyboard I<LEDS> on or off.  The I<Keyclick> volume and
+whether key clicks are on or off.  The I<Bell> volume, pitch and
+duration.  Whether the I<Bell> is on or off.  Setting the I<Autorepeat>
+delay and rate.  Turning I<Autorepeat> on or off.  Access to a wide
+range of keyboard controls is available through the B<XKEYBOARD> X
+Server extension.
+
+=item I<Pointer>
+
+Setting I<Mouse> acceleration (multiplier and divisor) and threshold.
+Resetting the I<Mouse> to default acceleration and threshold.
+
+=item I<Screen Saver>
+
+Setting the I<Screen Saver> timeout and cycle.  Setting the I<Screen
+Saver> to blank, expose, activate, default, not blank, not expose,
+reset.  Setting the I<Screen Saver> on or off.
+
+=item I<Colors>
+
+Setting pixel values to a colour name.
+
+=item I<Font Path>
+
+Setting the I<Font Path>, or restoring the default font path.  Making
+the server reread the font database.  Adding or removing elements to or
+from the I<Font Path>.
+
+=item I<DPMS (Energy Star)>
+
+I<Standby> setting in seconds; I<Suspend> setting in seconds; I<Off>
+setting in seconds.  Whether I<DPMS> is enabled or not.  Whether the
+I<Monitor> is on or off.  Forcing the I<Monitor> to on, standby, suspend
+or off.
+
+=back
 
 =head1 OPTIONS
 
@@ -427,3 +421,4 @@ L<X11::Protocol::Ext::XKEYBOARD(3pm)>.
 
 =cut
 
+# vim: sw=4 tw=72

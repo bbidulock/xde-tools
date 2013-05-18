@@ -136,6 +136,17 @@ not normally be done.  B<--kill-owner> implies B<--take-selection>.
 
 =head1 CONFIGURATION
 
+When B<xde-settings> starts it reads the configuration file located in
+F<$XDG_CONFIG_HOME/xde/xsettings.ini> unless the configuration file was
+overridden with options on the command line.  If the configuration file
+does not exist, it copies the first file it finds in
+F<@XDG_CONFIG_DIRS/xde/xsettings.ini>.  When no configuration file is
+found at all, it does not change settings and will write the current
+configuration to the configuration file if it is writable.
+
+B<xde-settings> monitors the configuration file for changes and applies
+changes when detected.
+
 The configuration file is an F<.ini> fomratted file with two sections:
 
 =over
@@ -203,9 +214,48 @@ section:
  sNet/IconThemeName=Mist
  sNet/ThemeName=Mist
 
+ Net/DoubleClickTime=250
+ Net/DoubleClickDistance=5
+ Net/DndDragThreshold=8
+ Net/CursorBlink=True
+ Net/CursorBlinkTime=1200
+ Net/ThemeName=Default
+ Net/IconThemeName=hicolor
+ Xft/Antialias=1
+ Xft/Hinting=1
+ Xft/HintStyle=hintnone
+ Xft/RGBA=none
+ Xft/DPI=102400
+ Gtk/CanChangeAccels=False
+ # all one line in file
+ Gtk/ColorPalette=black:white:gray50:red:purple:blue:light blue:\
+		  green:yellow:orange:lavender:brown:goldenrod:\
+		  dodger blue:pink:light green:gray10:gray30:\
+		  gray75:gray90
+ Gtk/FontName=Sans 10
+ Gtk/IconSizes=
+ Gtk/KeyThemeName=
+ Gtk/ToolbarStyle=2
+ Gtk/ToolbarIconSize=2
+ Gtk/IMPreeditStyle=
+ Gtk/IMStatusStyle=
+ Gtk/MenuImages=True
+ Gtk/ButtonImages=True
+ Gtk/MenuBarAccel=F10
+
+
 =back
 
-=cut
+=head1 AUTHOR
 
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
+
+L<XDE::Xsettings(3pm)>,
+L<XSETTINGS cross toolkit configuration proposal|http://standards.freedesktop.org/xsettings-spec/xsettings-spec-0.5.html>,
+L<XSETTINGS registry|http://www.freedesktop.org/wiki/Specifications/XSettingsRegistry>.
+
+=cut
 
 # vim: sw=4 tw=72
