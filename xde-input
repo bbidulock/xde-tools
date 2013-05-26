@@ -407,6 +407,31 @@ containing the following information as follows:
  SlowKeysEnabled=false
  StickyKeysEnabled=false
 
+=head1
+
+The package also installs by default an autostart F<.desktop> file to
+autostart this program when any of the lightweight window managers
+supported by XDE are loaded.
+
+=head1 EDITING INPUT SETTINGS
+
+B<xde-input> does not provide a mechanism for editing settings.  Its
+purpose is to act as a session manager for input settings for various
+desktop environments.  A good tool for changing input settings is
+L<lxinput(1)> or L<xset(1)>.  B<xde-input> will record the changes made
+by these tools on termination or when a change that is detectable by
+B<xde-input> has been made.
+
+=head1 HISTORY
+
+I wrote this tool because none of the lightweight window managers (with
+the notable excpetion of WindowMaker) save or restore the L<xset(1)>
+settings.  I got tire of typing C<xset r rate 300 66> every time I
+entered an X Window session under L<fluxbox(1)>, so I wrote this tool.
+Unfortunately, I also had to write the
+L<X11::Protocol::Ext::XKEYBOARD(3pm)> extension module to change just
+that: the repeat delay and rate on the keyboard.
+
 =head1 AUTHOR
 
 Brian Bidulock <bidulock@cpan.org>

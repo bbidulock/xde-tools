@@ -16,6 +16,7 @@ WriteMakefile(
 		'xde-session-menu',
 		'xde-session-run',
 		'xde-setbg',
+		'xde-setbg-edit',
 		'xde-setup',
 		'xde-settings',
 		'xde-startup',

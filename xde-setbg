@@ -4,47 +4,49 @@
 eval 'exec perl -S $0 ${1+"@"}'
     if $running_under_some_shell;
 
+my %OVERRIDES = ();
+BEGIN {
+	use strict;
+	use warnings;
+	my $here = $0; $here =~ s{/[^/]*$}{};
+	if ($here =~ s{^\.}{}) {
+	    chomp(my $cwd = `pwd`);
+	    $here = "/$here" if $here;
+	    $here = "$cwd$here";
+	}
+	unless ($here eq '/usr/bin') {
+	    unshift @INC, "$here/lib";
+	    %OVERRIDES = (
+		    XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
+		    XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
+		    XDG_ICON_APPEND    => "$here/share/pixmaps",
+	    );
+	}
+}
 
 use Getopt::Long;
 use Glib qw(TRUE FALSE);
 use Gtk2;
+use XDE::Setbg;
 use strict;
 use warnings;
 
 =head1 NAME
 
- xde-setbg -- set backgrounds and monitor for desktop changes
+xde-setbg -- set backgrounds and monitor for desktop changes
 
 =head1 SYNOPSIS
 
- xde-setbg -- [OPTIONS] [FILE [FILE ...]]
+xde-setbg -- [OPTIONS] [FILE [FILE ...]]
 
 =head1 DESCRIPTION
 
 B<xde-setbg> is a gtk2-perl application that can be used to set the
-backgrounds on multiple desktops or workspaces for lightweight window
-managers that do not have this capability on their own.  It installs the
-specified pixmap to the current desktop and monitors for changes.
-
-On the initial invocation of B<xde-setbg> for a given X Display,
-B<xde-setbg> will set the current desktop and place itself in the
-background monitoring for desktop changes.  When the desktop changes, it
-will change the background of the root window to the corresponding
-selected background.
-
-Backgrounds may be specified using a configuration file or specified on
-the command line as a list of backgrounds, one per desktop.
-
-B<xde-setbg> understands that file and style settings for various
-light-weight window managers: L<fluxbox(1)>, L<blackbox(1)>,
-L<openbox(1)>, L<icewm> and L<lxde(1)>.  It can also detect which of
-these (or a number of other) window managers are running and present.
-If a multiple-background capable window manager is present (such as
-L<wmaker(1)> or an L<lxde(1)> session with a L<pcmanfm(1)> desktop),
-B<xde-setbg> exists and does nothing.
-
-When there is a current background on initial startup, B<xde-setbg>
-assumes that this is a desktop that is applied to all window managers.
+backgrounds on multiple desktops or workspaces and work areas for
+lightweight window managers that do not have this capability on their
+own.  It installs the specified pixmaps to the current desktop and
+monitors for changes.  See L</BEHAVIOUR> for detailed behaviour of the
+program.
 
 =head1 ARGUMENTS
 
@@ -62,23 +64,69 @@ desktops.
 =cut
 
 my %ops = (
-    help => '',
-    verbose => '',
-    monitor => 1,
-    grab => '',
-    theme => '',
-    id => '',
-    setroot => 1,
+    help	=> '',
+    verbose	=> '',
+    prompt	=> '',
+    banner      => '',
+    noask	=> '',
+    charset	=> '',
+    language	=> '',
+    setdflt     => '',
+    default	=> '',
+    current	=> '',
+    choice	=> '',
+    vendor	=> '',
+    monitor	=> 1,
+    grab	=> '',
+    theme	=> '',
+    id		=> '',
+    setroot	=> 1,
 );
 
-=head1 OPTIONS
+my $xde = XDE::Setbg->new(%OVERRIDES,ops=>\%ops);
+
+=head1 COMMAND OPTIONS
+
+One of the following command options should be specified.
+When no command option is specified, B<xde-setbg> will assume that the
+command option is B<--set>.
 
 =over
+
+=item B<--set>, B<-s>
+
+Set the background.  The additional options and arguments are
+interpreted as listed in L</OPTIONS>.
+
+=item B<--edit>, B<-e>
+
+Do not set the background, but, rather, launch the background settings
+editor.  When a current instance of B<xde-setbg> is running, the running
+instance will launch the editor; otherwise, a new B<xde-setbg> daemon
+will be started.
+
+=item B<--quit>, B<-q>
+
+Ask a running instance of B<xde-setbg> to quit.
+
+=item B<--restart>, B<-r>
+
+Ask a running instance of B<xde-setbg> to restart.
 
 =item B<--help>, B<-h>
 
 Print usage information to standard error containing current defaults
 and exit.
+
+=back
+
+=head1 OPTIONS
+
+B<xde-setbg> recognizes the following options: (Because
+L<Getopt::Long(3pm)> is used, non-ambiguous abbreviations and single
+dash long options are accepted.)
+
+=over
 
 =item B<--verbose>, B<-v>
 
@@ -96,13 +144,27 @@ root window pixmap properties.
 =item B<--nomonitor>, B<-n>
 
 Specifies that B<xde-setbg> should just set the background(s) and should
-not monitor for changes.  Just used L<hsetroot(1)> or some other instead
-of this option.
+not monitor for changes.  Just use L<hsetroot(1)> or some other
+background setter instead of this option.
 
 =item B<--theme>, B<-t> I<THEME>
 
 Tells B<xde-setbg> which theme or style is currently being used by the
 window manager.
+
+=item B<--delay>, B<-d> I<MILLISECONDS>
+
+Specifies the amount of time in milliseconds to wait after the apperance
+of a window manager before entering full operation.  If set to zero (0),
+the program will not wait for a window manager to appear before entering
+full operation.
+
+=item B<--areas>, B<-a>
+
+Normaly B<xde-setbg> will only distribute backgrounds over workspaces
+and not work areas.  This option causes B<xdg-setbg> to also distribute
+backgrounds over work areas.  (L<fvwm(1)> is the only lightweight window
+manager that supports work areas and viewports.)
 
 =back
 
@@ -118,6 +180,8 @@ my $syntax = GetOptions(
     'id=s'	    => \$ops{id},
 );
 
+my @files = @ARGV;
+
 $ops{id} = hex($ops{id}) if $ops{id} and $ops{id} =~ m{^0x};
 
 sub show_usage {
@@ -128,514 +192,250 @@ EOF
     exit(0);
 }
 
-Gtk2->init;
+$xde->init;
 
-my $manager = Gtk2::Gdk::DisplayManager->get;
-my $display = Gtk2::Gdk::Display->get_default;
-my $screen  = Gtk2::Gdk::Screen->get_default;
-my $root    = $screen->get_root_window;
+$xde->set_backgrounds(@files);
 
-my ($x,$y,$w,$h,$d) = $root->get_geometry;
+$xde->main;
 
-my $vroot;
+=head1 BEHAVIOUR
 
-if ($ops{id}) {
-    my $win = Gtk2::Gdk::Window->foreign_new($ops{id});
-    if (defined $win) {
-	$vroot = $win;
-	printf STDERR "Virtual root window id is 0x%08x\n",$win->XID if $ops{verbose};
-    }
-}
+When B<xde-setbg> is executed and an existing instance of B<xde-setbg>
+is running, it passes its arguments to the running program and exits.
 
-# some atoms
+On the initial invocation of B<xde-setbg> for a given X Display,
+B<xde-setbg> will first await the appearance of an X Window Manager that
+conforms to the EHMH/NetWM specification.  After a delay, (configurable
+with the B<--delay> option), B<xde-setbg> will start operation.
 
-my %atoms = ();
-my %props = ();
+The purpose of waiting after the window manager to appears is because
+most lightweight window managers do set the background before or after
+startup.  Waiting a short duration after window manager startup serves
+to ignore any changes made to the desktop background during startup of
+the desktop environment.
 
-foreach my $name (qw(ESETROOT_PMAP_ID _XROOTPMAP_ID _XSETROOT_ID _XROOTMAP_ID _NET_NUMBER_OF_DESKTOPS _NET_CURRENT_DESKTOP PIXMAP)) {
-    if (my $atom = Gtk2::Gdk::Atom->intern($name=>FALSE)) {
-	$atoms{$name} = $atom;
-	my ($type,$format,$data) = $root->property_get($atom,undef,0,1,FALSE);
-	if (defined $type) {
-	    printf STDERR "%s(%s) = (%d) 0x%08x\n",
-		   $name,$type->name,$format,$data if $ops{verbose};
-	    $props{$name} = $data;
-	}
-    }
-}
+After beginning full operation, B<xde-setbg> will complete startup
+notification (if it was requested).  It then determines whether an
+XSETTINGS daemon is in operation, and if so, will read its settings from
+the XSETTINGS daemon.  In the absence of an xsettings daemon, it will
+read its configuration from its configuration file, see
+L</CONFIGURATION> for how the configuraiton file is selected.
 
-# Step 1: get an array of pixmaps for 12 desktops.  If there is a pixmap
-#   set on the X server, use that pixmap.
+The configuration will then be used to set backgrounds on the current
+desktop and any additional desktops provided by the window manager and
+will monitor for further desktop background changes on the X Display.
+When the backgound settings change, it will change the background of the
+root window to the corresponding selected background.  Whenever the
+image on the root window is changed using a tool such as L<hsetroot(1)>,
+B<xde-setbg> will record the change against the desktop and work area
+and restore those settings when the desktop and work area change.
 
-my @pmids = ();
-my %pixmaps = ();
+Background changes can come background setting tools (such as
+L<hsetroot(1)> or L<xsetroot(1)>), command line invocation arguments,
+from settings of the XSETTINGS daemon, or from configuration file
+changes.
 
-my $default;
+B<xde-setbg> also understands the file an style settings for various
+lightweight window managers: L<fluxbox(1)>, L<blackbox(1)>,
+L<openbox(1)>, L<icewm(1)>, L<fvwm(1)>, L<lxde(1)>, and L<wmaker(1)>.
+It can also detect when an instance of L<pcmanfm(1)> is controlling the
+desktop wallpaper.  When a multiple-background capable window manager is
+running and present (such as L<wmaker(1)> or an L<lxde(1)> session with
+L<pcmanfm(1)> desktop), B<xde-setbg> exits and does nothing.
 
-my $desktops = $props{_NET_NUMBER_OF_DESKTOPS};
-$desktops = 1 unless $desktops;
+When there is a current background on initial startup, B<xde-setbg>
+assumes that this is a desktop background that was applied by the
+lightweight window manager and ignores its settings.
 
-foreach my $id (qw(ESETROOT_PMAP_ID _XROOTPMAP_ID _XSETROOT_ID _XROOTMAP_ID)) {
-    if (my $prop = $props{$id}) {
-	for (my $i=0; $i<12; $i++) {
-	    $pmids[$i] = $prop;
-	}
-	$default = $prop;
-    }
-}
+When B<xde-setbg> exits gracefully, it writes its configuration out to
+the configuration file.  In addition to the background settings, it
+writes the current desktop or workspace and work area and viewport to
+the file.  This permits it to restore the current desktop or workspace,
+work area and view port on session restart.
 
-if (0) {
-if ($default) {
-	my $pixmap = Gtk2::Gdk::Pixmap->foreign_new($default);
-	$pixmaps{$pixmap->XID} = $pixmap if defined $pixmap;
-}
-}
+=head2 SUMMARY
 
-# Step 2: find the current desktop
+The user will observe the following when B<xde-setbg> is running:
 
-my $current = $props{_NET_CURRENT_DESKTOP};
-$current = 0 unless $current;
+=over
 
-# Step 3: get pixbufs and render pixmaps for arguments
+=item 1.
 
-my @files = (@ARGV);
+The desktop background will changed when changing desktops or
+workspaces, and optionally when changing work areas when enabled.
 
-for (my $i = 0; $i < scalar(@files); $i++) {
-    my $file = $files[$i];
-    my $mode = 'fill';
-    if ($file =~ m{^(center|tile|full|fill):(.*)$}) {
-	$mode = $1; $file = $2;
-    }
-    next unless -f $file;
-    my $pixbuf;
-    if ($mode eq 'fill') {
-	eval { $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file_at_scale($file,$w,$h,FALSE); };
-    }
-    elsif ($mode eq 'full') {
-	eval { $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file_at_size($file,$w,$h,FALSE); };
-    }
-    next unless $pixbuf;
-    my ($width,$height) = ($pixbuf->get_width,$pixbuf->get_height);
-    my ($x_src,$y_src,$x_dst,$y_dst,$w_box,$h_box) = (0,0,0,0,$w,$h);
-    if ($width > $w) {
-	$w_box = $w;
-	$x_src = ($width-$w)/2;
-	$x_dst = 0;
-    }
-    elsif ($width < $w) {
-	$w_box = $width;
-	$x_src = 0;
-	$x_dst = ($w-$width)/2;
-    }
-    if ($height > $h) {
-	$h_box = $height;
-	$y_src = ($height-$h)/2;
-	$y_dst = 0;
-    }
-    elsif ($height < $h) {
-	$h_box = $h;
-	$y_src = 0;
-	$y_dst = ($h-$height)/2;
-    }
-    my $pixmap = Gtk2::Gdk::Pixmap->new(undef,$w,$h,$d);
-    $pixmap->draw_pixbuf(undef,$pixbuf,$x_src,$y_src,$x_dst,$y_dst,$w_box,$h_box,'none',0,0);
-    $pmids[$i] = $pixmap->XID;
-    $pixmaps{$pixmap->XID} = $pixmap;
-    if ($i == $current) {
-	if ($ops{setroot}) {
-	    printf STDERR "Setting background pixmap to 0x%08x\n",$pixmap->XID if $ops{verbose};
-	    eval {
-		$root->set_back_pixmap($pixmap,0) if $ops{setroot};
-		$root->clear;
-	    };
-	}
-	$display->grab if $ops{grab};
-	foreach my $name (qw(_XSETROOT_ID _XROOTPMAP_ID ESETROOT_PMAP_ID _XROOTMAP_ID)) {
-	    $root->property_change($atoms{$name},$atoms{PIXMAP},Gtk2::Gdk::ULONGS,'replace',$pixmap->XID);
-	}
-	$display->flush;
-	$display->sync;
-	$display->ungrab if $ops{grab};
-    }
-}
+=item 2.
 
-# Step 4: register for property changes
+When metathemes are changed using the L<xde-theme(1)> setting tool, the
+set of backgrounds will also be changed.
 
-Gtk2::Gdk::Event->handler_set(sub{
-    my $event = shift;
-    print STDERR "Got event of type ",$event->type,"\n" if $ops{verbose};
-    if ($event->type eq 'property-notify') {
-	my $atom = $event->atom;
-	my $name = $atom->name;
-	print STDERR "Changed property is $name\n" if $ops{verbose};
-	if ($name eq '_XSETROOT_ID' or
-	    $name eq '_XROOTPMAP_ID' or
-	    $name eq '_XROOTMAP_ID' or
-	    $name eq 'ESETROOT_PMAP_ID') {
-	    print STDERR "Pixmap id changed\n" if $ops{verbose};
-	    my ($type,$format,$data) = $root->property_get($atom,undef,0,1,FALSE);
-	    if (defined $type) {
-		$props{$name} = $data;
-		printf STDERR "Pixmap id of %s changed to 0x%08x\n", $name, $data if $ops{verbose};
-		$pmids[$current] = $data;
-		if (0) {
-		    unless ($pixmaps{$data}) {
-			my $pixmap = Gtk2::Gdk::Pixmap->foreign_new($data);
-			$pixmaps{$data} = $pixmap if defined $pixmap;
-		    }
-		}
-	    }
-	}
-	elsif ($name eq '_NET_CURRENT_DESKTOP') {
-	    print STDERR "Currrent desktop changed\n" if $ops{verbose};
-	    my ($type,$format,$data) = $root->property_get($atom,undef,0,1,FALSE);
-	    if (defined $type) {
-		$props{$name} = $data;
-		printf STDERR "Current desktop %s changed to %d\n", $name, $data if $ops{verbose};
-		if ($current != $data) {
-		    if ($pmids[$data] and (not $pmids[$current] or $pmids[$data] != $pmids[$current])) {
-			my $pmap_id = $pmids[$data];
-			printf STDERR "Need to change background pixmap from 0x%08x to 0x%08x\n",
-			       $pmids[$current], $pmids[$data] if $ops{verbose};
-			$display->grab if $ops{grab};
-			if ($ops{setroot}) {
-			    my $pixmap;
-			    if ($pixmaps{$pmap_id}) {
-				$pixmap = $pixmaps{$pmap_id};
-				printf STDERR "Using known pixmap 0x%08x\n", $pmap_id if $ops{verbose};
-			    }
-			    else {
-				$pixmap = Gtk2::Gdk::Pixmap->foreign_new($pmap_id);
-				printf STDERR "Looked up pixmap 0x%08x\n", $pmap_id if $ops{verbose};
-			    }
-			    if (defined $pixmap) {
-				    printf STDERR "Setting background pixmap to 0x%08x\n",$pixmap->XID if $ops{verbose};
-				eval {
-				    $root->set_back_pixmap($pixmap,0);
-				    $root->clear;
-				};
-			    } else {
-				    printf STDERR "Could not lookup pixmap 0x%08x!\n", $pmap_id;
-			    }
-			}
-			foreach my $name (qw(_XSETROOT_ID _XROOTPMAP_ID ESETROOT_PMAP_ID _XROOTMAP_ID)) {
-			    $root->property_change($atoms{$name},$atoms{PIXMAP},Gtk2::Gdk::ULONGS,'replace',$pmap_id);
-			}
-			$display->flush;
-			$display->sync;
-			$display->ungrab if $ops{grab};
-		    }
-		    $current = $data;
-		}
-	    }
-	}
-	elsif ($name eq '_NET_NUMBER_OF_DESKTOPS') {
-	    print STDERR "Number of desktops changed\n" if $ops{verbose};
-	    my ($type,$format,$data) = $root->property_get($atom,undef,0,1,FALSE);
-	    if (defined $type) {
-		printf STDERR "Number of desktops %s changed to %d\n", $name, $data if $ops{verbose};
-		$props{$name} = $data;
-		if ($data > $desktops) {
-		    for (my $i = $desktops; $i < $data; $i++) {
-			$pmids[$i] = $default;
-		    }
-		}
-		$desktops = $data;
-	    }
-	}
-    }
-    Gtk2->main_do_event($event);
-});
+=item 3.
 
-print STDERR "Setting property change events on root...\n" if $ops{verbose};
-$root->set_events('property-change-mask');
-print STDERR "Setting button events on vroot...\n" if $ops{verbose};
-$vroot->set_events(['button-press-mask','button-release-mask']) if $vroot;
+When a background for a particular desktop or worspace and work area is
+changed using a background setting tool, it will remain changed for that
+desktop or workspace and work area for the reminaing session.
 
-#my $color = Gtk2::Gdk::Color->new(0x46*257,0x71*257,0x77*257);
-#$root->set_background($color);
+=item 4.
 
-Gtk2->main;
+When starting a session when running B<xde-setbg> on autostart, the
+desktop or workspace and work area and viewport will be changed to match
+that which was active when the window manager last shut down.  That is,
+if I was on desktop #4 when I logged out, upon login the desktop will
+switch to desktop #4.
 
-=head1 CONFIGURATION FILE
+=item 5.
 
-B<xde-setbg> looks for its own configuration file in
-F<$XDG_CONFIG_HOME/xde-session/$XDG_CURRENT_DESKTOP/wallpapers>.  This
-is a keyfile where the sections are named C<[$style]>, where, C<$style>
-is the style that is determined from window manager configuration.
-Within these sections, there are B<wallpaper>I<n> attributes for each of
-the possible desktops.  These attributes contain a background
-specification string that consists of C<$method:$path>, where C<$method>
-is one of C<center>, C<fill>, C<full>, C<tile> and C<$path> is the full
-pathname of the image file.  For example:
+The set of backgrounds can set with L<xde-theme(1)>.
 
- [Squared_blue]
- wallpaper0=fill:/usr/share/images/penguins/penguins_jumping.jpg
- wallpaper1=fill:/usr/share/images/penguins/penguin_pair.jpg
- wallpaper2=fill:/usr/share/images/penguins/penguins_inarow.jpg
+=item 6.
 
- [Unexicon]
- wallpaper0=fill:/usr/share/images/telcom/tower_fence.jpg
- wallpaper1=fill:/usr/share/images/telcom/tower_bluesky4.jpg
- wallpaper2=fill:/usr/share/images/telcom/tower_greysky3.jpg
+B<xde-setbg> can be used to change the set of backgrounds during a
+session and they will be applied when the session next starts.
 
-Sections that do not yet exist will have their backgrounds set from
-command line parameters and the new values will be inserted into the key
-file.
+=back
+
+=head1 CONFIGURATION
+
+A F<.desktop> file is distributed with B<xde-setbg> that can be used to
+autostart the program in an XDG compliant environment such as is
+provided by the X Desktop Environment.  Startup of the program conforms
+to the XDG Startup specification, and the program will notify the
+launcher once it has fully started.
 
 =head1 WINDOW MANAGERS
 
-B<xde-setbg> detects the window manager being used and conducts itself
-accordingly.  B<xde-setbg> supports the following window managers:
+B<xde-setbg> supports a number of lightweight window managers and
+manages some quirks associated with each:
 
 =over
 
-=item I<Fluxbox>
+=item L<fluxbox(1)>
 
-When B<xde-setbg> detects I<Fluxbox> as the window manager, it sets that
-background pixmap agaist the root window (the option B<--setroot> is
-implied).
+L<fluxbox(1)> sets the background upon startup unless it is requested to
+not do so.  The overlay file can have the background resource set to
+C<background: unset>, to suppress L<fluxbox(1)> from setting the
+background at all.  This setting is recommended and will result in
+smooth transition from the xdm background to the B<xde-setbg> initial
+background.  The B<--delay> option can be set to zero in this case.
 
-=item I<Blackbox>
+=item L<blackbox(1)>
 
-When B<xde-setbg> detects I<Blackbox> as the window manager, it sets the
-background pixmap against the root window (the option B<--setroot> is
-implied).
+L<blackbox(1)> sets the background directly from information obtained
+from the style file: the C<rootCommand> in the file sets the root
+background.  It is normally set to L<bsetroot(1)> or L<bsetbg(1)>.
+For styles that are aware of B<xde-setbg>, the C<rootCommand> can be set
+to invoke B<xde-setbg> directly.  For metastyles, the background should
+be reset using B<xde-setbg> or L<xde-settings(1)> after a new blackbox
+style file has been applied.  Note that L<bsetbg(1)> just invokes one of
+the may background setting programs.  The C<NO_EXEC> flag can be set to
+true in the F<~/.bsetbgrc> file to suppress setting of the background by
+L<bsetbg(1)>.
 
-=item I<IceWM>
+=item L<openbox(1)>
 
-When B<xde-setbg> detects I<IceWM> as the window manager, it sets the
-background pixmap against the root window (the option B<--setroot> is
-implied).
+L<openbox(1)> does not provide any theme-based background setting of its
+own.
 
-=item I<Openbox>
+=item L<icewm(1)>
 
-When B<xde-setbg> detects I<Openbox> as the window manager, without an
-I<LXDE> session running, it sets the background pixmap against the root
-window (the option B<--setroot> is implied).  Openbox does not attempt
-to set a background when it starts unless one was specified in the
-F<autostart.sh> startup script.
+L<icewm(1)> uses the L<icewmbg(1)> program to set the background.  If
+the program is not run, L<icewm(1)> will not set the background.  It
+reads its configuration from F<~/.icewm/preferences>.  Settings in
+F<~/.icewm/prefoverride> can be used to override settings in the
+F<~/.icewm/preferences> file and it appears that L<icewmbg(1)> respects
+that.  The documentation in L<icewm(1)> indicates that L<icewmbg(1)> can
+be used to set backgrounds on multiple desktops; however, examination of
+the code fro 1.3.7 reveals that the code for that is completely strapped
+out.
 
-=item I<LXDE>
+Basically, one need not even run B<icewmbg> when using B<xde-setbg>.  An
+XDE session will not invoke B<icewmbg> and, therefore, can set the
+B<--delay> option to zero (0).
 
-When B<xde-setbg> detects I<LXDE> as the window manager (well, Openbox
-is the window manager and LXDE is the desktop environment), it does not
-perform any actions against the X Display at all.  Instead it invokes
-C<pcmanfm -w %f> with the file determined by consulting configuration
-files and the command line.  Because L<pcmanfm(1)> will only set the
-background for the current desktop with the B<-w> flag, B<xde-setbg>
-monitors desktop changes by the B<_NET_CURRENT_DESKTOP> property on the
-root window, and sets backgrounds that have not previously been set
-using L<pcmanfm(1)> with the B<-w> flag.
-
-The configuration known to L<pcmanfm(1)> can be determined by consulting
-the file <$XDG_CONFIG_HOME/pcmanfm/LXDE/pcmanfm.conf>, which contains
-the desktop settings as B<wallpaper>n properties in the C<[desktop]>
-section of the configuration file.
-
-=item I<FVWM>
-
-When B<xde-setbg> detects I<FVWM> as the window manager, it sets the
-background pixmap against the root window (the option B<--setroot> is
-implied).  You should not use this together with the FVWM Backer Module.
-
-=item I<WindowMaker>
-
-When B<xde-setbg> detects I<WindowMaker> as the window manager, it does
-not perform any actions against the X Display at all.  Instead it
-invokes L<wmsetbg> with the appropriate options for the specified
-images.
 
 =back
 
-=head1 X RESOURCES
+=head1 BACKGROUND SETTERS
 
-B<xde-setbg> interprets the following X resources and properties set on
-the X Display.
+There are no background setters that appear to be desktop or workspace
+aware, far less work area and view port aware.  This requires placing a
+background editor into the B<xdg-setbg> tool.
+
+Nevertheless, B<xde-setbg> is designed to work (temporarily) with the
+following background setters:
+(By temporarily, I mean that although B<xde-setbg> will respect the
+setting made by these for the current desktop/workspace and work
+area/view port, they cannot be saved across sessions.)
 
 =over
 
-=item B<ESETROOT_PMAP_ID>
+=item L<icewmbg(1)>
 
-=item B<_XROOTPMAP_ID>
+=item L<bsetbg(1)>
 
-=item B<_XSETROOT_ID>
+=item L<fbsetbg(1)>
 
-=item B<_XROOTMAP_ID>
+=item L<wmsetbg(1)>
 
-=item B<_NET_DESKTOP_GEOMETRY>, B<_WIN_AREA_COUNT>
+=item L<xsetbg(1)>
 
-B<_NET_DESKTOP_GEOMETRY> specifies the size of the virtual desktop.
-This can be larger than the screen size when large desktops are
-supported.
+=item L<xli(1)>
 
-B<_WIN_AREA_COUNT> specifies the number of horizontal areas (columns)
-and vertical areas (rows).  Each row and column is the size of the
-screen.
+=item L<display(1)>
 
-=item B<_NET_DESKTOP_VIEWPORT>, B<_WIN_AREA>
+=item L<xv(1)>
 
-B<_NET_DESKTOP_VIEWPORT> contains the x and y coordinates of the top
-left corner of the viewport on each desktop.  This is (0,0) for all
-desktops when large desktops are not supported.
+=item L<Esetroot(1)>
 
-B<_WIN_AREA> specifies the x-index (column starting at 0 on the left)
-and y-index (row starting at 0 on the top).
+=item L<hsetroot(1)>
 
-=item B<_NET_VIRTUAL_ROOTS>
+=item L<bsetroot(1)>
 
-Gosh, I hope none of the supported window managers set this.
+=item L<fbsetroot(1)>
 
-=item B<_NET_NUMBER_OF_DESKTOPS>, B<_WIN_WORKSPACE_COUNT>
+=item L<xsetroot(1)>
 
-Specifies the total number of supported virtual desktops or workspaces.
-B<xde-setbg> uses one of these to determine the number of virtual
-desktops or workspaces.  B<xde-setbg> does not anticipate more than 12
-virtual desktops or workspaces.  B<_NET_NUMBER_OF_DESKTOPS> will always
-be used in preference to B<_WIN_WORKSPACE_COUNT>; however,
-B<_WIN_WORKSPACE_COUNT> will be used when supported and
-B<_NET_NUMBER_OF_DESKTOPS> is not supported.
+=item L<Esetroot(1)>
 
-=item B<_NET_CURRENT_DESKTOP>, B<_WIN_WORKSPACE>
+=item L<nitrogen(1)>
 
-Specifies the current desktop or workspace.  B<xde-setbg> uses one of
-these to determine the current virtual desktop or workspace.
-B<_NET_CURRENT_DESKTOP> wil always be used in preference to
-B<_WIN_WORKSPACE>; however, B<_WIN_WORKSPACE> will be used when
-supported and B<_NET_NUMBER_OF_DESKTOPS> is not supported.
-
-=item B<_NET_SUPPORTING_WM_CHECK>, B<_WIN_SUPPORTING_WM_CHECK>
-
-This resource is set on the root window of the display by all window
-managers except TWM.  This is set to the window used for communications
-with the window manager.  That window will typically have its
-B<_NET_WM_NAME> set to the name of the window manager (except for
-I<WindowMaker>).  IceWM also sets the B<_NET_WM_PID> of that window to
-the PID of the IceWM window manager running on the display.
-
-B<_WIN_SUPPORTING_WM_CHECK> is set on the root window of the display by
-some window managers (IceWM and FVWM) for older GNOME compliance.
-B<_NET_SUPPORTING_WM_CHECK> will always be used in preference to
-B<_WIN_SUPPORTING_WM_CHECK>; however, B<_WIN_SUPPORTING_WM_CHECK> will
-be used when supported and B<_NET_SUPPORTING_WM_CHECK> is not supported.
-
-=item B<_NET_SUPPORTED>, B<_WIN_PROTOCOLS>
-
-These resources are set on the root window to indicate the functions
-that are supported by the window manager.  Atoms of interest to
-B<xde-setbg> are:
-
-=over
-
-=item B<_NET_SUPPORTED>
-
-B<_NET_NUMBER_OF_DESKTOPS>, B<_NET_CURRENT_DESKTOP>,
-B<_NET_DESKTOP_NAMES>, B<_NET_DESKTOP_VIEWPORT>,
-B<_NET_DESKTOP_GEOMETRY>
-
-=item B<_WIN_PROTOCOLS>
-
-B<_WIN_WORKSPACE>, B<_WIN_WORKSPACE_COUNT> and
-B<_WIN_WORKSPACE_NAMES>, B<_WIN_AREA>, B<_WIN_AREA_COUNT>
-
-=back
-
-=item B<_NET_WM_NAME>, B<WM_NAME>
-
-This resource is set on the window manager window of the display (that
-pointed to by B<_NET_SUPPORTING_WM_CHECK>) to the name of the window
-manager.  For example, B<_NET_WM_NAME> has the following values for the
-following window managers:
-
-=over 12
-
-=item Blackbox
-
-C<Blackbox> (UTF8_STRING)
-
-=item Fluxbox
-
-C<Fluxbox> (UTF8_STRING)
-
-=item Openbox
-
-C<Openbox> (UTF8_STRING)
-
-=item IceWM
-
-C<IceWM 1.3.7 (Linux 3.4.0-1-ARCH/i686)> (STRING)
-
-=item FVWM
-
-C<FVWM> (UTF8_STRING)
-(Note that L<fvwm(1)> also sets B<WM_NAME>(STRING) to C<fvwm> and
-sets B<WM_CLASS>(STRING) to C<fvwm>, C<FVWM>.)
-
-=item WindowMaker
-
-WindowMaker does not set these resources; however, the
-B<_WINDOWMAKER_WM_PROTOCOLS> property is set on the root window.
-
-=item TWM
-
-TWM is not compiant with the NetWM specification.
-
-=back
-
-=item B<_BLACKBOX_PID>
-
-Specifies the UNIX pid of the Fluxbox window manager (not the Blackbox
-window manager).
-
-=item B<_OPENBOX_PID>(CARDINAL)
-
-Specifies the UNIX pid of the Openbox window manager.
-
-=item B<_OB_CONFIG_FILE>(UTF8_STRING)
-
-Specifies the full path name to the configuration file used by the
-Openbox window manager.
-
-=item B<_OB_THEME>(UTF8_STRING)
-
-Specifies the active theme used by the Openbox window manager.
-
-=item B<_OB_VERSION>(UTF8_STRING)
-
-Specifies the version string of the Openbox window manager.
-
-=back
-
-=head1 ENVIRONMENT
-
-B<xde-setbg> observes the following environment variables:
-
-=over
-
-=item B<DISPLAY>
-
-=item B<DESKTOP_SESSION>
-
-=item B<FBXDG_DE>
-
-=item B<_LXSESSION_PID>
-
-=item B<XDG_CURRENT_DESKTOP>
+L<nitrogen(1)> allows setting the root window on the current screen and
+saves the settings in F<$XDG_CONFIG_HOME/nitrogen/bg-saved.cfg> for
+later restoration.
 
 =back
 
 =head1 HISTORY
 
-I chose to write this utility because L<fluxbox(1)>, L<blackbox(1)>,
-L<openbox(1)>, and L<icewm(1)> lack this facility which is a native part
-of the L<wmaker(1)> window manager.  L<fvwm2(1)> has its own
-L<FvwmBacker(1)> module that performs this function, but it is slow an
-inefficient.
+Changing backgrounds when desktops or workspaces and work areas was not
+possible some decades ago due to the limited memory capabilities of X
+Servers at the time.  There is no such limitation today, even on
+embedded systems.  The only lightweight window managers with this
+capability are L<wmaker(1)> and L<lxde(1)> (running L<pcmanfm(1)> in
+B<-desktop> mode).
+
+Placing different backgrounds on different desktops or workspaces and
+work areas helps the user of the desktop environment take notice of
+desktop changes in an intuitive way without having to take visual
+reference of a desktop pager.  It is a useful feature that is missing
+from most lightweight window managers.
+
+L<fvwm(1)> has the C<Backer> module that can perform desktop switching
+in the same fashion as B<xde-setbg>; however, it does not store the full
+set of pixmaps on the X Display and thus switching between workspaces
+and work areas is both sluggish and causes screen flashes.  In
+particular, changing desktops rapidly with the scroll wheel is
+particularly unreponsive.
+
+I wrote B<xde-setbg> for the X Desktop Environment to overcome the
+limitations of the lightweight window managers that it supports.
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
 
 =head1 SEE ALSO
 
-L<hsetroot(1)>, L<esetroot(1)>, L<wmsetbg(1)>, L<bsetbg(1)>,
-L<fbsetbg(1)>.
-
 =cut
-# vim: set sw=4 tw=72
+
+# vim: sw=4 tw=72

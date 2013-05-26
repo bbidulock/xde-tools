@@ -45,33 +45,7 @@ B<xde-settings> [I<OPTIONS>]
 =head1 DESCRIPTION
 
 B<xde-settings> is a gtk2-perl application that implements an XSETTINGS
-daemon for the X Desktop Environment.
-
-On startup, the script determines if it is a unique instance of
-B<xde-setting>.  If it is not, it passes its arguments to the running
-instance and exits.
-
-When first starting up, the script reads the last current or default
-XSETTINGS from its configuration file.  The configuration file can also
-be specified as an option.  After reading the file, the daemon takes
-ownership of the C<_XSETTINGS_S[n]> selection for each screen on the
-display and manages settings according to the XSETTINGS protocol.
-
-When the program cannot obtain ownership of the C<_XSETTINGS_S[n]>
-selection, it monitors for ownership changes and assumes ownership once
-it is relinquished.  An option can be specified that will cause the
-program to kill the current owner of the selection if it cannot obtain
-it.
-
-Once it has ownership of the selection, the daemon manages settings and
-converts selections requested by other XDE applications in accordance
-with the ICCM and the XSETTINGS protocol, until the selection is either
-taken away, or the program terminates.  An option can be set to made
-B<xde-settings> persist after losing ownership.
-
-Upon choosing to exit or after receiving a C<$SIG{TERM}>, before exiting
-gracefully, the daemon writes the current settings back to the
-configuration file.
+daemon and metathemes switcher for the X Desktop Environment.
 
 =head1 OPTIONS
 
@@ -133,6 +107,40 @@ I<XKillClient> on the current owner.  This is rather drastic, and should
 not normally be done.  B<--kill-owner> implies B<--take-selection>.
 
 =back
+
+=head1 BEHAVIOUR
+
+On startup, the script determines if it is a unique instance of
+B<xde-settings>.  If it is not, it passes its arguments to the running
+instance and exits.
+
+When first starting up, the script reads the last current or default
+XSETTINGS from its configuration file.  The configuration file can also
+be specified as an option.  When there is no configuration file,
+configuration is read from F<$HOME/.gtkrc-2.0>.  After reading the file,
+the daemon takes ownership of the C<_XSETTINGS_S[n]> selection for
+each screen on the display and manages settings according to the
+XSETTINGS protocol.
+
+When the program cannot obtain ownership of the C<_XSETTINGS_S[n]"
+selection, it monitors for ownership changes and assumes ownership once
+it is reliquished.  An option can be specified that will cause the
+program to kill the current owner of the selection if it cannot obtain
+it.
+
+Once it has ownership of the selection, the daemon manages settings and
+converts selections requested by other XDE applications in accordance
+with the ICCM and the XSETTTINGS protocol, until the selection is either
+taken away, or the program terminates.  An option can be set to make
+B<xde-settings> persist after losing ownership.
+
+During operation, the program monitors its configuration file and the
+C<$HOME/.gtkrc-2.0> file for changes, apply the changes to the settings
+whenever a change is detected.
+
+Upon choosing to exit or after receiving a $SIG{TERM}, before exiting
+gracefully, the daemon writes the current settings back to the
+configuration file and optionally to the F<$HOME/.gtkrc-2.0> file.
 
 =head1 CONFIGURATION
 
@@ -245,6 +253,14 @@ section:
 
 
 =back
+
+=head1 HISTORY
+
+Although there is a reference implementation of the XSETTINGS protocol,
+L<xsettingsd(1)>, it does not monitor any files and uses a single
+static configuration file.  This is inadequate for most purposes.  I
+wrote B<xde-settings> to manage settings for GTK+ and other components
+of the desktop including metathemes for B<XDE>.
 
 =head1 AUTHOR
 
