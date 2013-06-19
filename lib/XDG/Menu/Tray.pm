@@ -106,7 +106,7 @@ sub create {
     $im = Gtk2::Image->new_from_icon_name('system-log-out','menu');
     $self->apply_style($im) if $im;
     $mi->set_image($im) if $im;
-    $mi->signal_connect(activate=>sub{system "fluxbox-logout"});
+    $mi->signal_connect(activate=>sub{system "xde-logout"});
     $mi->show_all;
     $m->append($mi);
 

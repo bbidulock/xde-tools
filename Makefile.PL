@@ -3,6 +3,7 @@ WriteMakefile(
 	NAME => 'xdg-tools',
 	VERSION => '0.01',
 	EXE_FILES => [
+		'xde-autostart',
 		'xde-chooser',
 		'xde-icon',
 		'xde-input',

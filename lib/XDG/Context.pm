@@ -83,62 +83,12 @@ passed to the method and calls the B<setup> method.  The default
 B<setup> method establishes I<%OVERRIDES> and defaults.  It is
 up to the caller to caller or derived class to call the B<getenv> or
 B<setenv> methods to read or write values from or to the environment.
-
 An options hash reference with default values (considering overrides)
-will be available in C<$xdg->{ops}>.
+will be available in C<$xdg-E<gt>{ops}>.
 
-I<%OVERRIDES> that are interpreted by this module are:
-
-=over
-
-=item B<XDG_CONFIG_*>
-
-This includes B<XDG_CONFIG_LEGACY>, B<XDG_CONFIG_HOME>,
-B<XDG_CONFIG_PREPEND>, B<XDG_CONFIG_DIRS>, B<XDG_CONFIG_APPEND>,
-B<XDG_CONFIG_FALLBACK>.  Each takes a colon-separated list of paths
-corresponding to XDG configuration directory lookup paths.  The
-character C<~> will be replaced with the contents of the B<$HOME>
-environtment variable.
-
-=item B<XDG_DATA_*>
-
-This includes B<XDG_DATA_LEGACY>, B<XDG_DATA_HOME>, B<XDG_DATA_PREPEND>,
-B<XDG_DATA_DIRS>, B<XDG_DATA_APPEND>, B<XDG_DATA_FALLBACK>.  Each takes
-a colon-separated list of paths corresponding to XDG data directory
-lookup paths.  The character C<~> will be replaced with the contents of
-the B<$HOME> environtment variable.
-
-=item B<XDG_ICON_*>
-
-This includes B<XDG_ICON_LEGACY>, B<XDG_ICON_HOME>, B<XDG_ICON_PREPEND>,
-B<XDG_ICON_DIRS>, B<XDG_ICON_APPEND>, B<XDG_ICON_FALLBACK>.  Each takes
-a colon-separated list of paths corresponding to icon lookup paths.  The
-character C<~> will be replaced with the contents of the B<$HOME>
-environtment variable.
-
-=item B<XDG_MENU_PREFIX>, B<XDG_VENDOR_ID>
-
-B<XDG_MENU_PREFIX> specifies the XDG menu prefix.  B<XDG_VENDOR_ID>
-specifies the XDG vendor identifier that will be used when determining
-the default B<XDG_MENU_PREFIX>.
-
-=item B<XDG_CURRENT_DESKTOP>
-
-Specifies the current desktop session.  This is the all upper-case name
-that will be used as the desktop environment when interpreting
-C<OnlyShowIn> and C<NotShowIn> F<.desktop> file fields.
-
-=back
-
-I<%ops> that are interpreted by this module are:
-
-=over
-
-=item B<language>, B<charset>, B<lang>
-
-These are used to determine localized strings from F<.desktop> files.
-
-=back
+See L</OVERRIDES> for details on the I<%OVERRIDES> interpreted by this
+module.
+See L</OPTIONS> for details on the I<%ops> interpreted by this module.
 
 =cut
 
@@ -160,6 +110,8 @@ to reapply overrides if necessary.
 =cut
 
 sub setup {
+    print STDERR "Args are: ", join(',',@_), "\n"
+	unless (scalar(@_)&0x1);
     my ($self,%OVERRIDES) = @_;
     foreach (keys %OVERRIDES) {
 	if ($_ eq 'ops' and exists $self->{ops}) {
@@ -170,7 +122,6 @@ sub setup {
 	    $self->{$_} = $OVERRIDES{$_};
 	}
     }
-    $self->default;
     return $self;
 }
 
@@ -205,15 +156,18 @@ sub default {
     $self->{XDG_ICON_DIRS} = join(':',map {"$_/icons"} split(/:/,$self->{XDG_DATA_DIRS}));
     $self->{XDG_ICON_APPEND} = undef unless $self->{XDG_ICON_APPEND};
     $self->{XDG_ICON_FALLBACK} = '/usr/share/pixmaps' unless $self->{XDG_ICON_FALLBACK};
+    $self->{XDG_VENDOR_ID} = $self->{ops}{vendor} unless $self->{XDG_VENDOR_ID} and not $self->{ops}{vendor};
     if ($self->{XDG_MENU_PREFIX} and not $self->{XDG_VENDOR_ID}) {
 	$self->{XDG_VENDOR_ID} = $self->{XDG_MENU_PREFIX};
 	$self->{XDG_VENDOR_ID} =~ s{-$}{};
     }
-    elsif ($self->{XDG_VENDOR_ID} and not $self->{XDG_MENU_PREFIX}) {
+    elsif ($self->{XDG_VENDOR_ID}) {
 	$self->{XDG_MENU_PREFIX} = "$self->{XDG_VENDOR_ID}-";
     }
     $self->{XDG_VENDOR_ID} = '' unless $self->{XDG_VENDOR_ID};
     $self->{XDG_MENU_PREFIX} = '' unless $self->{XDG_MENU_PREFIX};
+    $self->{XDG_CURRENT_DESKTOP} = $self->{ops}{desktop};
+    $self->{XDG_CURRENT_DESKTOP} = $self->{ops}{session} unless $self->{XDG_CURRENT_DESKTOP};
     $self->{XDG_CURRENT_DESKTOP} = '' unless $self->{XDG_CURRENT_DESKTOP};
     $self->{XDG_CURRENT_DESKTOP} = "\U$self->{XDG_CURRENT_DESKTOP}\E" if $self->{XDG_CURRENT_DESKTOP};
     foreach my $var (@{&MYPATH}) {
@@ -230,6 +184,8 @@ sub default {
     }
     $self->{ops}{vendor} = $self->{XDG_VENDOR_ID}
 	unless $self->{ops}{vendor};
+    $self->{ops}{desktop} = $self->{XDG_CURRENT_DESKTOP}
+	unless $self->{ops}{desktop};
     return $self;
 }
 
@@ -384,6 +340,42 @@ sub XDG_VENDOR_ID       { return shift->get_or_set(XDG_VENDOR_ID      =>@_) }
 sub XDG_CURRENT_DESKTOP { return shift->get_or_set(XDG_CURRENT_DESKTOP=>@_) }
 sub XDG_MENU_PREFIX	{ return shift->get_or_set(XDG_MENU_PREFIX    =>@_) }
 
+
+sub show_options {
+    my $self = shift;
+    my %ops = %{$self->{ops}};
+    if ($ops{verbose}) {
+	print STDERR "Option settings:\n";
+	foreach (sort keys %ops) {
+	    next unless defined $ops{$_};
+	    my $val = $ops{$_};
+	    $val = join(',',@$val) if ref($val) eq 'ARRAY';
+	    printf STDERR "\t%-20s: '%s'\n", $_, $val;
+	}
+    }
+}
+
+sub show_variables {
+    my $self = shift;
+    if ($self->{ops}{verbose}) {
+	print STDERR "Current settings:\n";
+	foreach (sort keys %$self) {
+	    next unless m{^XD} and defined $self->{$_};
+	    my $val = $self->{$_};
+	    $val = join(':',@$val) if ref($val) eq 'ARRAY';
+	    printf STDERR "\t%-20s: '%s'\n", $_, $val;
+	}
+    }
+}
+
+sub show_settings {
+    my $self = shift;
+    if ($self->{ops}{verbose}) {
+	$self->show_variables;
+	$self->show_options;
+    }
+}
+
 =item $xdg->B<set_vendor>($vendor) => $vendor
 
 Used to set the I<$vendor> string for setting the B<XDG_VENDOR_ID> and
@@ -400,6 +392,7 @@ sub set_vendor {
 	    XDG_VENDOR_ID   => "${vendor}",
 	    XDG_MENU_PREFIX => "${vendor}-",
 	);
+	$self->default;
     }
     return $vendor;
 }
@@ -448,10 +441,10 @@ sub get_autostart {
                 }
 	    }
             close($fh);
-            $self->{lang} =~ m{^(..)}; my $short = $1;
+            $self->{ops}{lang} =~ m{^(..)}; my $short = $1;
             foreach (keys %xl) {
-                if (exists $xl{$_}{$self->{lang}}) {
-                    $e{$_} = $xl{$_}{$self->{lang}};
+                if (exists $xl{$_}{$self->{ops}{lang}}) {
+                    $e{$_} = $xl{$_}{$self->{ops}{lang}};
                 }
                 elsif (exists $xl{$_}{$short}) {
                     $e{$_} = $xl{$_}{$short};
@@ -569,10 +562,10 @@ sub get_xsessions {
                 }
             }
             close($fh);
-            $self->{lang} =~ m{^(..)}; my $short = $1;
+            $self->{ops}{lang} =~ m{^(..)}; my $short = $1;
             foreach (keys %xl) {
-                if (exists $xl{$_}{$self->{lang}}) {
-                    $e{$_} = $xl{$_}{$self->{lang}};
+                if (exists $xl{$_}{$self->{ops}{lang}}) {
+                    $e{$_} = $xl{$_}{$self->{ops}{lang}};
                 }
                 elsif (exists $xl{$_}{$short}) {
                     $e{$_} = $xl{$_}{$short};
@@ -665,5 +658,102 @@ sub get_xsessions {
 =cut
 
 1;
+
+__END__
+
+=head1 OVERRIDES
+
+I<%OVERRIDES> that are interpreted by this module are:
+
+=over
+
+=item B<XDG_CONFIG_*>
+
+This includes B<XDG_CONFIG_LEGACY>, B<XDG_CONFIG_HOME>,
+B<XDG_CONFIG_PREPEND>, B<XDG_CONFIG_DIRS>, B<XDG_CONFIG_APPEND>,
+B<XDG_CONFIG_FALLBACK>.  Each takes a colon-separated list of paths
+corresponding to XDG configuration directory lookup paths.  The
+character C<~> will be replaced with the contents of the B<$HOME>
+environtment variable.
+
+=item B<XDG_DATA_*>
+
+This includes B<XDG_DATA_LEGACY>, B<XDG_DATA_HOME>, B<XDG_DATA_PREPEND>,
+B<XDG_DATA_DIRS>, B<XDG_DATA_APPEND>, B<XDG_DATA_FALLBACK>.  Each takes
+a colon-separated list of paths corresponding to XDG data directory
+lookup paths.  The character C<~> will be replaced with the contents of
+the B<$HOME> environtment variable.
+
+=item B<XDG_ICON_*>
+
+This includes B<XDG_ICON_LEGACY>, B<XDG_ICON_HOME>, B<XDG_ICON_PREPEND>,
+B<XDG_ICON_DIRS>, B<XDG_ICON_APPEND>, B<XDG_ICON_FALLBACK>.  Each takes
+a colon-separated list of paths corresponding to icon lookup paths.  The
+character C<~> will be replaced with the contents of the B<$HOME>
+environtment variable.
+
+=item B<XDG_MENU_PREFIX>, B<XDG_VENDOR_ID>
+
+B<XDG_MENU_PREFIX> specifies the XDG menu prefix.  B<XDG_VENDOR_ID>
+specifies the XDG vendor identifier that will be used when determining
+the default B<XDG_MENU_PREFIX>.
+
+=item B<XDG_CURRENT_DESKTOP>
+
+Specifies the current desktop session.  This is the all upper-case name
+that will be used as the desktop environment when interpreting
+C<OnlyShowIn> and C<NotShowIn> F<.desktop> file fields.
+
+=back
+
+=head1 OPTIONS
+
+XDG::Context recognizes the following options, I<%ops>, passed to B<new>:
+
+=over
+
+=item verbose => $boolean
+
+When true, print diagnostic information to standard error during
+operation.  The default is false.
+
+=item charset => $charset
+
+Specifies the character set to use on output; defaults to the character
+set of the current locale.
+
+=item language => $language
+
+Specifies the language to use on output and to select from available
+translations in XDG F<.desktop> files.  Defaults to the value for the
+current locale.
+
+=item lang => $lang
+
+Specifies the translation string to use when selecting translations from
+XDG F<.desktop> files.  Defaults to the language portion of the
+C<language> option, above.
+
+=item desktop => $desktop
+
+Specifies the current XDG desktop environment (e.g. FLUXBOX).  When
+unspecified, defaults will be set from environment variables.
+
+=item vendor => $vendor
+
+Specifies the vendor string for branding.  When unspecified, defaults
+will be taken from environment variables.
+
+=back
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
+
+L<XDE::Context(3pm)>, L<XDE::X11(3pm)>
+
+=cut
 
 # vim: sw=4 tw=72

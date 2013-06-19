@@ -2,12 +2,13 @@
 Encoding=UTF-8
 Name=Blackbox
 Comment=Highly configurable and low resource X11 Window manager
-TryExec=blackbox
-Exec=xde-startup blackbox
-Terminal=False
-Icon=blackbox.xpm
-Type=Application
+TryExec=/usr/bin/blackbox
+Exec=/usr/bin/blackbox
+Terminal=false
+Icon=blackbox
+Type=XSession
 
 [Window Manager]
-SessionManaged=true
+SessionManaged=false
+X-XDE-Managed=true
 

@@ -19,7 +19,7 @@ lib/XDE/X11.pm
 lib/XDE/X11/Setbg.pm
 lib/XDE/X11/StartupNotification.pm
 lib/XDE/X11/Xsettings.pm
-lib/XDE/Xsettings.pm
+lib/XDE/Settings.pm
 lib/XDG/Context.pm
 lib/XDG/IconData.pm
 lib/XDG/Icons.pm

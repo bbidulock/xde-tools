@@ -4,6 +4,17 @@
 eval 'exec perl -S $0 ${1+"@"}'
     if $running_under_some_shell;
 
+BEGIN {
+    use strict;
+    use warnings;
+    my $here = $0; $here =~ s{/[^/]*$}{};
+    if ($here =~ s{^\.}{}) {
+	chomp(my $cwd = `pwd`);
+	$here = "/$here" if $here;
+	$here = "$cwd$here";
+    }
+    unshift @INC, "$here/lib" unless $here eq '/usr/bin';
+}
 
 =head1 NAME
 
@@ -21,9 +32,6 @@ specific menus for a number of window-managers.
 
 =cut
 
-my $here = $0; $here =~ s{/[^/]*$}{};
-unshift @INC, "$here/lib";
-
 use Getopt::Long;
 use Encode;
 use I18N::Langinfo qw(langinfo CODESET);
@@ -32,6 +40,24 @@ use Glib qw(TRUE FALSE);
 use Gtk2;
 use strict;
 use warnings;
+
+my %OVERRIDES = ();
+my $here = $0; $here =~ s{/[^/]*$}{};
+if ($here =~ s{^\.}{}) {
+    chomp(my $cwd = `pwd`);
+    $here = "/$here" if $here;
+    $here = "$cwd$here";
+}
+unless ($here eq '/usr/bin') {
+    %OVERRIDES = (
+	HERE               => "$here",
+	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
+	XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
+	XDG_ICON_APPEND    => "$here/share/icons:$here/share/pixmaps",
+    );
+    my %path = (map{$_=>1}split(/:/,$ENV{PATH}));
+    $ENV{PATH} = "$here:$ENV{PATH}" unless exists $path{$here};
+}
 
 if ($here ne '/usr/bin') {
 	Gtk2::Rc->set_default_files("$here/themes/Unexicon/gtk-2.0/gtkrc", "$here/gtkrc-2.0");

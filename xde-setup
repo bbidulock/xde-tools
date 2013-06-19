@@ -4,11 +4,176 @@
 eval 'exec perl -S $0 ${1+"@"}'
     if $running_under_some_shell;
 
+BEGIN {
+    use strict;
+    use warnings;
+    my $here = $0; $here =~ s{/[^/]*$}{};
+    if ($here =~ s{^\.}{}) {
+	chomp(my $cwd = `pwd`);
+	$here = "/$here" if $here;
+	$here = "$cwd$here";
+    }
+    unshift @INC, "$here/lib" unless $here eq '/usr/bin';
+}
 
 use Getopt::Long;
-use File::Path;
+use Encode;
+use I18N::Langinfo qw(langinfo CODESET);
+use POSIX qw(locale_h);
+use XDE::Setup;
 use strict;
 use warnings;
+
+my %OVERRIDES = ();
+my $here = $0; $here =~ s{/[^/]*$}{};
+if ($here =~ s{^\.}{}) {
+    chomp(my $cwd = `pwd`);
+    $here = "/$here" if $here;
+    $here = "$cwd$here";
+}
+unless ($here eq '/usr/bin') {
+    %OVERRIDES = (
+	HERE               => "$here",
+	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
+	XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
+	XDG_ICON_APPEND    => "$here/share/icons:$here/share/pixmaps",
+    );
+    my %path = (map{$_=>1}split(/:/,$ENV{PATH}));
+    $ENV{PATH} = "$here:$ENV{PATH}" unless exists $path{$here};
+}
+
+my %ops = (
+    help	=> '',
+    verbose	=> '',
+    charset	=> langinfo(CODESET),
+    language	=> setlocale(LC_MESSAGES),
+    vendor	=> '',
+    session	=> '',
+    xdg_rcdir	=> 1,
+    tmp_menu	=> 1,
+    dry_run     => 1,
+);
+
+my $xde = XDE::Setup->new(%OVERRIDES,ops=>\%ops);
+$xde->getenv;
+
+$ops{session} = "\L$xde->{XDG_CURRENT_DESKTOP}\E"
+	unless $ops{session};
+
+my $syntax = GetOptions( \%ops,
+    'help|h',
+    'verbose|v',
+    'charset|c=s',
+    'language|l=s',
+    'vendor|V=s',
+    'session|s=s',
+    'xdg_rcdir|x!',
+    'tmp_menu|t!',
+    'dry_run|r!',
+);
+
+$ops{session} = shift @ARGV if @ARGV;
+$ops{session} = "\L$ops{session}\E" if $ops{session};
+
+if (@ARGV) {
+    print STDERR "Excess arguments: ", join(' ',@ARGV), "\n\n";
+    show_usage(2);
+}
+
+$xde->default; # reset defaults
+
+if ($ops{verbose}) {
+    print STDERR "lang:    $ops{lang}\n";
+    print STDERR "vendor:  $ops{vendor}\n";
+    print STDERR "session: $ops{session}\n";
+}
+
+if ($ops{help} or not $syntax) {
+    show_usage($syntax ? 0 : 2);
+}
+
+unless ($ops{session}) {
+    print STDERR "SESSION must be specified!\n\n";
+    show_usage(2);
+}
+
+$xde = $xde->setup_session($ops{session});
+
+die "Cannot set up session: $ops{session}" unless $xde;
+
+$xde->launch_session($ops{session});
+
+exit(0);
+
+sub show_usage {
+    my $rc = shift;
+    print STDERR <<END_USAGE;
+USAGE:
+    xde-setup [OPTIONS] [SESSION]
+
+ARGUMENTS:
+    SESSION                 [default: $ops{session}]
+        Specifies the session to start.  May be one of fluxbox,
+        blackbox, openbox, icewm, fvwm, fvwm2, wmaker, windowmaker.  The
+        argument is case insensitive.
+
+OPTIONS:
+    --help, -h
+        Prints this usage and default information and exits.
+
+    --verbose, -v
+        Print debugging information to standard error while operating.
+
+    --charset, -c CHARSET   [default: $ops{charset}]
+        specify the character set to use to output the menu; defaults to
+        the charset of the current locale.
+
+    --language, -l LANGUAGE [default: $ops{language}]
+        specify the language to use to output the menu; defaults to the
+        value of the current locale.
+
+    --vendor, -V VENDOR	    [default: $ops{vendor}]
+        Specify the vendor string for branding.
+
+    --session, -s SESSION   [default: $ops{session}]
+        An alternate way of specifying the SESSION argument.
+
+    --xdg, -x, --no-xdg     [default: $ops{xdg_rcdir}]
+        place configuration files in XDG_CONFIG_HOME instead of the
+        traditional locations.
+
+    --tmp, -t, --no-tmp     [default: $ops{tmp_menu}]
+        place the menu file (and symbolic links from) the /tmp
+        directory.
+
+    --dry_run, -r           [default: $ops{dry_run}]
+        don't execute or copy anything, just print to STDERR what
+        would have been done
+
+FILES:
+    $xde->{XDE_CONFIG_DIR}/$xde->{XDE_CONFIG_FILE}
+        the file containing the \U$ops{session}\E configuration.
+
+    $xde->{XDE_MENU_DIR}/$xde->{XDE_MENU_FILE}
+        the file containing the \U$ops{session}\E menu.
+
+ENVIRONMENT:
+    XDG_VENDOR_ID, XDG_MENU_PREFIX
+        Interpreted in the absense of the --vendor option.  Set to the
+        --vendor option when specified.
+
+    XDG_CURRENT_DESKTOP, DESKTOP_SESSION, FBXDG_DE
+        Interpreted in the absense of the --session option or SESSION
+        argument.  Set to the --session option or SESSION argument when
+        specified.
+
+END_USAGE
+    exit($rc);
+}
+
+1;
+
+__END__
 
 =head1 NAME
 
@@ -30,46 +195,6 @@ variables when they have not already been set in the environment.
 
 B<xde-setup> can be invoked automagically from L<xde-chooser(1p)>.
 
-=cut
-
-my $HOME = $ENV{HOME} if $ENV{HOME};
-$HOME = '~' unless $HOME;
-$ENV{HOME} = $HOME if $HOME;
-
-my $XDG_CONFIG_HOME = $ENV{XDG_CONFIG_HOME} if $ENV{XDG_CONFIG_HOME};
-$XDG_CONFIG_HOME = "$HOME/.config" unless $XDG_CONFIG_HOME;
-$ENV{XDG_CONFIG_HOME} = $XDG_CONFIG_HOME if $XDG_CONFIG_HOME;
-
-my $XDG_CONFIG_DIRS = $ENV{XDG_CONFIG_DIRS} if $ENV{XDG_CONFIG_DIRS};
-$XDG_CONFIG_DIRS = "/etc/xdg" unless $XDG_CONFIG_DIRS;
-$XDG_CONFIG_DIRS = join(':','/etc/xdg/xde',$XDG_CONFIG_DIRS)
-    unless ":$XDG_CONFIG_DIRS:" =~ m{:/etc/xdg/xde:};
-$ENV{XDG_CONFIG_DIRS} = $XDG_CONFIG_DIRS if $XDG_CONFIG_DIRS;
-
-my @XDG_CONFIG_DIRS = split(/:/,join(':',$XDG_CONFIG_HOME,$XDG_CONFIG_DIRS));
-
-my $XDG_DATA_HOME = $ENV{XDG_DATA_HOME} if $ENV{XDG_DATA_HOME};
-$XDG_DATA_HOME = "$HOME/.local/share" unless $XDG_DATA_HOME;
-$ENV{XDG_DATA_HOME} = $XDG_DATA_HOME if $XDG_DATA_HOME;
-
-my $XDG_DATA_DIRS = $ENV{XDG_DATA_DIRS} if $ENV{XDG_DATA_DIRS};
-$XDG_DATA_DIRS = "/usr/local/share:/usr/share" unless $XDG_DATA_DIRS;
-$XDG_DATA_DIRS = join(':','/usr/share/xde',$XDG_DATA_DIRS)
-    unless ":$XDG_DATA_DIRS:" =~ m{:/usr/share/xde:};
-$ENV{XDG_DATA_DIRS} = $XDG_DATA_DIRS if $XDG_DATA_DIRS;
-
-my @XDG_DATA_DIRS = split(/:/,join(':',$XDG_DATA_HOME,$XDG_DATA_DIRS));
-
-my $XDG_CURRENT_DESKTOP = $ENV{XDG_CURRENT_DESKTOP} if $ENV{XDG_CURRENT_DESKTOP};
-my $DESKTOP_SESSION = $ENV{DESKTOP_SESSION} if $ENV{DESKTOP_SESSION};
-my $FBXDG_DE = $ENV{FBXDG_DE} if $ENV{FBXDG_DE};
-
-my $XDE_SESSION = $ENV{XDE_SESSION} if $ENV{XDE_SESSION};
-$XDE_SESSION = $XDG_CURRENT_DESKTOP unless $XDE_SESSION;
-$XDE_SESSION = $DESKTOP_SESSION	    unless $XDE_SESSION;
-$XDE_SESSION = $FBXDG_DE	    unless $XDE_SESSION;
-$XDE_SESSION = ''		    unless $XDE_SESSION;
-
 =head1 OPTIONS
 
 B<xde-setup> uses L<Getopt::Long(3pm)> to parse options, so
@@ -80,119 +205,34 @@ ambiguous.  B<xde-setup> recognizes the following options:
 
 =item B<--help>, B<-h>
 
-Print usage and default information and exit.
+Print usage information to standard error containing current defaults
+and exit.
 
 =item B<--verbose>, B<-v>
 
-Print debugging information to standard error during execution.
+Print debugging information to standard error during operation.
+
+=item B<--charset>, B<-c> I<CHARSET>
+
+Specify the character set with which to output the menu.  Defaults to
+the character set in use by the current locale.
+
+=item B<--language>, B<-l> I<LANGUAGE>
+
+Specify the output language for the menu.  Defaults to the language set
+in the current locale.
 
 =item B<--vendor>, B<-V>
 
 Specify the vendor string.  This affects the setting of
 B<XDG_MENU_PREFIX> (see L</ENVIRONMENT>).
 
+=item B<--session>, B<-s> I<SESSION>
+
+Alternate way to specify the session to set up.  When unspecified,
+defaults to that obtained from environment variables.
+
 =back
-
-=cut
-
-my %ops = (
-    help    => '',
-    verbose => '',
-    vendor  => '',
-    session => $XDE_SESSION,
-    xdg	    => '',
-);
-
-my $syntax = GetOptions( \%ops,
-    'help|h',
-    'verbose|v',
-    'vendor|V=s',
-    'session|s=s',
-    'xdg|x',
-);
-
-if (scalar(@ARGV) > 1) {
-    shift @ARGV;
-    print STDERR "Excess arguments: ", join(' ',@ARGV), "\n\n";
-    show_usage(2);
-}
-if (scalar(@ARGV) == 1) {
-    $ops{session} = shift @ARGV unless $ops{session};
-}
-if (not $syntax or $ops{help}) {
-    show_usage($syntax ? 0 : 2);
-}
-unless ($ops{session}) {
-    print STDERR "SESSION must be specified!\n\n";
-    show_usage(2);
-}
-
-use constant {
-    SESSIONS => {
-        fluxbox             => 'fluxbox',
-        blackbox            => 'blackbox',
-        openbox             => 'openbox',
-        'openbox-session'   => 'openbox',
-        lxde                => 'openbox',
-        icewm               => 'icewm',
-        'icewm-session'     => 'icewm',
-        fvwm                => 'fvwm',
-        fvwm2               => 'fvwm',
-        wmaker              => 'wmaker',
-        windowmaker         => 'wmaker',
-    },
-};
-
-if (exists &SESSIONS->{"\L$ops{session}\E"}) {
-    $ops{session} = &SESSIONS->{"\L$ops{session}\E"};
-}
-else {
-    print STDERR "Unrecognized session: $ops{session}\n\n";
-    show_usage(1);
-}
-
-sub show_usage {
-    my $rc = shift;
-    print STDERR<<END_USAGE
-USAGE:
-    xde-setup [OPTIONS] [SESSION]
-
-ARGUMENTS:
-    SESSION
-        Specifies the session to start.  May be one of fluxbox,
-        blackbox, openbox, icewm, fvwm, fvwm2, wmaker, windowmaker.  The
-        argument is case insensitive.
-
-OPTIONS:
-    --help, -h
-        Prints this usage and default information and exits.
-
-    --verbose, -v
-        Print debugging information to standard error while operating.
-
-    --vendor, -V VENDOR
-        Specify the vendor string for branding.
-
-    --session, -s SESSION
-        An alternate way of specifying the SESSION argument.
-
-    --xdg, -x
-        Place configuration files in XDG_CONFIG_HOME instead of the
-        traditional locations.
-
-ENVIRONMENT:
-    XDG_VENDOR_ID, XDG_MENU_PREFIX
-        Interpreted in the absense of the --vendor option.  Set to the
-        --vendor option when specified.
-
-    XDG_CURRENT_DESKTOP, DESKTOP_SESSION, FBXDG_DE
-        Interpreted in the absense of the --session option or SESSION
-        argument.  Set to the --session option or SESSION argument when
-        specified.
-
-END_USAGE
-    exit($rc);
-}
 
 =head1 ARGUMENTS
 
@@ -225,57 +265,6 @@ B<xde-setup> recognizes the following session arguments:
 
 =back
 
-=cut
-
-use constant {
-    RCDIR => {
-        fluxbox     => "~/.fluxbox",
-        blackbox    => "~/.blackbox",
-        openbox     => "~/.config/openbox",
-        icewm       => "~/.icewm",
-        fvwm        => "~/.fvwm",
-        wmaker      => "~/GNUstep",
-    },
-    RCFILE => {
-        fluxbox     => 'xde-init',
-        blackbox    => 'xde-rc',
-        openbox     => 'xde-rc.xml',
-        icewm       => '', # multiple actually
-        fvwm        => 'config',
-        wmaker      => 'Defaults/WindowMaker',
-    },
-    MENUFILE => {
-        fluxbox     => 'menu',
-        blackbox    => 'menu',
-        openbox     => 'menu.xml',
-        icewm       => 'menu',
-        wmaker      => 'Library/WindowMaker/menu',
-    },
-};
-
-my $RCDIR = &RCDIR->{$ops{session}}; $RCDIR =~ s{\~}{$HOME};
-my $RCFILE = &RCFILE->{$ops{session}};
-my $MENUFILE = &MENUFILE->{$ops{session}};
-
-my $XDE_START_CMD = "/bin/false";
-
-$XDE_SESSION = "\U$ops{session}\E";
-my $XDE_CONFIG_DIR = $ops{xdg} ? "$XDG_CONFIG_HOME/$ops{session}" : $RCDIR;
-my $XDE_CONFIG_DIR = "$XDG_CONFIG_HOME/\L$XDE_SESSION\E";
-my $XDE_CONFIG_FILE = "$XDE_CONFIG_DIR/xde-$RCFILE";
-my $XDE_MENU_DIR = "/tmp/xde/\U$XDE_SESSION\E";
-my $XDE_MENU_FILE = "$XDE_MENU_DIR/${XDG_MENU_PREFIX}menu";
-
-$XDG_CURRENT_DESKTOP = $XDE_SESSION;
-$ENV{XDG_CURRENT_DESKTOP} = $XDG_CURRENT_DESKTOP if $XDG_CURRENT_DESKTOP;
-
-$DESKTOP_SESSION = $XDE_SESSION;
-$ENV{DESKTOP_SESSION} = $DESKTOP_SESSION if $DESKTOP_SESSION;
-
-$FBXDG_DE = $XDE_SESSION;
-$ENV{FBXDG_DE} = $FBXDG_DE if $FBXDG_DE;
-
-
 =head1 WINDOW MANAGERS
 
 The window manager is specified using the I<SESSION> argument.  The
@@ -288,9 +277,6 @@ specific menus are consistent.
 
 =cut
 
-sub setup_session {
-}
-
 =pod
 
 The actions performed for specific window managers are as follows:
@@ -299,171 +285,27 @@ The actions performed for specific window managers are as follows:
 
 =item I<fluxbox>
 
-I<Fluxbox> normally has its configuration files in F<$HOME/.fluxbox>.
-
 =cut
-
-sub setup_fluxbox {
-    # create directories and files as required, overwrite newer base
-    mkpath $XDE_CONFIG_DIR unless -d $XDE_CONFIG_DIR;
-    foreach (qw(backgrounds icons pixmaps splash styles tiles)) {
-        mkpath "$XDE_CONFIG_DIR/$_" unless -d "$XDE_CONFIG_DIR/$_";
-    }
-    foreach my $file ("xde-$RCFILE" $MENUFILE) {
-        foreach my $dir (map {"$_/$ops{session}"} @XDG_DATA_DIRS) {
-            if (-f "$dir/$file") {
-		unless (-f "$XDE_CONFIG_DIR/$file" and
-                        stat("$XDE_CONFIG_DIR/$file")[9] > stat("$dir/$file")[9]) {
-		    system("/bin/cp -f \"$dir/$file\" \"$XDE_CONFIG_DIR\"");
-                }
-                last;
-            }
-        }
-    }
-    # create the menu file
-    mkpath $XDE_MENU_DIR unless -d $XDE_MENU_DIR;
-    unless (-f $XDE_MENU_FILE) {
-        foreach my $dir ($XDE_CONFIG_DIR,$RCDIR,
-                map {"$_/$ops{session}"} @XDG_DATA_DIRS) {
-            if (-f "$dir/$MENUFILE") {
-                system("/bin/cp -f \"$dir/$MENUFILE\" \"$XDE_MENU_FILE\"");
-                last;
-            }
-        }
-    }
-    # ensure that the configuration file contains the proper menu file
-    # TODO: we should really handle style files here too
-    my @lines = (`cat $XDE_CONFIG_FILE`);
-    my %found;
-    open(my $fh,">",$XDE_CONFIG_FILE);
-    if ($fh) {
-        while (@lines) {
-            my $line = shift @lines; chomp $line;
-            if ($line =~ m{^sessions.menuFile:}) {
-                print $fh "sessions.menuFile:\t$XDE_MENU_FILE\n" unless $found;
-                $found{menuFile} = 1;
-            }
-            else {
-                print $fh "$line\n";
-            }
-        }
-        print $fh "sessions.menuFile:\t$XDE_MENU_FILE\n" unless $found{menuFile};
-        close($fh);
-    }
-    $XDE_STARTWM_CMD = "'/usr/bin/$ops{session} -rc \"$XDE_CONFIG_FILE\"'";
-}
 
 =item I<blackbox>
 
-I<Blackbox> normally has its configuration file in F<$HOME/.blackboxrc>,
-its menu file in F<$HOME/.bbmenu> and user styles in the directory
-F<$HOME/.blackbox/styles>.  The configuration file can be specified with
-the B<-rc> option when invoking L<blackbox(1)> (see L<blackbox(1)/OPTIONS>).
-
-The location of the menu file can be specified using the
-C<session.menuFile> resource in the configuration file.  The menu file
-defaults to F</usr/share/blackbox/menu>.
-
-L<blackbox(1)> reads the configuation file on setup, and only writes
-the configuration file on exit.  It will reread the configuration file
-when asked to restart.
-
-Styles and their locations in L<blackbox(1)> are specified using the
-C<[stylesdir]> and C<[stylesmenu]> menu items.  By controlling the menu,
-these menu items can be set to point anywhere.  Default L<blackbox(1)>
-menus normally place styles in F</usr/share/blackbox/styles> and
-F<$HOME/.blackbox/styles> directories.
-
-B<xde-setup> pushes all of this configuration into the user's
-L<$XDG_CONFIG_HOME/blackbox> directory, creating it and populating it
-when necessary.  Files to populate when creating the directory can be
-found in F<@XDG_DATA_DIRS/blackbox>.
-
 =cut
-
-sub setup_blackbox {
-    # create directories and files as required, overwrite newer base
-    mkpath $XDE_CONFIG_DIR unless -d $XDE_CONFIG_DIR;
-    foreach (qw(styles)) {
-        mkpath "$XDE_CONFIG_DIR/$_" unless -d "$XDE_CONFIG_DIR/$_";
-    }
-    foreach my $file ("xde-$RCFILE" $MENUFILE) {
-	foreach my $dir (map {"$_/$ops{session}"} @XDG_DATA_DIRS) {
-	    if (-f "$dir/$file") {
-		unless (-f "$XDE_CONFIG_DIR/$file" and
-                        stat("$XDE_CONFIG_DIR/$file")[9] > stat("$dir/$file")[9]) {
-		    system("/bin/cp -f \"$dir/$file\" \"$XDE_CONFIG_DIR\"");
-		}
-		last;
-	    }
-	}
-    }
-    # create the menu file
-    mkpath $XDE_MENU_DIR unless -d $XDE_MENU_DIR;
-    unless (-f $XDE_MENU_FILE) {
-        foreach my $dir ($XDE_CONFIG_DIR,$RCDIR,
-                map {"$_/$ops{session}"} @XDG_DATA_DIRS) {
-            if (-f "$dir/$MENUFILE") {
-                system("/bin/cp -f \"$dir/$MENUFILE\" \"$XDE_MENU_FILE\"");
-                last;
-            }
-        }
-    }
-    # ensure that the configuration file contains the proper menu file
-    # TODO: we should really handle style files here too
-    my @lines = (`cat $XDE_CONFIG_FILE`);
-    my %found;
-    open(my $fh,">",$XDE_CONFIG_FILE);
-    if ($fh) {
-        while (@lines) {
-            my $line = shift @lines; chomp $line;
-            if ($line =~ m{^sessions.menuFile:}) {
-                print $fh "sessions.menuFile:\t$XDE_MENU_FILE\n" unless $found;
-                $found{menuFile} = 1;
-            }
-            else {
-                print $fh "$line\n";
-            }
-        }
-        print $fh "sessions.menuFile:\t$XDE_MENU_FILE\n" unless $found{menuFile};
-        close($fh);
-    }
-    $XDE_STARTWM_CMD = "'/usr/bin/$ops{session} -rc \"$XDE_CONFIG_FILE\"'";
-}
 
 =item I<openbox>
 
-I<Openbox> normally has its configuration file in
-F<$XDG_CONFIG_HOME/openbox/rc.xml>, and its menu file in
-F<$XDG_CONFIG_HOME/openbox/menu.xml>.
-
 =cut
-
-sub setup_openbox {
-}
 
 =item I<icewm>
 
 =cut
 
-sub setup_icewm {
-}
-
-=item I<fvwm>
+=item I<fvwm>, I<fvwm2>
 
 =cut
-
-sub setup_fvwm2 { return setup_fvwm(@_) }
-sub setup_fvwm {
-}
 
 =item I<wmaker>
 
 =cut
-
-sub setup_windowmaker { return setup_wmaker(@_) }
-sub setup_wmaker {
-}
 
 =back
 
@@ -477,120 +319,11 @@ B<xde-setup> also sets up the following LXDE and other utilities:
 
 =item L<lxpanel(1)>
 
-To signal which profile for L<lxpanel(1)> to use, and which menu to
-include, the environment variables B<DESKTOP_SESSION>,
-B<XDG_CURRENT_DESKTOP> and B<XDG_MENU_PREFIX> are set to appropriate
-values.  L<lxpanel(1)> looks for its configuration files in the
-directory F<$XDG_CONFIG_HOME/lxpanel/$PROFILE>.  Otherwise, it
-looks for files in F<$XDG_DATA_DIRS/lxpanel/profile/$PROFILE>, well
-really just F</usr/share/lxpanel/profile/$PROFILE>.  It will use a
-profile equal to the B<DESKTOP_SESSION> environment variable; and
-otherwise, will look for the profile C<default>.  When the B<--profile>
-option is specified to L<lxpanel(1)>, that profile overrides environment
-variables.
-
-B<XDE> installs default profile files in
-F</usr/share/lxpanel/profile/$SESSION> for C<FLUXBOX>, C<BLACKBOX>,
-C<OPENBOX>, C<ICEWM>, C<FVWM> and C<WMAKER>.  So, B<xde-setup> look
-for them there.  B<xde-setup> also sets the B<XDG_MENU_PREFIX>
-environment variable appropriately, so that L<lxpanel(1)> will present
-the correct menu.
-
 =cut
-
-sub setup_lxpanel {
-    my $PROFILE = "\U$ops{session}\L";
-    my $profdir = "$XDG_CONFIG_HOME/lxpanel/$PROFILE";
-    my $panldir = "$profdir/panels";
-    mkpath $profdir unless -d $profdir;
-    mkpath $panldir unless -d $panldir;
-    my $config = "$profdir/config";
-    my $panel  = "$panldir/panel";
-    foreach my $dir (map {"$_/lxpanel/profile/$PROFILE"} @XDG_DATA_DIRS}) {
-        if (-f "$dir/config") {
-            unless (-f $config and
-                    stat($config)[9] >= stat("$dir/config")[9]) {
-                system("/bin/cp -f \"$dir/config\" \"$config\"");
-            }
-            if (-f "$dir/panels/panel") {
-                unless (-f $panel and
-                        stat($panel)[9] >= stat("$dir/panels/panel")[9]) {
-                    system("/bin/cp -f \"$dir/panels/panel\" \"$panel\"");
-                }
-            }
-            last;
-        }
-    }
-    # we need to ensure that the config file is correct
-    {
-        open(my $fh,">",$config);
-        if (defined $fh) {
-            print $fh <<END_CONFIG;
-[Command]
-FileManager=pcmanfm -p $PROFILE %s
-Terminal=lxterminal
-Logout=xde-logout
-END_CONFIG
-            close($fh);
-        }
-    }
-    # TODO: there is some theming in the panel file that might need to
-    #       be adjusted.
-    $ENV{CURRENT_SESSION} = $PROFILE;
-    $ENV{XDG_CURRENT_DESKTOP} = $PROFILE;
-    $ENV{XDG_MENU_PREFIX} = $XDG_MENU_PREFIX if $XDG_MENU_PREFIX;
-}
 
 =item L<pcmanfm(1)>
 
-To signal which profile for L<pcmanfm(1)> to use, and which mneu to
-include, the environment variables B<DESKTOP_SESSION>,
-B<XDG_CURRENT_DESKTOP> and B<XDG_MENU_PREFIX> are set to appropriate
-values.  L<lxpanel(1)> looks for its configuration files in the
-directory F<$XDG_CONFIG_HOME/pcmanfm/$PROFILE>.  Otherwise, it looks for
-files in F<$XDG_CONFIG_DIRS/pcmanfm/$PROFILE>.  Note the difference here
-from L<lxpanel(1)>.  It will use a profile equal to B<DESKTOP_SESSION>
-environment variable; and otherwise, will look for the profile
-C<default>.  When the B<--profile> option is specified to L<pcmanfm(1)>,
-that profile overrides environment variables.
-
-B<XDE> install default profile files in
-F</etc/xdg/pcmanfm/$SESSION> for C<FLUXBOX>, C<BLACKBOX>, C<OPENBOX>,
-C<ICEWM>, C<FVWM> and C<WMAKER>.  So, B<xde-setup> looks for them
-there.  B<xde-setup> also sets the B<XDG_MENU_PREFIX> environment
-variable appropriately, so that L<pcmanfm(1)> will present the correct
-menu under C<Applications>.
-
 =cut
-
-sub setup_pcmanfm {
-    my $PROFILE = "\U$ops{session}\L";
-    my $profdir = "$XDG_CONFIG_HOME/pcmanfm/$PROFILE";
-    mkpath $profdir unless -d $profdir;
-    my $config = "$profdir/pcmanfm.conf";
-    my $ditems = "$profdir/desktop-items-0.conf";
-    foreach my $dir (map {"$_/pcmanfm/$PROFILE"} split(/:/,$XDG_DATA_DIRS)) {
-	if (-f "$dir/pcmanfm.conf") {
-	    unless (-f $config and
-		    stat($config)[9] >= stat("$dir/pcmanfm.conf")[9]) {
-		system("/bin/cp -f \"$dir/pcmanfm.conf\" \"$config\"");
-	    }
-	    if (-f "$dir/desktop-items-0.conf") {
-		unless (-f $ditems and
-			stat($ditems)[9] >= stat("$dir/desktop-items-0.conf")[9]) {
-		    system("/bin/cp -f \"$dir/desktop-items-0.conf\" \"$ditems\"");
-		}
-	    }
-	    last;
-	}
-    }
-    # TODO: there is some theming in the pcmanfm.conf file that might
-    #	    need to be adjusted, such as the wallpaper configuration,
-    #	    desktop label colors, desktop font, etc.
-    $ENV{CURRENT_SESSION} = $PROFILE;
-    $ENV{XDG_CURRENT_DESKTOP} = $PROFILE;
-    $ENV{XDG_MENU_PREFIX} = $XDG_MENU_PREFIX if $XDG_MENU_PREFIX;
-}
 
 =back
 
@@ -642,16 +375,16 @@ suitably created for that purpose.
 
 =cut
 
-sub set_xprops {
-    my $root = Gtk2::Gdk::Screen->get_default()->get_root_window;
-    my $type = Gkt2::Gdk::Atom->intern('STRING',FALSE);
-    foreach my $name (qw(XDE_SESSION XDE_CONFIG_DIR XDE_CONFIG_FILE XDE_MENU_FILE)) {
-	my $value = *{$name};
-	if (my $atom = Gtk2::Gdk::Atom->intern("_$name",FALSE)) {
-	    $root->property_change($atom,$type,Gtk2::Gdk::CHARS,'replace',$value);
-	}
-    }
-}
+#sub set_xprops {
+#    my $root = Gtk2::Gdk::Screen->get_default()->get_root_window;
+#    my $type = Gkt2::Gdk::Atom->intern('STRING',FALSE);
+#    foreach my $name (qw(XDE_SESSION XDE_CONFIG_DIR XDE_CONFIG_FILE XDE_MENU_FILE)) {
+#	my $value = *{$name};
+#	if (my $atom = Gtk2::Gdk::Atom->intern("_$name",FALSE)) {
+#	    $root->property_change($atom,$type,Gtk2::Gdk::CHARS,'replace',$value);
+#	}
+#    }
+#}
 
 =head1 ENVIRONMENT
 

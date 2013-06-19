@@ -4,24 +4,16 @@
 eval 'exec perl -S $0 ${1+"@"}'
     if $running_under_some_shell;
 
-my %OVERRIDES = ();
 BEGIN {
-	use strict;
-	use warnings;
-	my $here = $0; $here =~ s{/[^/]*$}{};
-	if ($here =~ s{^\.}{}) {
-	    chomp(my $cwd = `pwd`);
-	    $here = "/$here" if $here;
-	    $here = "$cwd$here";
-	}
-	unless ($here eq '/usr/bin') {
-	    unshift @INC, "$here/lib";
-	    %OVERRIDES = (
-		    XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
-		    XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
-		    XDG_ICON_APPEND    => "$here/share/pixmaps",
-	    );
-	}
+    use strict;
+    use warnings;
+    my $here = $0; $here =~ s{/[^/]*$}{};
+    if ($here =~ s{^\.}{}) {
+	chomp(my $cwd = `pwd`);
+	$here = "/$here" if $here;
+	$here = "$cwd$here";
+    }
+    unshift @INC, "$here/lib" unless $here eq '/usr/bin';
 }
 
 use Getopt::Long;
@@ -31,6 +23,117 @@ use POSIX qw(locale_h);
 require XDE::Settings;
 use strict;
 use warnings;
+
+my %OVERRIDES = ();
+my $here = $0; $here =~ s{/[^/]*$}{};
+if ($here =~ s{^\.}{}) {
+    chomp(my $cwd = `pwd`);
+    $here = "/$here" if $here;
+    $here = "$cwd$here";
+}
+unless ($here eq '/usr/bin') {
+    %OVERRIDES = (
+	HERE               => "$here",
+	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
+	XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
+	XDG_ICON_APPEND    => "$here/share/icons:$here/share/pixmaps",
+    );
+    my %path = (map{$_=>1}split(/:/,$ENV{PATH}));
+    $ENV{PATH} = "$here:$ENV{PATH}" unless exists $path{$here};
+}
+
+my $program = $0; $program =~ s{^.*/}{};
+
+my %ops = (
+    help		=> '',
+    verbose		=> '',
+    vendor		=> '',
+    desktop		=> '',
+    charset		=> langinfo(CODESET),
+    language		=> setlocale(LC_MESSAGES),
+    filename		=> '',
+    takeover		=> 1,
+    persist_on_loss	=> 1,
+    kill_owner		=> '',
+);
+
+my $xde = XDE::Settings->new(%OVERRIDES,ops=>\%ops);
+$xde->getenv;
+
+my $syntax = GetOptions(\%ops, qw(
+    help|h
+    verbose|v
+    vendor|V=s
+    desktop|d=s
+    charset|c=s
+    language|l=s
+    filename|f=s
+    takeover|t!
+    persist_on_loss|p!
+    kill_owner|k!
+));
+
+$xde->default; # reset defaults
+
+if ($ops{help}) {
+    print STDOUT show_usage();
+    exit(0);
+}
+
+unless ($syntax) {
+    print STDERR show_usage();
+    exit(2);
+}
+
+$xde->init;
+$xde->main;
+
+exit(0);
+
+sub show_usage {
+    return <<USAGE_EOF;
+
+USAGE:
+    $program [OPTIONS]
+
+OPTIONS:
+    --help, -h
+	print this usage information and exit.
+
+    --verbose, -v
+	print debuggin information to standard error during operation.
+
+    --charset, -c CHARSET   [default: $ops{charset}]
+	specify the character set to use on output; defaults to the
+	charset of the current locale
+
+    --lauguage, -l LANGUAGE [default: $ops{language}]
+	specify the language to use on output; defaults to the value for
+	the current locale.
+
+    --session, -s SESSION   [default: $ops{session}]
+	specify the XDG_CURRENT_DESKTOP session.
+
+    --desktop, -d DESKTOP   [default: $ops{desktop}]
+	specify the XDG_CURRENT_DESKTOP desktop.
+
+    --filename, -f FILENAME [default: $ops{filename}]
+	specify the configuration file to use instead of the default.
+
+    --takeover, -t	    [default: $ops{takeover}]
+	take the selection away from its current owner when necessary.
+	
+    --persist_on_loss, -p   [default: $ops{persist_on_loss}]
+	persist and monitor for relinquishment of ownership when
+	ownership is lost.
+
+    --kill_owner, -k	    [default: $ops{kill_owner}]
+	kill the client owning the selection when ownership cannot be
+	acheived.
+
+USAGE_EOF
+}
+
 
 __END__
 
@@ -84,21 +187,21 @@ language in use by the current locale.
 
 Specify the configuration file to use.
 
-=item B<--notake-selection>, B<--take-selection>
+=item B<--notakeover>, B<--takeover>
 
 The default is to take ownership of the C<_XSETTNIGS_S[n]> selections
 away from an existing owner.  This option causes B<xde-settings> to
 monitor for relinquishment of the selections rather than taking
 ownership.
 
-=item B<--nopersist-on-loss>, B<--persist-on-loss>
+=item B<--nopersist_on_loss>, B<--persist_on_loss>
 
 The default is to persist after losing the last C<_XSETTINGS_S[n]>
 selection and monitor for loss of ownership.  The default can be
 overridden with this option.  When specified, B<xde-settings> will exit
 gracefully once the selection is lost.
 
-=item B<--kill-owner>, B<--nokill-owner>
+=item B<--kill_owner>, B<--nokill_owner>
 
 The default when ownership of the C<_XSETTINGS_S[n]> selections cannot
 be acheived is to allow the existing owner to retain the selection and

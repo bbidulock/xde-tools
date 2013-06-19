@@ -8,6 +8,12 @@ Comment[fi]=LXDE - kevyt X11-työpöytäympäristö
 Comment[ja]=LXDE - 軽量な X11 デスクトップ環境
 Comment[pt]=LXDE - Ambiente de trabalho X11 leve
 Comment[zh_TW]=LXDE - 輕量級的 X11 桌面環境
+TryExec=/usr/bin/startlxde
 Exec=/usr/bin/startlxde
-Icon=lxde-icon.png
-Type=Application
+Icon=lxde-icon
+Type=XSession
+
+[Window Manager]
+SessionManaged=true
+X-XDE-Managed=true
+

@@ -4,24 +4,16 @@
 eval 'exec perl -S $0 ${1+"@"}'
     if $running_under_some_shell;
 
-my %OVERRIDES = ();
-{
-	use strict;
-	use warnings;
-	my $here = $0; $here =~ s{/[^/]*$}{};
-	if ($here =~ s{^\.}{}) {
-	    chomp(my $cwd = `pwd`);
-	    $here = "/$here" if $here;
-	    $here = "$cwd$here";
-	}
-	unless ($here eq '/usr/bin') {
-	    unshift @INC, "$here/lib";
-	    %OVERRIDES = (
-		    XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
-		    XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
-		    XDG_ICON_APPEND    => "$here/share/pixmaps",
-	    );
-	}
+BEGIN {
+    use strict;
+    use warnings;
+    my $here = $0; $here =~ s{/[^/]*$}{};
+    if ($here =~ s{^\.}{}) {
+	chomp(my $cwd = `pwd`);
+	$here = "/$here" if $here;
+	$here = "$cwd$here";
+    }
+    unshift @INC, "$here/lib" unless $here eq '/usr/bin';
 }
 
 use Getopt::Long;
@@ -31,6 +23,139 @@ use POSIX qw(locale_h);
 use XDE::Autostart;
 use strict;
 use warnings;
+
+my %OVERRIDES = ();
+my $here = $0; $here =~ s{/[^/]*$}{};
+if ($here =~ s{^\.}{}) {
+    chomp(my $cwd = `pwd`);
+    $here = "/$here" if $here;
+    $here = "$cwd$here";
+}
+unless ($here eq '/usr/bin') {
+    %OVERRIDES = (
+	HERE               => "$here",
+	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
+	XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
+	XDG_ICON_APPEND    => "$here/share/icons:$here/share/pixmaps",
+    );
+    my %path = (map{$_=>1}split(/:/,$ENV{PATH}));
+    $ENV{PATH} = "$here:$ENV{PATH}" unless exists $path{$here};
+}
+
+my $program = $0; $program =~ s{^.*/}{};
+
+my %ops = (
+    help	=> '',
+    verbose	=> '',
+    banner	=> '',
+    charset	=> langinfo(CODESET),
+    language	=> setlocale(LC_MESSAGES),
+    session	=> $xde->{XDE_SESSION},
+    icons	=> $xde->{XDE_ICON_THEME},
+    theme	=> $xde->{XDE_GTK2_THEME},
+    vendor	=> $xde->{XDG_VENDOR_ID},
+    run		=> '',
+);
+
+my $xde = XDE::Autostart->new(%OVERRIDES);
+$xde->getenv;
+
+my $syntax = GetOptions( \%ops, qw(
+    help|h
+    verbose|v
+    banner|b=s
+    side|s=s
+    charset|c=s
+    language|l=s
+    session|s=s
+    icons|i=s
+    theme|t=s
+    linger|L!
+    vendor|V=s
+    run|r=s
+));
+
+if (scalar(@ARGV) > 1) {
+    shift @ARGV;
+    print STDERR "Excess arguments: ", join(' ',@ARGV), "\n\n";
+    print STDERR show_usage();
+    exit(2);
+}
+if (scalar(@ARGV) == 1) {
+    $ops{session} = shift @ARGV unless $ops{session};
+}
+
+$xde->default; # reset defaults
+
+if ($ops{help}) {
+    print STDOUT show_usage();
+    exit(0);
+}
+
+unless ($syntax) {
+    print STDERR "Syntax ERROR\n";
+    print STDERR show_usage();
+    exit(2);
+}
+
+unless ($ops{session}) {
+    print STDERR "SESSION must be specified!\n\n";
+    print STDERR show_usage();
+    exit(2);
+}
+
+$xde->init;
+$xde->startup;
+$xde->main;
+$xde->term;
+
+exit(0);
+
+sub show_usage {
+    return <<END_USAGE
+
+USAGE:
+    xde-startup [OPTIONS] [SESSION]
+
+ARGUMENTS:
+    SESSION
+        Specifies the session to start.  May be one of fluxbox,
+        blackbox, openbox, icewm, fvwm, fvwm2, wmaker, windowmaker.  The
+        argument is case insensitive.
+
+OPTIONS:
+    --help, -h
+        Prints this usage and default information and exits.
+
+    --verbose, -v
+        Print debugging information to standard error while operating.
+
+    --vendor, -V VENDOR
+        Specify the vendor string for branding.
+
+    --session, -s SESSION
+        An alternate way of specifying the SESSION argument.
+
+    --xdg, -x
+        Place configuration files in XDG_CONFIG_HOME instead of the
+        traditional locations.
+
+ENVIRONMENT:
+    XDG_VENDOR_ID, XDG_MENU_PREFIX
+        Interpreted in the absense of the --vendor option.  Set to the
+        --vendor option when specified.
+
+    XDG_CURRENT_DESKTOP, DESKTOP_SESSION, FBXDG_DE
+        Interpreted in the absense of the --session option or SESSION
+        argument.  Set to the --session option or SESSION argument when
+        specified.
+
+END_USAGE
+}
+
+1;
+
+__END__
 
 =head1 NAME
 
@@ -44,11 +169,6 @@ B<xde-startup> [I<OPTIONS>] [I<SESSION>]
 
 B<xde-startup> is a gtk2-perl utility that can be used to perform
 autostart functions before or after window-manager startup.
-
-=cut
-
-my $xde = XDE::Autostart->new(%OVERRIDES);
-
 
 =head1 OPTIONS
 
@@ -119,95 +239,6 @@ started.
 
 =back
 
-=cut
-
-my %ops = (
-    help	=> '',
-    verbose	=> '',
-    banner	=> $xde->default_banner(),
-    charset	=> langinfo(CODESET),
-    language	=> setlocale(LC_MESSAGES),
-    session	=> $xde->{XDE_SESSION},
-    icons	=> $xde->{XDE_ICON_THEME},
-    theme	=> $xde->{XDE_GTK2_THEME},
-    vendor	=> $xde->{XDG_VENDOR_ID},
-    run		=> '',
-);
-
-my $syntax = GetOptions( \%ops,
-    'help|h',
-    'verbose|v',
-    'banner|b=s',
-    'side|s=s',
-    'charset|c=s',
-    'language|l=s',
-    'session|s=s',
-    'icons|i=s',
-    'theme|t=s',
-    'linger|L!',
-    'vendor|V=s',
-    'run|r=s',
-);
-
-if (scalar(@ARGV) > 1) {
-    shift @ARGV;
-    print STDERR "Excess arguments: ", join(' ',@ARGV), "\n\n";
-    show_usage(2);
-}
-if (scalar(@ARGV) == 1) {
-    $ops{session} = shift @ARGV unless $ops{session};
-}
-if (not $syntax or $ops{help}) {
-    show_usage($syntax ? 0 : 2);
-}
-unless ($ops{session}) {
-    print STDERR "SESSION must be specified!\n\n";
-    show_usage(2);
-}
-
-sub show_usage {
-    my $rc = shift;
-    print STDERR<<END_USAGE
-USAGE:
-    xde-startup [OPTIONS] [SESSION]
-
-ARGUMENTS:
-    SESSION
-        Specifies the session to start.  May be one of fluxbox,
-        blackbox, openbox, icewm, fvwm, fvwm2, wmaker, windowmaker.  The
-        argument is case insensitive.
-
-OPTIONS:
-    --help, -h
-        Prints this usage and default information and exits.
-
-    --verbose, -v
-        Print debugging information to standard error while operating.
-
-    --vendor, -V VENDOR
-        Specify the vendor string for branding.
-
-    --session, -s SESSION
-        An alternate way of specifying the SESSION argument.
-
-    --xdg, -x
-        Place configuration files in XDG_CONFIG_HOME instead of the
-        traditional locations.
-
-ENVIRONMENT:
-    XDG_VENDOR_ID, XDG_MENU_PREFIX
-        Interpreted in the absense of the --vendor option.  Set to the
-        --vendor option when specified.
-
-    XDG_CURRENT_DESKTOP, DESKTOP_SESSION, FBXDG_DE
-        Interpreted in the absense of the --session option or SESSION
-        argument.  Set to the --session option or SESSION argument when
-        specified.
-
-END_USAGE
-    exit($rc);
-}
-
 =head1 ARGUMENTS
 
 B<xde-startup> recognizes the following options:
@@ -221,8 +252,98 @@ session cannot be determined from environment variables, or specified
 with the B<--session> option.  It is case insensitive, and some common
 command names will be translated into a correct XDG_CURRNET_DESKTOP.
 
-=cut
+=back
 
-$xde->autostart(%ops);
+=head1 BEHAVIOUR
+
+On initial startup, B<xde-startup> behaves as follows:
+
+=over
+
+=item 1.
+
+Window Manager.
+
+B<xde-startup> establishes that a window manager is active.  It uses
+properties on the X Display root window to do this.  Other functions mu
+
+=item 2.
+
+Session establishement.
+
+B<xde-startup> establishes the name of the session.  It uses the
+I<SESSION> argument, or uses the B<XDG_CURRENT_DESKTOP> environment
+variable.  When neither are specified, B<xde-startup> attempts to
+determin the session by using characteristics on the X Display root to
+determine the window manager in use.
+
+=item 3.
+
+Autostart files.
+
+B<xde-startup> establishes the list of XDE autostart F<.desktop> files
+by examining the F<@XDG_CONFIG_DIRS/autostart> directories for autostart
+entries.  This operation can proceed even though a window manager has
+not yet appeared.  This is because the files are statically defined and
+can be examined later using the proper session string.
+
+=item 4.
+
+Startup.
+
+Once the window manager has appeared (or a timeout has occured waiting
+for the window manager to appear), the correct session and active set of
+autostart files is established.  B<xde-startup> then proceeds to start
+the appropriate autostart files.
+
+=back
+
+=head1 HISTORY
+
+I wrote B<xde-startup> because of deficiencies in L<fbautostart(1)> and
+L<lxsession(1)>.  These deficiencies and how they were addressed are as
+follows:
+
+=over
+
+=item 1.
+
+Timing.
+
+Autostarted functions normally need to be started after the window
+manager is already running.  Otherwise, there are lots of artifacts and
+a smooth startup does not result.  B<xde-startup> performs autostart
+only after a suitable window manager has appeared.
+
+=item 2.
+
+Accuracy.
+
+L<fbautostart(1)>, in particular, does not autostart from the users's
+home XDG directorires, which is an error.  B<xde-autostart> properly
+examines the B<XDG_CONFIG_HOME> directory for autostart definitions.
+
+=item 3.
+
+Startup Notification.
+
+None of the others perform startup notification and monitoring of
+started programs.  B<xde-startup> perform startup notification and
+monitors for failures during the session.
+
+=back
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
+
+L<lxsession(1)>,
+L<fbautostart(1)>,
+L<XDE::Autostart(3pm)>,
+L<XDE::Protoocl(3pm)>.
+
+=cut
 
 # vim: sw=4 tw=72

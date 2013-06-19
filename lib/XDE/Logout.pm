@@ -1,6 +1,5 @@
 package XDE::Logout;
-require XDE::Context;
-use base qw(XDE::Context);
+use base qw(XDE::Gtk2);
 use Glib qw(TRUE FALSE);
 use Gtk2;
 use Net::DBus;
@@ -14,27 +13,91 @@ XDE::Logout - log out of an XDE session or boot computer
 
 =head1 SYNOPSIS
 
- require XDE::Logout;
+ use XDE::Logout;
 
- my $xde = XDE::Logout->new();
- my $choice = $xde->logout(%ops);
+ my $xde = XDE::Logout->new(%OVERRIDES,\%ops);
+
+ $xde->getenv;
+ $xde->init;
+
+ my $choice = $xde->logout;
  exit(0) if $choice eq 'Cancel';
- my $action = "Do$choice";
- if ($xde->can($action)) {
-	 $xde->$action();
-	 exit(0);
- }
- die "Cannot grok response '$choice'";
+ my $action = "action_$choice";
+ my $sub = $xde->can($action)
+     or die "Cannot grok response '$choice'";
+ &sub($xde);
+ exit(0);
 
 =head1 DESCRIPTION
+
+B<XDE::Logout> provides a module to perform logout functions for the X
+Desktop Environment.  When invoked, it presents the user with a dialog
+that provides options such a rebooting, logging out and shutting down.
+
+XDE::Logout used the C<login1> service provided by L<systemd(1)> on the
+Dbus to determine whether power functions are available and presents a
+modal window for user selection.  Upon selection either the C<login1>
+service is invoked for a power function, the user is logged out, or the
+logout procedure is cancelled.
+
+=head1 METHODS
+
+XDE::Logout provides the following methods:
+
+=over
+
+=item $xde = XDE::Logout->B<new>(I<%OVERRIDES>,\I<%ops>)
+
+Creates a new XDE::Logout instance and returns a blessed reference.  The
+XDE::Logout module uses L<XDE::Context(3pm)> at a base, and the
+I<%OVERRIDES> are simply passed to the L<XDE::Context(3pm)> module.
+When an option hash, I<%ops>, is passed to the method, it is initialized
+with default option values.
+See L</OPTIONS> for details.
+
+=over
+
+=back
 
 =cut
 
 sub new {
-    my $self = XDE::Context::new(@_);
-    $self->getenv() if $self;
-    return $self;
+    return XDE::Gtk2::new(@_);
 }
+
+=item $xde->B<defaults>()
+
+Sets the defaults for this module only.  This method determines the
+default value of the C<prompt> option.  The default for the C<banner>
+option is determined by L<XDE::Context(3pm)>.
+
+=cut
+
+sub defaults {
+    my $self = shift;
+    $self->{XDE_LOGOUT_PROMPT} = $self->{ops}{prompt};
+    unless ($self->{XDE_LOGOUT_PROMPT}) {
+	my $session;
+	$session = "\U$self->{XDG_VENDOR_ID}\E" if $self->{XDG_VENDOR_ID};
+	$session = $self->{XDG_CURRENT_DESKTOP} unless $session;
+	$session = 'XDE' unless $session;
+	$self->{XDE_LOGOUT_PROMPT} = "Logout of <b>$session</b> session?";
+    }
+    $self->{ops}{prompt} = $self->{XDE_LOGOUT_PROMPT}
+	unless $self->{ops}{prompt};
+}
+
+# =item $xde->B<lxsession_check>()
+# 
+# An internal method to determine whether we have been invoked under a
+# session running L<lxsession(1)>.  When that is the case, we simply
+# execute L<lxsession-logout(1)> with the appropriate parameters for
+# branding.  In that case, this method does not return (executes
+# L<lxsession-logout(1)> directly).  Otherwise the method returns.
+# This method is currently unused and is deprecated.  C<$xde-E<gt>init>
+# must be called before this method.
+# 
+# =cut
 
 sub lxsession_check {
     my $self = shift;
@@ -61,6 +124,42 @@ sub lxsession_check {
     return;
 }
 
+sub test_lock_screen_program {
+    my $self = shift;
+    unless ($self->{ops}{lockscreen}) {
+	foreach my $prog (qw(xlock slock)) {
+	    foreach my $dir (split(/:/,$ENV{PATH})) {
+		my $locker = "$dir/$prog";
+		if (-x $locker) {
+		    if ($prog eq 'xlock') {
+			$self->{ops}{lockscreen} = "$locker -mode blank";
+		    } else {
+			$self->{ops}{lockscreen} = $locker;
+		    }
+		    $self->{can}{LockScreen} = 'yes';
+		    print STDERR "Got $self->{ops}{lockscreen}\n"
+			if $self->{ops}{verbose};
+		    return;
+		} else {
+		    print STDERR "No $locker\n"
+			if $self->{ops}{verbose};
+		}
+	    }
+	}
+    }
+    $self->{can}{LockScreen} = 'yes';
+    return;
+}
+
+# =item $xde->B<test_power_functions>()
+# 
+# Internal method that uses Net::DBus and the C<login1> service to test
+# for available power functions.  The results of the test are stored in
+# a hashref, C<$xde-E<gt>{can}>, indexed by power function name:
+# PowerOff, Reboot, Suspend, Hibernate and HybridSleep.
+# 
+# =cut
+
 sub test_power_functions {
     my $self = shift;
     $self->{dbus}{bus} = Net::DBus->system();
@@ -74,6 +173,14 @@ sub test_power_functions {
     $self->{can}{Hibernate}   = $result if $result = $self->{dbus}{obj}->CanHibernate();
     $self->{can}{HybridSleep} = $result if $result = $self->{dbus}{obj}->CanHybridSleep();
 }
+
+# =item $xde->B<grabbed_window>(I<$window>)
+# 
+# Internal method to transform window, I<$window>, into a window that has
+# a grab on the pointer on a Gtk2 window and restricts pointer movement to
+# the window boundary.  I<$window> is a L<Gtk2::Window(3pm)>.
+# 
+# =cut
 
 sub grabbed_window {
     my $self = shift;
@@ -109,6 +216,15 @@ sub grabbed_window {
     }
 }
 
+# =item $xde->B<ungrabbed_window>(I<$window>)
+# 
+# Internal method to tranform window, I<$window>, back into a regular
+# window, releasing the pointer and keyboard grab and motion restriction.
+# I<$window> is a L<Gtk2::Window(3pm)> that previously had the
+# B<grabbed_window> method called on it.
+# 
+# =cut
+
 sub ungrabbed_window {
     my $self = shift;
     my $w = shift;
@@ -117,6 +233,15 @@ sub ungrabbed_window {
     Gtk2::Gdk->keyboard_ungrab(Gtk2::GDK_CURRENT_TIME);
     $win->hide;
 }
+
+# =item $xde->B<areyousure>(I<$window>,I<$message>) => $result {yes|no}
+# 
+# Simply dialog prompting the user with a yes/no question; however, the
+# window, I<$window>, is one that was previously grabbed using
+# B<grabbed_window>.  This method hands the focus grab to the dialog and
+# back to the window on exit.  Returns the response to the dialog.
+# 
+# =cut
 
 sub areyousure {
     my $self = shift;
@@ -140,115 +265,155 @@ sub areyousure {
     return $result;
 }
 
+# =item $xde->B<PowerOff>(I<$window>)
+# 
+# =cut
+
 sub PowerOff {
     my $self = shift;
     my $w = shift;
     print STDERR "Power Off clicked!\n" if $self->{ops}{verbose};
     my $result = $self->areyousure($w, "Are you sure you want to power off the computer?");
-    if ($result eq 'yes') {
-	$self->{ops}{choice} = 'PowerOff';
-	Gtk2::main_quit;
-    }
+    $self->main_quit('PowerOff') if $result eq 'yes';
     return Gtk2::EVENT_PROPAGATE;
 }
+
+# =item $xde->B<Reboot>(I<$window>)
+# 
+# =cut
+
 sub Reboot {
     my $self = shift;
     my $w = shift;
     print STDERR "Reboot clicked!\n" if $self->{ops}{verbose};
     my $result = $self->areyousure($w, "Are you sure you want to reboot the computer?");
-    if ($result eq 'yes') {
-	$self->{ops}{choice} = 'Reboot';
-	Gtk2::main_quit;
-    }
+    $self->main_quit('Reboot') if $result eq 'yes';
     return Gtk2::EVENT_PROPAGATE;
 }
+
+# =item $xde->B<Suspend>(I<$window>)
+# 
+# =cut
+
 sub Suspend {
     my $self = shift;
     my $w = shift;
     print STDERR "Suspend clicked!\n" if $self->{ops}{verbose};
     my $result = $self->areyousure($w, "Are you sure you want to suspend the computer?");
-    if ($result eq 'yes') {
-	$self->{ops}{choice} = 'Suspend';
-	Gtk2::main_quit;
-    }
+    $self->main_quit('Suspend') if $result eq 'yes';
     return Gtk2::EVENT_PROPAGATE;
 }
+
+# =item $xde->B<Hibernate>(I<$window>)
+# 
+# =cut
+
 sub Hibernate {
     my $self = shift;
     my $w = shift;
     print STDERR "Hibernate clicked!\n" if $self->{ops}{verbose};
     my $result = $self->areyousure($w, "Are you sure you want to hibernate the computer?");
-    if ($result eq 'yes') {
-	$self->{ops}{choice} = 'Hibernate';
-	Gtk2::main_quit;
-    }
+    $self->main_quit('Hibernate') if $result eq 'yes';
     return Gtk2::EVENT_PROPAGATE;
 }
+
+# =item $xde->B<HybridSleep>(I<$window>)
+# 
+# =cut
+
 sub HybridSleep {
     my $self = shift;
     my $w = shift;
     print STDERR "Hybrid Sleep clicked!\n" if $self->{ops}{verbose};
     my $result = $self->areyousure($w, "Are you sure you want to hybrid sleep the computer?");
-    if ($result eq 'yes') {
-	$self->{ops}{choice} = 'HybridSleep';
-	Gtk2::main_quit;
-    }
+    $self->main_quit('HybridSleep') if $result eq 'yes';
     return Gtk2::EVENT_PROPAGATE;
 }
+
+# =item $xde->B<SwitchUser>(I<$window>)
+# 
+# =cut
+
 sub SwitchUser {
     my $self = shift;
     my $w = shift;
     print STDERR "Switch User clicked!\n" if $self->{ops}{verbose};
-    $self->{ops}{choice} = 'SwitchUser';
+    $self->main_quit('SwitchUser');
     return Gtk2::EVENT_PROPAGATE;
 }
+
+# =item $xde->B<SwitchDesk>(I<$window>)
+# 
+# =cut
+
 sub SwitchDesk {
     my $self = shift;
     my $w = shift;
     print STDERR "Switch Desktop clicked!\n" if $self->{ops}{verbose};
-    $self->{ops}{choice} = 'SwitchDesk';
+    $self->main_quit('SwitchDesk');
     return Gtk2::EVENT_PROPAGATE;
 }
+
+# =item $xde->B<LockScreen>(I<$window>)
+# 
+# =cut
+
 sub LockScreen {
     my $self = shift;
     my $w = shift;
     print STDERR "Lock Screen clicked!\n" if $self->{ops}{verbose};
-    $self->{ops}{choice} = 'LockScreen';
+    $self->main_quit('LockScreen');
     return Gtk2::EVENT_PROPAGATE;
 }
+
+# =item $xde->B<Logout>(I<$window>)
+# 
+# =cut
+
 sub Logout {
     my $self = shift;
     my $w = shift;
     print STDERR "Logout clicked!\n" if $self->{ops}{verbose};
-    $self->{ops}{choice} = 'Logout';
-    Gtk2->main_quit;
+    $self->main_quit('Logout');
     return Gtk2::EVENT_PROPAGATE;
 }
+
+# =item $xde->B<Restart>(I<$window>)
+# 
+# =cut
+
 sub Restart {
     my $self = shift;
     my $w = shift;
     print STDERR "Restart clicked!\n" if $self->{ops}{verbose};
-    $self->{ops}{choice} = 'Restart';
-    Gtk2->main_quit;
+    $self->main_quit('Restart');
     return Gtk2::EVENT_PROPAGATE;
 }
+
+# =item $xde->B<Cancel>(I<$window>)
+# 
+# =cut
+
 sub Cancel {
     my $self = shift;
     my $w = shift;
     print STDERR "Cancel clicked!\n" if $self->{ops}{verbose};
-    $self->{ops}{choice} = 'Cancel';
-    Gtk2->main_quit;
+    $self->main_quit('Cancel');
     return Gtk2::EVENT_PROPAGATE;
 }
 
+=item $xde->B<logout>() => $choice
+
+Provides a modal choice window of the available logout and power
+selections and returns the scalar choice made by the operator.
+This method does not invoke the choice.  The B<action_$choice>
+methods provide a mechanism to actuate the choice.
+
+=cut
+
 sub logout {
-    my ($self,%ops) = @_;
-    $self->{ops} = \%ops;
-    # XDE::Context expects these on the main object
-    foreach (qw/verbose lang language charset/) {
-	$self->{$_} = $ops{$_} if $ops{$_};
-    }
-    $self->set_vendor($ops{vendor}) if $ops{vendor};
+    my ($self) = @_;
+    my %ops = %{$self->{ops}};
 
     my $can = $self->{can} = {
 	PowerOff    => 'na',
@@ -277,6 +442,7 @@ sub logout {
 	Cancel	    => 'Cancel and return to current session.',
     };
     eval { $self->test_power_functions(); };
+    eval { $self->test_lock_screen_program(); };
 
     foreach (keys %$can) {
 	if ($can->{$_} eq 'na') {
@@ -305,25 +471,10 @@ sub logout {
 sub make_logout_choice {
     my $self = shift;
     my %ops = %{$self->{ops}};
-    Gtk2->init;
-    if ($self->{XDG_ICON_PREPEND} or $self->{XDG_ICON_APPEND})
-    {
-	my $theme = Gtk2::IconTheme->get_default;
-	if ($self->{XDG_ICON_PREPEND}) {
-	    foreach (reverse split(/:/,$self->{XDG_ICON_PREPEND})) {
-		$theme->prepend_search_path($_);
-	    }
-	}
-	if ($self->{XDG_ICON_APPEND}) {
-	    foreach (split(/:/,$self->{XDG_ICON_APPEND})) {
-		$theme->append_search_path($_);
-	    }
-	}
-    }
     my ($w,$h,$f,$v,$s,$l,$bb);
     $w = Gtk2::Window->new('toplevel');
     $w->signal_connect(delete_event=>sub{
-	    Gtk2->main_quit;
+	    $self->main_quit('Cancel');
 	    Gtk2::EVENT_STOP;
     });
     $w->set_wmclass('xde-logout','Xdg-logout');
@@ -336,8 +487,40 @@ sub make_logout_choice {
     $w->set_skip_pager_hint(TRUE);
     $w->set_skip_taskbar_hint(TRUE);
     $w->set_position('center-always');
+# =======================
+    $w->fullscreen;
+    $w->set_decorated(FALSE);
+    my $screen = Gtk2::Gdk::Screen->get_default;
+    my ($width,$height) = ($screen->get_width,$screen->get_height);
+    $w->set_default_size($width,$height);
+    $w->set_app_paintable(TRUE);
+    my $pixbuf = Gtk2::Gdk::Pixbuf->get_from_drawable(
+	    Gtk2::Gdk->get_default_root_window,
+	    undef, 0, 0, 0, 0, $width, $height);
+    my $a = Gtk2::Alignment->new(0.5,0.5,0.0,0.0);
+    $w->add($a);
+    my $e = Gtk2::EventBox->new;
+    $a->add($e);
+    $e->set_size_request(-1,-1);
+    $w->signal_connect(expose_event=>sub{
+	    my ($w,$e,$p) = @_;
+	    my $cr = Gtk2::Gdk::Cairo::Context->create($w->window);
+	    $cr->set_source_pixbuf($p,0,0);
+	    $cr->paint;
+	    my $color;
+#	    $color = Gtk2::Gdk::Color->new(0x72*257,0x9f*257,0xcf*257,0);
+#	    $cr->set_source_color($color);
+#	    $cr->paint_with_alpha(0.6);
+	    $color = Gtk2::Gdk::Color->new(0,0,0,0);
+	    $cr->set_source_color($color);
+	    $cr->paint_with_alpha(0.7);
+    },$pixbuf);
+    $v = Gtk2::VBox->new(FALSE,0);
+    $v->set_border_width(15);
+    $e->add($v);
+# =======================
     $h = Gtk2::HBox->new(FALSE,5);
-    $w->add($h);
+    $v->add($h);
     if ($ops{banner}) {
 	$f = Gtk2::Frame->new;
 	$f->set_shadow_type('etched-in');
@@ -361,22 +544,22 @@ sub make_logout_choice {
     $bb->set_border_width(5);
     $bb->set_layout_default('spread');
     $bb->set_spacing_default(5);
-    $v->pack_end($bb,TRUE,TRUE,0);
+    $v->pack_end($bb,FALSE,TRUE,0);
     my (@b,$b,$i);
     my @data = (
-	[ 'system-shutdown', 'gnome-session-halt', 'gtk-quit', 'Power Off',
+	[ 'system-shutdown', 'gnome-session-halt', 'gtk-stop', 'Power Off',
 	  sub{ $self->PowerOff($w) }, $self->{can}{PowerOff}, $self->{tip}{PowerOff},
 	],
-	[ 'system-reboot', 'gnome-session-reboot', 'gtk-quit', 'Reboot',
+	[ 'system-reboot', 'gnome-session-reboot', 'gtk-refresh', 'Reboot',
 	  sub{ $self->Reboot($w) }, $self->{can}{Reboot}, $self->{tip}{Reboot},
 	],
-	[ 'system-suspend', 'gnome-session-suspend', 'gtk-quit', 'Suspend',
+	[ 'system-suspend', 'gnome-session-suspend', 'gtk-save', 'Suspend',
 	  sub{ $self->Suspend($w) }, $self->{can}{Suspend}, $self->{tip}{Suspend},
 	],
-	[ 'system-suspend-hibernate', 'gnome-session-hibernate', 'gtk-quit', 'Hibernate',
+	[ 'system-suspend-hibernate', 'gnome-session-hibernate', 'gtk-save-as', 'Hibernate',
 	  sub{ $self->Hibernate($w) }, $self->{can}{Hibernate}, $self->{tip}{Hibernate},
 	],
-	[ 'system-suspend-hibernate', 'gnome-session-hibernate', 'gtk-quit', 'Hybrid Sleep',
+	[ 'system-suspend-hibernate', 'gnome-session-hibernate', 'gtk-revert-to-saved', 'Hybrid Sleep',
 	  sub{ $self->HybridSleep($w) }, $self->{can}{HybridSleep}, $self->{tip}{HybridSleep},
 	],
 	[ 'system-switch-user', 'gnome-session-switch', 'gtk-quit', 'Switch User',
@@ -385,10 +568,10 @@ sub make_logout_choice {
 	[ 'system-switch-user', 'gnome-session-switch', 'gtk-quit', 'Switch Desktop',
 	  sub{ $self->SwitchDesk($w) }, $self->{can}{SwitchDesk}, $self->{tip}{SwitchDesk},
 	],
-	[ 'gtk-refresh', 'gtk-refresh', 'gtk-refres', 'Restart',
+	[ 'gtk-refresh', 'gtk-refresh', 'gtk-redo', 'Restart',
 	  sub{ $self->Restart($w) }, $self->{can}{Restart}, $self->{tip}{Restart},
 	],
-	[ 'system-lock-screen', 'gnome-lock-screen', 'gtk-quit', 'Lock Screen',
+	[ 'system-lock-screen', 'gnome-lock-screen', 'gtk-missing-image', 'Lock Screen',
 	  sub{ $self->LockScreen($w) }, $self->{can}{LockScreen}, $self->{tip}{LockScreen},
 	],
 	[ 'system-log-out', 'gnome-logout', 'gtk-quit', 'Logout',
@@ -405,9 +588,7 @@ sub make_logout_choice {
 	$b->set_border_width(2);
 	$b->set_image_position('left');
 	$b->set_alignment(0.0,0.5);
-	$i = Gtk2::Image->new_from_icon_name($_->[0],'button');
-	$i = Gtk2::Image->new_from_icon_name($_->[1],'button') unless $i;
-	$i = Gtk2::Image->new_from_stock($_->[2],'button') unless $i;
+	$i = $self->get_icon('button',$_->[2],$_->[0],$_->[1]);
 	$b->set_image($i);
 	$b->set_label($_->[3]);
 	$b->signal_connect(clicked=>$_->[4]);
@@ -415,7 +596,7 @@ sub make_logout_choice {
 	$b->set_tooltip_text($_->[6]) if $_->[6];
 	$bb->pack_start($b,TRUE,TRUE,5); push @b,$b;
     }
-    $w->set_default_size(-1,350);
+#   $w->set_default_size(-1,350);
     $w->show_all;
     $w->show_now;
     $w->signal_connect('grab-broken-event'=>sub{
@@ -429,36 +610,112 @@ sub make_logout_choice {
     #$b[-1]->grab_focus;
 
     $self->grabbed_window($w);
-    Gtk2->main;
+    my $return = $self->main;
     $w->destroy;
-    return $self->{ops}{choice};
+    return $return;
 }
 
-sub DoPowerOff {
+=item $xde->B<action_PowerOff>()
+
+Requests that the C<login1> service power off the computer.  B<logout>
+must be called first to establish the DBus connection.
+
+=cut
+
+sub action_PowerOff {
     shift->{dbus}{obj}->PowerOff(TRUE);
 }
-sub DoReboot {
+
+=item $xde->B<action_Reboot>()
+
+Requests that the C<login1> service reboot the computer.  B<logout> must
+be called first to establish the DBus connection.
+
+=cut
+
+sub action_Reboot {
     shift->{dbus}{obj}->Reboot(TRUE);
 }
-sub DoSuspend {
+
+=item $xde->B<action_Suspend>()
+
+Requests that the C<login1> service suspend the computer.  B<logout>
+must be called first to establish the DBus connection.
+
+=cut
+
+sub action_Suspend {
     shift->{dbus}{obj}->Suspend(TRUE);
 }
-sub DoHibernate {
+
+=item $xde->B<action_Hibernate>()
+
+Requests that the C<login1> service hibernate the computer.  B<logout>
+must be called first to establish the DBus connection.
+
+=cut
+
+sub action_Hibernate {
     shift->{dbus}{obj}->Hibernate(TRUE);
 }
-sub DoHybridSleep {
+
+=item $xde->B<action_HybridSleep>()
+
+Requests that the C<login1> service hybrid sleep the computer.
+B<logout> must be called first to establish the DBus connection.
+
+=cut
+
+sub action_HybridSleep {
     shift->{dbus}{obj}->HybridSleep(TRUE);
 }
-sub DoSwitchUser {
+
+=item $xde->B<action_SwitchUser>()
+
+Currently unimplemented.
+
+=cut
+
+sub action_SwitchUser {
     print STDERR "Unimplemented DoSwitchUser\n";
 }
-sub DoSwitchDesk {
+
+=item $xde->B<action_SwitchDesk>()
+
+Currently unimplemented.
+
+=cut
+
+sub action_SwitchDesk {
     print STDERR "Unimplemented DoSwitchDesk\n";
 }
-sub DoLockScreen {
-    print STDERR "Unimplemented DoLockScreen\n";
+
+=item $xde->B<action_LockScreen>()
+
+Currently unimplemented.
+
+=cut
+
+sub action_LockScreen {
+    my $self = shift;
+    if ($self->{ops}{lockscreen}) {
+	system("$self->{ops}{lockscreen} &");
+    } else {
+	warn "No screen locking program defined";
+    }
 }
-sub DoLogout {
+
+=item $xde->B<action_Logout>()
+
+Performs a complicated sequence of checks to log out of the current
+session.  This method supports more than just XDE sessions
+(L<lxsession(1)> and other sessions are supported).
+
+See L</BEHAVIOUR> for details.
+
+=cut
+
+sub action_Logout {
     my $self = shift;
     # check for _LXSESSION_PID _FBSESSION_PID XDG_SESSION_PID
     #   when one of these exists, logging out of the session consists of
@@ -554,5 +811,88 @@ sub DoLogout {
     return;
 }
 
+=back
+
+=cut
+
 1;
 
+__END__
+
+=head1 OPTIONS
+
+XDE::Logout recognizes the following options passed to B<new>:
+
+=over
+
+=item banner => $banner
+
+Specifies the logo to display as a banner.  When unspecified, defaults
+to the banner determined using XDG environment variables.
+
+=item prompt => $prompt
+
+Specifies the logout prompt to display (e.g. 'Logout of FLUXBOX
+session?').  When unspecified, the default is determined using XDG
+environment variables.  This string can use pango markup.
+
+=back
+
+See also L<XDE::Context(3pm)> for additional options interpreted by the
+base class.
+
+=head1 BEHAVIOUR
+
+The behaviour of the B<action_Logout>() method is as follows:
+
+=over
+
+=item 1.
+
+Check for B<XDG_SESSION_PID>, B<_FBSESSION_PID>, B<_LXSESSION_PID>
+environment variables.
+
+When any of these environment variables exist, the PID is sent a
+C<SIGTERM> and the logout is considered complete.  This will normally
+terminate an XDE session or an L<lxsession(1)>.
+
+=item 2.
+
+Check for B<_BLACKBOX_PID> and B<_OPENBOX_PID> display properties.
+
+When any of these properties exist, the PID is sent a C<SIGTERM> and the
+logout is considered complete.  (The B<_BLACKBOX_PID> is actually for
+L<fluxbox(1)> not L<blackbox(1)>).
+
+=item 3.
+
+Find the window manager using the B<_NET_SUPPORTING_WM_CHECK> property
+and locate the B<_NET_WM_PID> property of the window manager.
+
+When this property is found, the PID is sent a C<SIGTERM> and the logout
+is considered complete.
+
+=back
+
+Otherwise, the logout procedure will fail and a diagnostic message is
+displayed on standard output.
+
+The procedure can be used to exit a L<fluxbox(1)>, L<blackbox(1)>,
+L<openbox(1)> or L<icewm(1)> window manager when no session is
+available.
+
+Note that this procedure has little chance of operating successfully
+when this method is invoked on a host other than the one on which the
+session or window manager was launched.
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
+
+L<XDE::Context(3pm)>, L<XDE::X11(3pm)>
+
+=cut
+
+# vim: sw=4 tw=72

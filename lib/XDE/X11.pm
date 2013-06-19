@@ -1,5 +1,4 @@
 package XDE::X11;
-require X11::Protocol;
 use base qw(X11::Protocol);
 use Glib;
 use Gtk2;

@@ -60,6 +60,8 @@ use constant {
 	wmaker		 => 'wmaker',
 	'wmaker-xde'	 => 'wmaker',
 	windowmaker	 => 'wmaker',
+	lxde		 => 'lxde',
+	'lxde/openbox'	 => 'lxde',
     },
     CONFDIR => {
 	fluxbox		 => "~/.fluxbox",
@@ -68,14 +70,16 @@ use constant {
 	icewm		 => "~/.icewm",
 	fvwm		 => "~/.fvwm",
 	wmaker		 => "~/GNUstep",
+	lxde		 => "~/.config/openbox",
     },
     CONFFILE => {
 	fluxbox		 => 'xde-init',
 	blackbox	 => 'xde-rc',
 	openbox		 => 'xde-rc.xml',
-	icewm		 => '', # multiple actually
+	icewm		 => 'preferences', # multiple actually
 	fvwm		 => 'config', # other names too
 	wmaker		 => 'Defaults/WindowMaker',
+	lxde		 => 'lxde-rc.xml',
     },
     MENUDIR => {
 	fluxbox		 => '~/.fluxbox',
@@ -84,14 +88,34 @@ use constant {
 	icewm		 => '~/.icewm',
 	fvwm		 => '~/.fvwm',
 	wmaker		 => '~/GNUstep',
+	lxde		 => '~/.config/openbox',
     },
     MENUFILE => {
 	fluxbox		 => 'menu',
 	blackbox	 => 'menu',
 	openbox		 => 'menu.xml',
 	icewm		 => 'menu',
-	fvwm		 => 'preferences',
+	fvwm		 => 'menus',
 	wmaker		 => 'Library/WindowMaker/menu',
+	lxde		 => 'menu.xml',
+    },
+    SUBDIRS => {
+	fluxbox		 => [qw(backgrounds icons pixmaps splash styles tiles)],
+	blackbox	 => [qw(backgrounds styles)],
+	openbox		 => [],
+	icewm		 => [qw(themes sounds)],
+	fvwm		 => [qw(icons)],
+	wmaker		 => [],
+	lxde		 => [],
+    },
+    CFGFILES => {
+	fluxbox		 => [qw(apps fbdesk fbdesk.icons fbpager keys menuconfig overlay slitlist startup usermenu windowmenu)],
+	blackbox	 => [],
+	openbox		 => [],
+	icewm		 => [qw(focus_mode keys prefoverride programs theme toolbar winoptions startup shutdown)],
+	fvwm		 => [qw(bindings decorations functions globalfeel iconstyles menus modules startup sytles)],
+	wmaker		 => [],
+	lxde		 => [],
     },
 };
 
@@ -99,7 +123,14 @@ use constant {
 
 =over
 
-=item B<new> XDG::Context::new
+=item $xde = XDE::Context->B<new>(I<%OVERRIDES>,ops=>\I<%ops>) => blessed HASHREF
+
+Creates a new instance of an XDE::Context object an retruns a blessed
+reference.  The XDE::Context module uses the L<XDG::Context(3pm)> module
+as a base, so the C<%OVERRIDES> are simply passed to the
+L<XDG::Context(3pm)> module.  When an options hash, I<%ops>, is passed
+to the method, it is initialized with default option values.
+See L</OPTIONS> for details on the options recognized by this module.
 
 =cut
 
@@ -107,17 +138,19 @@ sub new {
 	return XDG::Context::new(@_);
 }
 
-=item $xde->B<default>()
+=item $xde->B<xde_default>() => $xde
+
+Internal method to establish defaults for the XDE::Context object
+without invoking the defaults of the superior module: used for multiple
+inheritance.  Normally called by the B<default> method of this package
+or a derived package.  Establishes a wide range of XDG and XDE session
+parameters and defaults.
+This method may or may not be indempotent.
 
 =cut
 
-sub default {
+sub xde_default {
     my $self = shift;
-    $self->{XDG_CONFIG_PREPEND} = '/etc/xdg/xde' unless $self->{XDG_CONFIG_PREPEND};
-    $self->{XDG_DATA_PREPEND} = '/usr/local/share/xde:/usr/share/xde' unless $self->{XDG_DATA_PREPEND};
-
-    $self->SUPER::default();
-
     $self->{XDG_CURRENT_DESKTOP} = $self->{DESKTOP_SESSION} unless $self->{XDG_CURRENT_DESKTOP};
     $self->{XDG_CURRENT_DESKTOP} = $self->{FBXDG_DE} unless $self->{XDG_CURRENT_DESKTOP};
     $self->{XDG_CURRENT_DESKTOP} = '' unless $self->{XDG_CURRENT_DESKTOP};
@@ -133,29 +166,26 @@ sub default {
     $self->{FBXDG_DE} = '' unless $self->{FBXDG_DE};
     $self->{FBXDG_DE} = "\U$self->{FBXDG_DE}\E" if $self->{FBXDG_DE};
 
+    $self->{XDE_SESSION} = $self->{ops}{session};
     $self->{XDE_SESSION} = '' unless $self->{XDE_SESSION};
     $self->{XDE_SESSION} = $self->{XDG_CURRENT_DESKTOP} unless $self->{XDE_SESSION};
     $self->{XDE_SESSION} = $self->{DESKTOP_SESSION} unless $self->{XDE_SESSION};
     $self->{XDE_SESSION} = $self->{FBXDG_DE} unless $self->{XDE_SESSION};
     $self->{XDE_SESSION} = "\L$self->{XDE_SESSION}\E" if $self->{XDE_SESSION};
 
-    $self->{XDE_SESSION} = &SESSIONS->{$self->{XDE_SESSION}} if exists &SESSIONS->{$self->{XDE_SESSION}};
     if (exists &SESSIONS->{$self->{XDE_SESSION}}) {
-	my $session = $self->{XDE_SESSION};
+	my $session = $self->{XDE_SESSION} = &SESSIONS->{$self->{XDE_SESSION}};
 	$self->{XDE_CONFIG_DIR}  = &CONFDIR->{$session};
-	$self->{XDE_CONFIG_FILE} = &CONFDIR->{$session};
+	$self->{XDE_CONFIG_FILE} = &CONFFILE->{$session};
 	$self->{XDE_MENU_DIR}    = &MENUDIR->{$session};
 	$self->{XDE_MENU_FILE}   = &MENUFILE->{$session};
+	$self->{XDE_MENU_FILE} = 'menu' unless $self->{XDE_MENU_FILE};
+	$self->{XDE_MENU_FILE} = "$self->{XDG_MENU_PREFIX}$self->{XDE_MENU_FILE}";
 	if ($self->{ops}{xdg_rcdir}) {
 	    $self->{XDE_CONFIG_DIR} = "$self->{XDG_CONFIG_HOME}/$session";
 	}
-	unless ($self->{ops}{no_tmp_menu}) {
-	    my $prefix = $self->{XDG_MENU_PREFIX};
-	    $prefix =~ s{-$}{};
-	    $prefix = "/$prefix" if $prefix;
-	    $self->{XDE_MENU_DIR} = "/tmp/xde/\U$session\E$prefix";
-	    $self->{XDE_MENU_FILE} = &MENUFILE->{$session};
-	    $self->{XDE_MENU_FILE} = 'menu' unless $self->{XDE_MENU_FILE};
+	if ($self->{ops}{tmp_menu}) {
+	    $self->{XDE_MENU_DIR} = "/tmp/xde/\U$session\E";
 	}
     }
     else {
@@ -179,24 +209,62 @@ sub default {
     foreach my $var (@{&MYPATH}) {
 	$self->{$var} =~ s(~)($self->{HOME})g if $self->{$var};
     }
-    $self->{ops}{banner} = $self->default_banner;
+    $self->{XDE_BANNER_FILE} = $self->{ops}{banner} unless $self->{XDE_BANNER_FILE} and not $self->{ops}{banner};
+    unless ($self->{XDE_BANNER_FILE} or not $self->{XDG_MENU_PREFIX}) {
+	foreach (map{"$_/images"}$self->XDG_DATA_ARRAY) {
+	    if (-f "$_/$self->{XDG_MENU_PREFIX}banner.png") {
+		$self->{XDE_BANNER_FILE} = "$_/$self->{XDG_MENU_PREFIX}banner.png";
+		last;
+	    }
+	}
+    }
+#    $self->{XDE_BANNER_FILE} = $self->default_banner unless $self->{XDE_BANNER_FILE} or not $self->{XDG_MENU_PREFIX};
+    $self->{XDE_BANNER_FILE} = '' unless $self->{XDE_BANNER_FILE};
+    $self->{ops}{banner} = $self->{XDE_BANNER_FILE} unless $self->{ops}{banner};
+    return $self;
+}
+
+=item $xde->B<default>() => $xde
+
+Internal method invoked by L<XDG::Context(3pm)> to establish defaults
+for the instance.  Invokes the superior B<default> method with the
+additional XDG_CONFIG_DIRS prepend of F</etc/xdg/xde> and XDG_DATA_DIRS
+prepend of F</usr/local/share/xde> and F</usr/share/xde>.  Invokes the
+B<xde_default> XDE::Context method, above.
+Invokes the C<defaults> method of the derived class if available.
+This method may or may not be indempotent.
+
+=cut
+
+sub default {
+    my $self = shift;
+    $self->{XDG_CONFIG_PREPEND} = '/etc/xdg/xde' unless $self->{XDG_CONFIG_PREPEND};
+    $self->{XDG_DATA_PREPEND} = '/usr/local/share/xde:/usr/share/xde' unless $self->{XDG_DATA_PREPEND};
+
+    $self->SUPER::default(@_);
+    $self->XDE::Context::xde_default(@_);
+    my $sub = $self->can('defaults');
+    &$sub($self,@_) if $sub;
+
     return $self;
 }
 
 =item $xde->B<getenv>()
 
 Read environment variables into the context and recalculate defaults.
-Environment variables examined are: B<XDE_SESSION>, B<XDE_CONFIG_DIR>,
+Environment variables examined are B<XDE_SESSION>, B<XDE_CONFIG_DIR>,
 B<XDE_CONFIG_FILE>, B<XDE_MENU_DIR>, B<XDE_MENU_FILE>,
-B<DESKTOP_SESSION>, B<FBXDG_DE>.  See L<XDG::Context(3pm)> for
-additional environment variables examined.
+B<DESKTOP_SESSION>, B<FBXDG_DE>, and those described under
+L<XDG::Context(3pm)/getenv>.  Also calls C<_getenv> of the derived class
+when available.  This method may or may not be indempotent.
 
 =cut
 
 sub getenv {
     my $self = shift;
+    if (my $sub = $self->can('_getenv')) { &$sub($self,@_) }
     foreach (@{&MYENV}) { $self->{$_} = $ENV{$_} }
-    return $self->SUPER::getenv();
+    return $self->SUPER::getenv(@_);
 }
 
 =item $xde->B<setenv>()
@@ -204,18 +272,17 @@ sub getenv {
 Write pertinent XDE environment variables from the context into the
 environment.  Environment variables written are: B<XDE_SESSION>,
 B<XDE_CONFIG_DIR>, B<XDE_CONFIG_FILE>, B<XDE_MENU_DIR>,
-B<XDE_MENU_FILE>, B<DESKTOP_SESSION>, B<FBXDG_DE>.  See
-L<XDG::Context(3pm)> for additional environment variables written.
+B<XDE_MENU_FILE>, B<DESKTOP_SESSION>, B<FBXDG_DE>, and those described
+under L<XDG::Context(3pm)/setenv>.  Also calls C<_setenv> of the derived
+class when available.  This method may or may not be indempotent.
 
 =cut
 
 sub setenv {
     my $self = shift;
-    $self->SUPER::setenv();
-    foreach (@{&MYENV}) {
-	delete $ENV{$_};
-	$ENV{$_} = $self->{$_} if $self->{$_};
-    }
+    $self->SUPER::setenv(@_);
+    foreach (@{&MYENV}) { delete $ENV{$_}; $ENV{$_} = $self->{$_} if $self->{$_}; }
+    if (my $sub = $self->can('_setenv')) { &$sub($self,@_) }
     return $self;
 }
 
@@ -226,15 +293,25 @@ optionally, menu directories in /tmp) if they do not already exist.
 The directories created are: B<XDE_CONFIG_HOME>, B<XDE_CONFIG_DIR>,
 B<XDE_MENU_DIR>.  See L<XDG::Context(3pm)> for additional directories
 established.
+This method is indempotent.
 
 =cut
+
+sub do_mkpath {
+    my ($self,$dir) = @_;
+    if ($self->{ops}{dry_run}) {
+	print STDERR "mkdir -p $dir\n";
+    } else {
+	eval { mkpath $dir; } unless -d $dir;
+    }
+}
 
 sub mkdirs {
     my $self = shift;
     $self->SUPER::mkdirs();
     foreach (qw(XDE_CONFIG_HOME XDE_CONFIG_DIR XDE_MENU_DIR)) {
 	if (my $dir = $self->{$_}) {
-	    eval { mkpath $dir; } unless -d $dir;
+	    $self->do_mkpath($dir);
 	}
     }
 }
@@ -274,37 +351,91 @@ sub set_session {
 	XDE_MENU_DIR	    => undef,
 	XDE_MENU_FILE	    => undef,
     );
+    $self->default;
     return $desktop;
+}
+
+=item $xde->B<setup_session>(I<$session>)
+
+Perform default common session directory subdirectory and configuration
+file setup.
+
+=cut
+
+sub do_system {
+    my ($self,@cmds) = @_;
+    my $cmd = join(' ',@cmds);
+    if ($self->{ops}{dry_run}) {
+	print STDERR $cmd,"\n";
+	return 1;
+    }
+    return system($cmd);
 }
 
 sub setup_session {
     my $self = shift;
     my $session = shift;
-    my $rcdir = $self->{XDE_CONFIG_DIR};
-    mkpath $rcdir unless -d $rcdir;
+    $session = "\L$session\E";
+    my $desktop = "\U$session\E";
+    my $rcdir = $self->{XDE_CONFIG_DIR}; $rcdir =~ s|~|$ENV{HOME}|;
+    $self->do_mkpath($rcdir);
     foreach (@{&SUBDIRS->{$session}}) {
-	mkpath "$rcdir/$_" unless -d "$rcdir/$_";
+	$self->do_mkpath("$rcdir/$_");
     }
-    foreach my $file ($self->{XDE_CONFIG_FILE}, $self->{XDE_MENU_FILE},
-	    @{&CFGFILES->{$session}}) {
+    foreach my $file ($self->{XDE_CONFIG_FILE}, @{&CFGFILES->{$session}}) {
 	my $rcfile = "$rcdir/$file";
+	print STDERR ":: establishing: $rcfile\n"
+	    if $self->{ops}{verbose};
 	my $base = $file; $base =~ s{^.*/}{};
-	foreach my $dir (map {"$_/$session"} @{$self->{XDG_DATA_ARRAY}}) {
+	foreach my $dir (map {"$_/$session"} $self->XDG_DATA_ARRAY) {
 	    my $rcbase = "$dir/$base";
 	    if (-f $rcbase) {
-		system("/bin/cp -f \"$rcbase\" \"$rcfile\"")
-		    unless -f $rcfile and (stat($rcfile))[9] > (stat($rcbase))[9];
+		if (-f $rcfile and (stat($rcfile))[9] > (stat($rcbase))[9]) {
+		    print STDERR "$rcfile exists and is not older than $rcbase\n"
+			if $self->{ops}{verbose};
+		} else {
+		    $self->do_system("/bin/cp -f --preserve=timestamps \"$rcbase\" \"$rcfile\"");
+		}
 		last;
+	    } else {
+		warn "$rcbase does not exist"
+		    if $self->{ops}{verbose} and not -f $rcfile;
 	    }
 	}
+    }
+    my $menudir = $self->{XDE_MENU_DIR}; $menudir =~ s|~|$ENV{HOME}|;
+    $self->do_mkpath($menudir);
+    my $menu = "$menudir/$self->{XDE_MENU_FILE}";
+    print STDERR ":: establishing: $menu\n"
+	if $self->{ops}{verbose};
+    foreach my $dir (map {"$_/$session"} $self->XDG_DATA_ARRAY) {
+	my $menubase = "$dir/$self->{XDE_MENU_FILE}";
+	if (-f $menubase) {
+	    if (-f $menu and (stat($menu))[9] > (stat($menubase))[9]) {
+		print STDERR "$menu exists and is not older than $menubase\n"
+		    if $self->{ops}{verbose};
+	    } else {
+		$self->do_system("/bin/cp -f --preserve=timestamps \"$menubase\" \"$menu\"");
+	    }
+	    last;
+	} else {
+	    warn "$menubase does not exist"
+		if $self->{ops}{verbose} and not -f $menu;
+	}
+    }
+    unless (-f $menu) {
+	$self->do_system("touch \"$menu\"");
+    }
+    unless ($menudir eq $rcdir) {
+	$self->do_system("rm -f \"$rcdir/$self->{XDE_MENU_FILE}\"");
+	$self->do_system("ln -sf \"$menu\" \"$rcdir/$self->{XDE_MENU_FILE}\"");
     }
 }
 
 =item $xde->B<default_banner>() => SCALAR
 
 Determine the full path of the default branding banner from XDE/XDG
-context and return it as a scalar.  L</set_vendor> should be called
-before this function if it is to be called at all.
+context and return it as a scalar.
 
 =cut
 
@@ -315,13 +446,13 @@ sub default_banner {
 	foreach my $dir (map {"$_/images"} $self->XDG_DATA_ARRAY) {
 	    my $banner = "$dir/$file";
 	    if (-f $banner) {
-		print STDERR "Found banner '$banner'\n" if $self->{verbose};
+		print STDERR "Found banner '$banner'\n" if $self->{ops}{verbose};
 		return $banner;
 	    }
-	    print STDERR "No banner named '$banner'\n" if $self->{verbose};
+	    print STDERR "No banner named '$banner'\n" if $self->{ops}{verbose};
 	}
     }
-    print STDERR "Failed to find a banner\n" if $self->{verbose};
+    print STDERR "Failed to find a banner\n" if $self->{ops}{verbose};
     return '';
 }
 
@@ -383,7 +514,7 @@ sub get_themes {
 		unless $e{Xsettings}{'Xde/ThemeName'};
 	    foreach my $wm (qw(fluxbox blackbox openbox icewm fvwm wmaker)) {
 		foreach (keys %{$e{Theme}}) {
-		    $e{$wm}{$_} = $e{Theme}{$_} unless $e{$wm}{$_};
+		    $e{$wm}{$_} = $e{Theme}{$_} unless exists $e{$wm}{$_};
 		}
 	    }
 	    $themes{$s} = \%e;
@@ -627,5 +758,57 @@ sub get_styles_WMAKER {
 =cut
 
 1;
+
+__END__
+
+=head1 OPTIONS
+
+XDE::Context recognizes the following options passed in the I<%ops> hash
+to the B<new> method:
+
+=over
+
+=item xdg_rcdir => $boolean
+
+When true, use F<$XDG_CONFIG_HOME> for all window manager session
+configuration files instead of their normal locations (this does not
+apply to L<openbox(1)> (even under L<startlxde(1)>), which normally
+places its configuration files in the F<$XDG_CONFIG_HOME> directory).
+Defaults to false.
+
+=item tmp_menu => $boolean
+
+When true, use the F</tmp> directory to store dynamic copies of the
+window manager root menu.  Not that setting this value to false will
+likely result in a conflict when sessions are run on multiple hosts that
+mount the same user home directory (but will not conflict for multiple
+sessions on the same host).  Defaults to true.
+
+=item banner => $banner
+
+The filename of the branding banner to include in the display.  Selected
+from the I<vendor> option or XDG environment variables when not
+specified.
+
+=item side => $side
+
+Specifies the side of the window on which the logo will be placed.  This
+can be one of the following scalar strings: C<left>, C<top>, C<right> or
+C<bottom>.  When unspecified, it defaults to C<top>.
+
+=back
+
+See L<XDG::Context(3pm)> for additional options recognized by the base
+package.
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
+
+L<XDE::Context(3pm)>, L<XDE::X11(3pm)>
+
+=cut
 
 # vim: sw=4 tw=72

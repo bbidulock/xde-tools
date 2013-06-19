@@ -4,42 +4,50 @@
 eval 'exec perl -S $0 ${1+"@"}'
     if $running_under_some_shell;
 
-my %OVERRIDES = ();
 BEGIN {
-	use strict;
-	use warnings;
-	my $here = $0; $here =~ s{/[^/]*$}{};
-	if ($here =~ s{^\.}{}) {
-	    chomp(my $cwd = `pwd`);
-	    $here = "/$here" if $here;
-	    $here = "$cwd$here";
-	}
-	unless ($here eq '/usr/bin') {
-	    unshift @INC, "$here/lib";
-	    %OVERRIDES = (
-                    HERE               => "$here",
-		    XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
-		    XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
-		    XDG_ICON_APPEND    => "$here/share/pixmaps",
-	    );
-	}
+    use strict;
+    use warnings;
+    my $here = $0; $here =~ s{/[^/]*$}{};
+    if ($here =~ s{^\.}{}) {
+	chomp(my $cwd = `pwd`);
+	$here = "/$here" if $here;
+	$here = "$cwd$here";
+    }
+    unshift @INC, "$here/lib" unless $here eq '/usr/bin';
 }
 
 use Getopt::Long;
 use Encode;
 use I18N::Langinfo qw(langinfo CODESET);
 use POSIX qw(locale_h);
-use XDE::Input;
-use Glib qw(TRUE FALSE);
 use Gtk2;
 use Gtk2::Unique;
+use XDE::Input;
 use strict;
 use warnings;
+
+my %OVERRIDES = ();
+my $here = $0; $here =~ s{/[^/]*$}{};
+if ($here =~ s{^\.}{}) {
+    chomp(my $cwd = `pwd`);
+    $here = "/$here" if $here;
+    $here = "$cwd$here";
+}
+unless ($here eq '/usr/bin') {
+    %OVERRIDES = (
+	HERE               => "$here",
+	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
+	XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
+	XDG_ICON_APPEND    => "$here/share/icons:$here/share/pixmaps",
+    );
+    my %path = (map{$_=>1}split(/:/,$ENV{PATH}));
+    $ENV{PATH} = "$here:$ENV{PATH}" unless exists $path{$here};
+}
 
 my $program = $0; $program =~ s{^.*/}{};
 my $editor = ($program eq 'xde-input-edit') ? 1 : 0;
 
-my (@SAVEARGS) = ($0, @ARGV);
+my (@SAVEARGS) = (@ARGV);
 
 my %ops = (
     help        => '',
@@ -54,6 +62,7 @@ my %ops = (
 );
 
 my $xde = XDE::Input->new(%OVERRIDES,ops=>\%ops);
+$xde->getenv;
 
 my $syntax = GetOptions( \%ops, qw(
     help|h
@@ -66,6 +75,70 @@ my $syntax = GetOptions( \%ops, qw(
     filename|f=s
     editor|e!
 ));
+
+$xde->default; # reset defaults
+
+if ($ops{help}) {
+    print STDOUT show_usage();
+    exit(0);
+}
+
+unless ($syntax) {
+    print STDERR "Syntax ERROR\n";
+    print STDERR show_usage();
+    exit(2);
+}
+
+$xde->init;
+
+$program = 'xde-input-edit' if $ops{editor};
+
+$xde->{DESKTOP_STARTUP_ID} = $ENV{DESKTOP_STARTUP_ID}
+    unless $xde->{DESKTOP_STARTUP_ID};
+delete $ENV{DESKTOP_STARTUP_ID};
+my $unique = Gtk2::UniqueApp->new(
+        'com.unexicon.xde-input', $xde->{DESKTOP_STARTUP_ID},
+        'xde-input' => 1,
+        'xde-input-edit' => 2);
+if ($unique->is_running) {
+    $unique->send_message_by_name($program=>text=>join('|',@SAVEARGS));
+    print STDERR "Another instance of $program is already running.\n";
+    exit(0);
+}
+
+my $window = Gtk2::Window->new('toplevel');
+$unique->watch_window($window);
+$unique->signal_connect(message_received=>sub{
+        my ($unique,$command,$message,$time) = @_;
+        if ($command eq 'xde-input') {
+	    if ($ops{verbose}) {
+		print STDERR "$command command received\n";
+		print STDERR "\tscreen is ", $message->get_screen, "\n";
+		print STDERR "\tworkspace is ", $message->get_workspace, "\n";
+		print STDERR "\tstartup id is ", $message->get_startup_id, "\n";
+	    }
+        }
+        elsif ($command eq 'xde-input-edit') {
+	    if ($ops{verbose}) {
+		print STDERR "$command command received\n";
+		print STDERR "\tscreen is ", $message->get_screen, "\n";
+		print STDERR "\tworkspace is ", $message->get_workspace, "\n";
+		print STDERR "\tstartup id is ", $message->get_startup_id, "\n";
+	    }
+	    $xde->edit_input;
+        }
+        return 'ok';
+});
+
+
+$xde->get_input();
+$xde->set_input();
+$SIG{TERM} = sub{$xde->main_quit};
+$xde->edit_input() if $ops{editor};
+$xde->main;
+$xde->term;
+
+exit(0);
 
 sub show_usage {
     return <<USAGE_EOF;
@@ -103,60 +176,6 @@ OPTIONS:
 
 USAGE_EOF
 }
-
-$ops{lang} = $ops{language};
-$ops{lang} =~ s{\..*$}{};
-
-if ($ops{help}) {
-    print STDOUT show_usage();
-    exit(0);
-}
-
-unless ($syntax) {
-    print STDERR show_usage();
-    exit(2);
-}
-
-Gtk2->init;
-
-$xde->{DESKTOP_STARTUP_ID} = $ENV{DESKTOP_STARTUP_ID}
-    unless $xde->{DESKTOP_STARTUP_ID};
-delete $ENV{DESKTOP_STARTUP_ID};
-my $unique = Gtk2::UniqueApp->new(
-        'com.unexicon.xde-input', $xde->{DESKTOP_STARTUP_ID},
-        'xde-input' => 1,
-        'xde-input-edit' => 2);
-if ($unique->is_running) {
-    $unique->send_message_by_name($program=>text=>join('|',@SAVEARGS));
-    print STDERR "Another instance of $program is already running.\n";
-    exit(0);
-}
-
-my $window = Gtk2::Window->new('toplevel');
-$unique->watch_window($window);
-$unique->signal_connect(message_received=>sub{
-        my ($unique,$command,$message,$time) = @_;
-        print STDERR "Args are: ", join(',',@_), "\n";
-        if ($command eq 'xde-input') {
-            print STDERR "$command command received\n";
-            print STDERR "\tscreen is ", $message->get_screen, "\n";
-            print STDERR "\tworkspace is ", $message->get_workspace, "\n";
-            print STDERR "\tstartup id is ", $message->get_startup_id, "\n";
-        }
-        elsif ($command eq 'xde-input-edit') {
-            print STDERR "$command command received\n";
-            print STDERR "\tscreen is ", $message->get_screen, "\n";
-            print STDERR "\tworkspace is ", $message->get_workspace, "\n";
-            print STDERR "\tstartup id is ", $message->get_startup_id, "\n";
-        }
-        return 'ok';
-});
-
-
-$xde->init;
-$xde->get_input();
-$xde->set_input();
-$xde->main;
 
 1;
 

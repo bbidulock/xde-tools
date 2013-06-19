@@ -4,15 +4,40 @@
 eval 'exec perl -S $0 ${1+"@"}'
     if $running_under_some_shell;
 
+BEGIN {
+    use strict;
+    use warnings;
+    my $here = $0; $here =~ s{/[^/]*$}{};
+    if ($here =~ s{^\.}{}) {
+	chomp(my $cwd = `pwd`);
+	$here = "/$here" if $here;
+	$here = "$cwd$here";
+    }
+    unshift @INC, "$here/lib" unless $here eq '/usr/bin';
+}
 
-my $here = $0; $here =~ s{/[^/]*$}{};
-unshift @INC, "$here/lib";
-
-require XDG::Icons;
-
+use XDG::Icons;
 use Getopt::Long;
 use strict;
 use warnings;
+
+my %OVERRIDES = ();
+my $here = $0; $here =~ s{/[^/]*$}{};
+if ($here =~ s{^\.}{}) {
+    chomp(my $cwd = `pwd`);
+    $here = "/$here" if $here;
+    $here = "$cwd$here";
+}
+unless ($here eq '/usr/bin') {
+    %OVERRIDES = (
+	HERE               => "$here",
+	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
+	XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
+	XDG_ICON_APPEND    => "$here/share/icons:$here/share/pixmaps",
+    );
+    my %path = (map{$_=>1}split(/:/,$ENV{PATH}));
+    $ENV{PATH} = "$here:$ENV{PATH}" unless exists $path{$here};
+}
 
 =head1 NAME
 
@@ -223,3 +248,5 @@ Copyright (c) 2013, OpenSS7 Corporation.  All Rights Reserved.
 L<XDG::Icons(3pm)>, L<XDG::IconTheme(3pm)>
 
 =cut
+
+# vim: sw=4 tw=72

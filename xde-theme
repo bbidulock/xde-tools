@@ -4,25 +4,16 @@
 eval 'exec perl -S $0 ${1+"@"}'
     if $running_under_some_shell;
 
-
-my %OVERRIDES = ();
 BEGIN {
-	use strict;
-	use warnings;
-	my $here = $0; $here =~ s{/[^/]*$}{};
-	if ($here =~ s{^\.}{}) {
-	    chomp(my $cwd = `pwd`);
-	    $here = "/$here" if $here;
-	    $here = "$cwd$here";
-	}
-	unless ($here eq '/usr/bin') {
-	    unshift @INC, "$here/lib";
-	    %OVERRIDES = (
-		    XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
-		    XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
-		    XDG_ICON_APPEND    => "$here/share/pixmaps",
-	    );
-	}
+    use strict;
+    use warnings;
+    my $here = $0; $here =~ s{/[^/]*$}{};
+    if ($here =~ s{^\.}{}) {
+	chomp(my $cwd = `pwd`);
+	$here = "/$here" if $here;
+	$here = "$cwd$here";
+    }
+    unshift @INC, "$here/lib" unless $here eq '/usr/bin';
 }
 
 use Getopt::Long;
@@ -32,6 +23,24 @@ use POSIX qw(locale_h);
 require XDE::Theme;
 use strict;
 use warnings;
+
+my %OVERRIDES = ();
+my $here = $0; $here =~ s{/[^/]*$}{};
+if ($here =~ s{^\.}{}) {
+    chomp(my $cwd = `pwd`);
+    $here = "/$here" if $here;
+    $here = "$cwd$here";
+}
+unless ($here eq '/usr/bin') {
+    %OVERRIDES = (
+	HERE               => "$here",
+	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
+	XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
+	XDG_ICON_APPEND    => "$here/share/icons:$here/share/pixmaps",
+    );
+    my %path = (map{$_=>1}split(/:/,$ENV{PATH}));
+    $ENV{PATH} = "$here:$ENV{PATH}" unless exists $path{$here};
+}
 
 =head1 NAME
 

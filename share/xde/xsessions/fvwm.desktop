@@ -3,6 +3,11 @@ Encoding=UTF-8
 Name=FVWM
 Comment=The fvwm window manager
 Type=XSession
-Exec=xde-startup fvwm
+Exec=/usr/bin/fvwm
 TryExec=/usr/bin/fvwm
+Terminal=false
 Icon=fvwm
+
+[Window Manager]
+SessionManaged=true
+X-XDE-Managed=true

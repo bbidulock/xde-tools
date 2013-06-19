@@ -32,12 +32,13 @@ sub new {
 
 Use this function instead of C<Gtk2->init> to initialize the Gtk2
 toolkit using the environment from the L<XDE::Context(3pm)> object.
+The client must call C<$xde->setenv()> before calling this method.
 
 =cut
 
 sub init {
     my $self = shift;
-    $self->setenv();  # so Gtk2 sees the proper environment variables
+    # $self->setenv();  # so Gtk2 sees the proper environment variables
     my %ops = %{$self->{ops}};
     # Do this before Gtk2->init so that we can set the proper theme
     # file.
@@ -63,6 +64,19 @@ sub init {
     $theme->signal_connect_swapped(changed=>sub{shift->icon_theme_changed(@_)},$self);
 }
 
+sub get_icon {
+    my ($self,$size,$stock,@choices) = @_;
+    my $theme = Gtk2::IconTheme->get_default;
+    foreach (@choices) {
+	if ($theme->has_icon($_)) {
+	    print STDERR "Found icon $_\n" if $self->{ops}{verbose};
+	    return Gtk2::Image->new_from_icon_name($_,$size);
+	}
+    }
+    print STDERR "Using stock $stock\n" if $self->{ops}{verbose};
+    return Gtk2::Image->new_from_stock($stock,$size);
+}
+
 =item $xde->main()
 
 Use this function instead of C<Gtk2->main> to run the event loop.
@@ -71,10 +85,22 @@ Use this function instead of C<Gtk2->main> to run the event loop.
 
 sub main {
     my $self = shift;
-    push @{$self->{retval}}, undef;
+    unshift @{$self->{retval}}, undef;
     $SIG{TERM} = sub{Gtk2->main_quit};
     Gtk2->main;
-    return pop @{$self->{retval}};
+    return shift @{$self->{retval}};
+}
+
+=item $xde->main_quit($retval)
+
+Use this function instead of C<Gtk2->main_quit>.
+
+=cut
+
+sub main_quit {
+    my $self = shift;
+    $self->{retval}[0] = shift if @{$self->{retval}};
+    Gtk2->main_quit;
 }
 
 =item $xde->B<icon_theme_changed>(I<$theme>) = Glib event flag

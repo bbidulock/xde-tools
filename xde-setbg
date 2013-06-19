@@ -4,32 +4,103 @@
 eval 'exec perl -S $0 ${1+"@"}'
     if $running_under_some_shell;
 
-my %OVERRIDES = ();
 BEGIN {
-	use strict;
-	use warnings;
-	my $here = $0; $here =~ s{/[^/]*$}{};
-	if ($here =~ s{^\.}{}) {
-	    chomp(my $cwd = `pwd`);
-	    $here = "/$here" if $here;
-	    $here = "$cwd$here";
-	}
-	unless ($here eq '/usr/bin') {
-	    unshift @INC, "$here/lib";
-	    %OVERRIDES = (
-		    XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
-		    XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
-		    XDG_ICON_APPEND    => "$here/share/pixmaps",
-	    );
-	}
+    use strict;
+    use warnings;
+    my $here = $0; $here =~ s{/[^/]*$}{};
+    if ($here =~ s{^\.}{}) {
+	chomp(my $cwd = `pwd`);
+	$here = "/$here" if $here;
+	$here = "$cwd$here";
+    }
+    unshift @INC, "$here/lib" unless $here eq '/usr/bin';
 }
 
 use Getopt::Long;
-use Glib qw(TRUE FALSE);
-use Gtk2;
+use Encode;
+use I18N::Langinfo qw(langinfo CODESET);
+use POSIX qw(locale_h);
 use XDE::Setbg;
 use strict;
 use warnings;
+
+my %OVERRIDES = ();
+my $here = $0; $here =~ s{/[^/]*$}{};
+if ($here =~ s{^\.}{}) {
+    chomp(my $cwd = `pwd`);
+    $here = "/$here" if $here;
+    $here = "$cwd$here";
+}
+unless ($here eq '/usr/bin') {
+    %OVERRIDES = (
+	HERE               => "$here",
+	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
+	XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
+	XDG_ICON_APPEND    => "$here/share/icons:$here/share/pixmaps",
+    );
+    my %path = (map{$_=>1}split(/:/,$ENV{PATH}));
+    $ENV{PATH} = "$here:$ENV{PATH}" unless exists $path{$here};
+}
+
+my $program = $0; $program =~ s{^.*/}{};
+
+my %ops = (
+    help	=> '',
+    verbose	=> '',
+    prompt	=> '',
+    banner      => '',
+    noask	=> '',
+    charset	=> langinfo(CODESET),
+    language	=> setlocale(LC_MESSAGES),
+    setdflt     => '',
+    default	=> '',
+    current	=> '',
+    choice	=> '',
+    vendor	=> '',
+    monitor	=> 1,
+    grab	=> '',
+    theme	=> '',
+    id		=> '',
+    setroot	=> 1,
+);
+
+my $xde = XDE::Setbg->new(%OVERRIDES,ops=>\%ops);
+$xde->getenv;
+
+my $syntax = GetOptions(
+    'help|h'	    => \$ops{help},
+    'verbose|v'	    => \$ops{verbose},
+    'monitor!'	    => \$ops{monitor},
+    'setroot|s'	    => \$ops{setroot},
+    'grab|g'	    => \$ops{grab},
+    'n'		    => sub{ $ops{monitor} = 0 },
+    'id=s'	    => \$ops{id},
+);
+
+my @files = @ARGV;
+
+$ops{id} = hex($ops{id}) if $ops{id} and $ops{id} =~ m{^0x};
+
+$xde->default; # reset defaults
+
+$xde->init;
+#$xde->set_backgrounds(@files);
+$xde->main;
+$xde->term;
+
+exit(0);
+
+sub show_usage {
+    return <<USAGE_EOF;
+
+USAGE:
+    xde-setbg [OPIONS] [FILE [FILE ...]]
+USAGE_EOF
+}
+
+1;
+
+__END__
 
 =head1 NAME
 
@@ -60,30 +131,6 @@ A list of files that specify which backgrounds to use for which virtual
 desktops.
 
 =back
-
-=cut
-
-my %ops = (
-    help	=> '',
-    verbose	=> '',
-    prompt	=> '',
-    banner      => '',
-    noask	=> '',
-    charset	=> '',
-    language	=> '',
-    setdflt     => '',
-    default	=> '',
-    current	=> '',
-    choice	=> '',
-    vendor	=> '',
-    monitor	=> 1,
-    grab	=> '',
-    theme	=> '',
-    id		=> '',
-    setroot	=> 1,
-);
-
-my $xde = XDE::Setbg->new(%OVERRIDES,ops=>\%ops);
 
 =head1 COMMAND OPTIONS
 
@@ -167,36 +214,6 @@ backgrounds over work areas.  (L<fvwm(1)> is the only lightweight window
 manager that supports work areas and viewports.)
 
 =back
-
-=cut
-
-my $syntax = GetOptions(
-    'help|h'	    => \$ops{help},
-    'verbose|v'	    => \$ops{verbose},
-    'monitor!'	    => \$ops{monitor},
-    'setroot|s'	    => \$ops{setroot},
-    'grab|g'	    => \$ops{grab},
-    'n'		    => sub{ $ops{monitor} = 0 },
-    'id=s'	    => \$ops{id},
-);
-
-my @files = @ARGV;
-
-$ops{id} = hex($ops{id}) if $ops{id} and $ops{id} =~ m{^0x};
-
-sub show_usage {
-    print STDERR<<EOF;
-USAGE:
-    xde-setbg [OPIONS] [FILE [FILE ...]]
-EOF
-    exit(0);
-}
-
-$xde->init;
-
-$xde->set_backgrounds(@files);
-
-$xde->main;
 
 =head1 BEHAVIOUR
 
@@ -435,6 +452,10 @@ limitations of the lightweight window managers that it supports.
 Brian Bidulock <bidulock@cpan.org>
 
 =head1 SEE ALSO
+
+L<hsetroot(1)>,
+L<XDE::Setbg(3pm)>,
+L<X11::Protocol(3pm)>.
 
 =cut
 

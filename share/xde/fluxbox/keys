@@ -1,11 +1,20 @@
 # click on the desktop to get menus
 OnDesktop Mouse1 :HideMenus
 OnDesktop Mouse2 :WorkspaceMenu
-OnDesktop Mouse3 :RootMenu
+# OnDesktop Mouse3 :RootMenu
+OnDesktop Mouse3 :MacroCmd {RootMenu} {ExecCommand xdg_menu --format fluxbox /etc/xdg/menus/arch-applications.menu >~/.fluxbox/xdgmenu}
 
 # scroll on the desktop to change workspaces
 OnDesktop Mouse4 :NextWorkspace
 OnDesktop Mouse5 :PrevWorkspace
+
+# same for pcmanfm
+OnWindow Mod1 Click4 :NextWorkspace
+OnWindow Mod1 Click5 :PrevWorkspace
+
+# unfortunately this breaks scrolling on regular windows
+# OnWindow Mouse4 :If {Matches (Layer=Desktop)} {NextWorkspace}
+# OnWindow Mouse5 :If {Matches (Layer=Desktop)} {PrevWorkspace}
 
 # scroll on the toolbar to change current window
 OnToolbar Mouse4 :PrevWindow {static groups} (iconhidden=no)
@@ -26,7 +35,7 @@ OnWindow Mod1 Mouse2 :Lower
 OnTitlebar Control Mouse1 :StartTabbing
 
 # double click on the titlebar to shade
-OnTitlebar Double Mouse1 :ShadeOn
+OnTitlebar Double Mouse1 :Shade
 
 # scoll up on titlebar to shade
 OnTitlebar Mouse4 :ShadeOn
@@ -47,8 +56,8 @@ Mod1 Tab :NextWindow {groups} (workspace=[current])
 Mod1 Shift Tab :PrevWindow {groups} (workspace=[current])
 
 # cycle through tabs in the current window
-Mod4 Tab :NextTab
-Mod4 Shift Tab :PrevTab
+#Mod4 Tab :NextTab
+#Mod4 Shift Tab :PrevTab
 
 # go to a specific tab in the current window
 Mod4 1 :Tab 1

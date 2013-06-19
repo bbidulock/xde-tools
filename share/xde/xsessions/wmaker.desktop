@@ -3,7 +3,10 @@ Encoding=UTF-8
 Name=WindowMaker
 Comment=This session logs you into Window Maker
 TryExec=/usr/bin/wmaker
-Exec=xde-session wmaker
-# no icon yet, only the top three are currently used
+Exec=/usr/bin/wmaker
 Icon=WindowMaker
-Type=Application
+Type=XSession
+
+[Window Manager]
+SessionManaged=false
+X-XDE-Managed=true
