@@ -1,0 +1,12 @@
+session.styleFile:	/usr/share/fluxbox/styles/Squared_blue
+fbdesk.iconFile:	~/.fluxbox/fbdesk.icons
+fbdesk.lockPositions:	false
+fbdesk.doubleClickInterval:	200
+fbdesk.font:	Liberation Sans 9
+fbdesk.iconAlpha:	255
+fbdesk.snapY:	72
+fbdesk.textColor:	black
+fbdesk.textBackground:	white
+fbdesk.textAlpha:	255
+fbdesk.textPlacement:	Bottom
+fbdesk.snapX:	72

@@ -1,0 +1,183 @@
+  menu "Accessibility" /usr/share/icons/gnome/16x16/apps/accessibility-directory.png {
+  }
+  menu "Accessories" /usr/share/icons/gnome/16x16/categories/gnome-util.png {
+    prog "AllTray 0.7.5.1dev" /usr/share/icons/gnome/16x16/mimetypes/exec.png alltray -a
+    prog "BlackBox Pager" /usr/share/icons/gnome/16x16/mimetypes/exec.png /usr/bin/bbpager
+    prog "File Manager PCManFM" /usr/share/icons/gnome/16x16/apps/system-file-manager.png pcmanfm
+    prog "Font Viewer" /usr/share/icons/gnome/16x16/apps/preferences-desktop-font.png gnome-font-viewer
+    prog "Gtk VNC Viewer" /usr/share/icons/gnome/16x16/apps/gnome-remote-desktop.png gvncviewer
+    prog "Gxmessage" /usr/share/icons/gnome/16x16/mimetypes/exec.png gxmessage
+    prog "Image Viewer" /usr/share/icons/gnome/16x16/mimetypes/exec.png gpicview
+    prog "LXTerminal" /usr/share/icons/gnome/16x16/mimetypes/exec.png lxterminal
+    prog "MacSlow's Cairo-Clock" /usr/share/icons/gnome/16x16/mimetypes/exec.png cairo-clock
+    prog "Mount-gtk" /usr/share/icons/gnome/16x16/devices/drive-removable-media.png mount-gtk
+    prog "Vi IMproved" /usr/share/icons/gnome/16x16/mimetypes/exec.png gvim -f
+    prog "Xarchiver" /usr/share/icons/gnome/16x16/mimetypes/exec.png xarchiver
+    prog "Xcalc Calculator" /usr/share/icons/gnome/16x16/apps/accessories-calculator.png xcalc
+    prog "compton" /usr/share/icons/gnome/16x16/mimetypes/exec.png compton
+  }
+  menu "Archlinux" /usr/share/icons/gnome/16x16/mimetypes/exec.png {
+    prog "AUR" /usr/share/icons/gnome/16x16/mimetypes/exec.png xdg-open https://aur.archlinux.org
+    prog "Bugs" /usr/share/icons/gnome/16x16/mimetypes/exec.png xdg-open https://bugs.archlinux.org
+    prog "Developers" /usr/share/icons/gnome/16x16/mimetypes/exec.png xdg-open http://www.archlinux.org/developers/
+    prog "Documentation" /usr/share/icons/gnome/16x16/mimetypes/exec.png xdg-open https://wiki.archlinux.org/index.php/Official_Arch_Linux_Install_Guide
+    prog "Donate" /usr/share/icons/gnome/16x16/mimetypes/exec.png xdg-open http://www.archlinux.org/donate/
+    prog "Forum" /usr/share/icons/gnome/16x16/mimetypes/exec.png xdg-open https://bbs.archlinux.org
+    prog "Homepage" /usr/share/icons/gnome/16x16/mimetypes/exec.png xdg-open http://www.archlinux.org
+    prog "SVN" /usr/share/icons/gnome/16x16/mimetypes/exec.png xdg-open http://projects.archlinux.org/svntogit/
+    prog "Schwag" /usr/share/icons/gnome/16x16/mimetypes/exec.png xdg-open http://www.zazzle.com/archlinux/
+    prog "Wiki" /usr/share/icons/gnome/16x16/mimetypes/exec.png xdg-open https://wiki.archlinux.org
+  }
+  menu "Education" /usr/share/icons/gnome/16x16/mimetypes/exec.png {
+  }
+  menu "Games" /usr/share/icons/gnome/16x16/categories/gnome-joystick.png {
+  }
+  menu "Graphics" /usr/share/icons/gnome/16x16/categories/gnome-graphics.png {
+    prog "GNU Image Manipulation Program" /usr/share/icons/gnome/16x16/mimetypes/exec.png gimp-2.8
+    prog "GQview" /usr/share/icons/gnome/16x16/mimetypes/exec.png gqview -r
+    prog "GV" /usr/share/icons/gnome/16x16/mimetypes/exec.png gv
+    prog "Geeqie" /usr/share/icons/gnome/16x16/mimetypes/exec.png geeqie -r
+    prog "Image Viewer" /usr/share/icons/gnome/16x16/mimetypes/exec.png gpicview
+    prog "Inkscape" /usr/share/icons/gnome/16x16/mimetypes/exec.png inkscape
+    prog "LibreOffice Draw" /usr/share/icons/gnome/16x16/apps/libreoffice-draw.png libreoffice --draw
+    prog "MuPDF" /usr/share/icons/gnome/16x16/mimetypes/exec.png mupdf
+    prog "Xfig" /usr/share/icons/gnome/16x16/mimetypes/exec.png xfig
+  }
+  menu "Internet" /usr/share/icons/gnome/16x16/categories/gnome-globe.png {
+    prog "Avahi SSH Server Browser" /usr/share/icons/gnome/16x16/devices/network-wired.png /usr/bin/bssh
+    prog "Avahi VNC Server Browser" /usr/share/icons/gnome/16x16/devices/network-wired.png /usr/bin/bvnc
+    prog "Ekiga Softphone" /usr/share/icons/gnome/16x16/mimetypes/exec.png ekiga
+    prog "EtherApe" /usr/share/icons/gnome/16x16/mimetypes/exec.png etherape
+    prog "Ettercap" /usr/share/icons/gnome/16x16/mimetypes/exec.png ettercap -G
+    prog "Firefox" /usr/share/icons/gnome/16x16/mimetypes/exec.png /usr/lib/firefox/firefox
+    prog "Links" /usr/share/icons/gnome/16x16/mimetypes/exec.png xlinks -g
+    prog "OpenNX Connection Wizard" /usr/share/icons/gnome/16x16/mimetypes/exec.png /usr/bin/opennx --wizard
+    prog "OpenNX Session Administrator" /usr/share/icons/gnome/16x16/mimetypes/exec.png /usr/bin/opennx --admin
+    prog "OpenNX client" /usr/share/icons/gnome/16x16/mimetypes/exec.png /usr/bin/opennx
+    prog "Remmina Remote Desktop Client" /usr/share/icons/gnome/16x16/mimetypes/exec.png remmina
+    prog "TightVNC Viewer" /usr/share/icons/gnome/16x16/mimetypes/exec.png vncviewer
+    prog "X11VNC Server" /usr/share/icons/Mist/16x16/devices/computer.png x11vnc -gui tray=setpass -rfbport PROMPT -bg -o %HOME/.x11vnc.log.%VNCDISPLAY
+    prog "Zenmap" /usr/share/zenmap/pixmaps/zenmap.png zenmap
+    prog "Zenmap (as root)" /usr/share/zenmap/pixmaps/zenmap.png /usr/share/zenmap/su-to-zenmap.sh
+  }
+  menu "Office" /usr/share/icons/gnome/16x16/categories/gnome-applications.png {
+    prog "Adobe Reader 9" /usr/share/icons/gnome/16x16/mimetypes/exec.png /opt/Adobe/Reader9/bin/acroread
+    prog "Evolution" /usr/share/icons/gnome/16x16/mimetypes/exec.png evolution
+    prog "GV" /usr/share/icons/gnome/16x16/mimetypes/exec.png gv
+    prog "LibreOffice" /usr/share/icons/gnome/16x16/apps/libreoffice-startcenter.png libreoffice
+    prog "LibreOffice Base" /usr/share/icons/gnome/16x16/apps/libreoffice-base.png libreoffice --base
+    prog "LibreOffice Calc" /usr/share/icons/gnome/16x16/apps/libreoffice-calc.png libreoffice --calc
+    prog "LibreOffice Draw" /usr/share/icons/gnome/16x16/apps/libreoffice-draw.png libreoffice --draw
+    prog "LibreOffice Impress" /usr/share/icons/gnome/16x16/apps/libreoffice-impress.png libreoffice --impress
+    prog "LibreOffice Writer" /usr/share/icons/gnome/16x16/apps/libreoffice-writer.png libreoffice --writer
+    prog "RAKT PDF Viewer" /usr/share/icons/gnome/16x16/mimetypes/exec.png raktpdf
+    prog "Xpdf" /usr/share/icons/gnome/16x16/mimetypes/exec.png xpdf
+    prog "Zathura" - zathura
+  }
+  menu "Programming" /usr/share/icons/gnome/16x16/categories/gnome-devel.png {
+    prog "CMake" /usr/share/icons/gnome/16x16/mimetypes/exec.png cmake-gui
+    prog "Eeschema" /usr/share/icons/gnome/16x16/mimetypes/exec.png eeschema
+    prog "FLUID" /usr/share/icons/gnome/16x16/mimetypes/exec.png fluid
+    prog "GNU Octave" /usr/share/octave/3.6.3/imagelib/octave-logo.svg xterm -T "GNU Octave" -e /usr/bin/octave
+    prog "KiCad" /usr/share/icons/gnome/16x16/mimetypes/exec.png kicad
+    prog "Qt4 Assistant " /usr/share/icons/gnome/16x16/mimetypes/exec.png assistant-qt4
+    prog "Qt4 Designer" /usr/share/icons/gnome/16x16/mimetypes/exec.png designer-qt4
+    prog "Qt4 Linguist " /usr/share/icons/gnome/16x16/mimetypes/exec.png linguist-qt4
+  }
+  menu "Science & Math" /usr/share/icons/gnome/16x16/mimetypes/exec.png {
+    prog "GNU Octave" /usr/share/octave/3.6.3/imagelib/octave-logo.svg xterm -T "GNU Octave" -e /usr/bin/octave
+  }
+  menu "Sound & Video" /usr/share/icons/gnome/16x16/categories/gnome-multimedia.png {
+    prog "Alsaplayer" /usr/share/icons/gnome/16x16/mimetypes/exec.png alsaplayer
+    prog "Clementine" /usr/share/icons/gnome/16x16/mimetypes/exec.png clementine
+    prog "Consonance" /usr/share/icons/gnome/16x16/mimetypes/exec.png consonance
+    prog "Goggles Music Manager" /usr/share/icons/gnome/16x16/mimetypes/exec.png gogglesmm
+    prog "Guayadeque Music Player" /usr/share/icons/gnome/16x16/mimetypes/exec.png guayadeque
+    prog "Music Player" /usr/share/icons/gnome/16x16/mimetypes/exec.png lxmusic
+    prog "PNMixer" /usr/share/icons/gnome/16x16/mimetypes/exec.png pnmixer
+    prog "QT V4L2 test Utility" /usr/share/icons/gnome/16x16/mimetypes/exec.png qv4l2
+    prog "Videos" /usr/share/icons/gnome/16x16/mimetypes/exec.png totem
+    prog "Xfburn" /usr/share/icons/gnome/16x16/devices/media-cdrom.png xfburn
+  }
+  menu "System Tools" /usr/share/icons/gnome/16x16/categories/gnome-system.png {
+    prog "Avahi Zeroconf Browser" /usr/share/icons/gnome/16x16/devices/network-wired.png /usr/bin/avahi-discover
+    prog "Blackbox Window Manager" /usr/share/archlinux/wmlogos/archlinux-wm-base.svg /usr/bin/blackbox
+    prog "Cairo Composite Manager" /usr/share/pixmaps/cairo-compmgr/cairo-compmgr.png cairo-compmgr
+    prog "Conky Status Display" /usr/share/icons/gnome/16x16/mimetypes/unknown.png /usr/bin/conky
+    prog "EtherApe" /usr/share/icons/gnome/16x16/mimetypes/exec.png etherape
+    prog "Fluxbox Panel" /usr/share/fbpanel/images/logo.png fbpanel
+    prog "Fluxbox Run Command" /usr/share/icons/gnome/16x16/actions/system-run.png fbrun
+    prog "Fluxbox Window Manager" /usr/share/archlinux/wmlogos/archlinux-wm-fluxbox.svg fluxbox
+    prog "GSmartControl" /usr/share/icons/gnome/16x16/mimetypes/exec.png /usr/bin/gsmartcontrol
+    prog "Gigolo" /usr/share/icons/gnome/16x16/places/gtk-network.png gigolo
+    prog "Htop" /usr/share/icons/gnome/16x16/mimetypes/exec.png xterm -T "Htop" -e htop
+    prog "LSHW" /usr/share/lshw/artwork/logo.svg /usr/sbin/gtk-lshw
+    prog "LXDE Panel" /usr/share/icons/gnome/16x16/mimetypes/exec.png lxpanel
+    prog "Lock Screen" /usr/share/icons/gnome/16x16/actions/gnome-lockscreen.png slock
+    prog "Manage Printing" /usr/share/icons/gnome/16x16/mimetypes/exec.png /usr/bin/xdg-open http://localhost:631/
+    prog "Openbox Window Manager" /usr/share/icons/gnome/16x16/mimetypes/exec.png openbox
+    prog "Pango Viewer" /usr/share/icons/gnome/16x16/mimetypes/exec.png pango-view -t "Hello world!"
+    prog "Pie Dock" /usr/share/icons/gnome/16x16/emblems/emblem-new.png piedock
+    prog "ROX Filer" /usr/share/icons/gnome/16x16/mimetypes/exec.png rox
+    prog "Services" /usr/share/icons/gnome/16x16/categories/applications-system.png systemadm
+    prog "Software" /usr/share/icons/gnome/16x16/apps/system-software-install.png gpk-application
+    prog "Task Manager" /usr/share/icons/gnome/16x16/apps/utilities-system-monitor.png lxtask
+    prog "UXTerm" /usr/share/icons/gnome/16x16/mimetypes/exec.png uxterm
+    prog "Unclutter" /usr/share/icons/gnome/16x16/mimetypes/exec.png /usr/bin/unclutter
+    prog "Wireshark" /usr/share/icons/gnome/16x16/mimetypes/exec.png wireshark
+    prog "XTerm" /usr/share/icons/gnome/16x16/mimetypes/exec.png xterm
+    prog "dconf Editor" /usr/share/icons/gnome/16x16/mimetypes/exec.png dconf-editor
+    prog "urxvt" /usr/share/icons/gnome/16x16/apps/utilities-terminal.png urxvt
+    prog "urxvt (client)" /usr/share/icons/gnome/16x16/apps/utilities-terminal.png urxvtc
+    prog "urxvt (tabbed)" /usr/share/icons/gnome/16x16/apps/utilities-terminal.png urxvt-tabbed
+  }
+  menu "X11 Tools" /usr/share/icons/gnome/16x16/mimetypes/exec.png {
+    prog "Openbox Window Properties" /usr/share/icons/gnome/16x16/categories/preferences-desktop.png obxprop | gxmessage -wrap -font 'monospace 10' -title 'X Window Properties' -file -
+    prog "X Clock" /usr/share/icons/gnome/16x16/mimetypes/exec.png xclock -geometry 164x164
+    prog "X Display Properties" /usr/share/icons/gnome/16x16/mimetypes/exec.png xdpyinfo|gxmessage -file - -title 'X Display Properties'
+    prog "X Display Refresh" /usr/share/icons/gnome/16x16/mimetypes/exec.png xrefresh
+    prog "X Events" /usr/share/icons/gnome/16x16/mimetypes/exec.png xterm -T 'X Events' -e xev
+    prog "X Font Select" /usr/share/icons/gnome/16x16/mimetypes/exec.png xfontsel
+    prog "X Input" /usr/share/icons/gnome/16x16/mimetypes/exec.png bash -c "xinput | gxmessage -font 'monospace 10' -file - -title 'X Input Information'"
+    prog "X Keyboard LEDs" /usr/share/icons/gnome/16x16/mimetypes/exec.png xkbvleds
+    prog "X Keyboard State" /usr/share/icons/gnome/16x16/mimetypes/exec.png xkbwatch
+    prog "X Kill" /usr/share/icons/gnome/16x16/mimetypes/exec.png xkill
+    prog "X Mod Key Mapping" /usr/share/icons/gnome/16x16/mimetypes/exec.png bash -c "xmodmap | gxmessage -font 'monospace 10' -file - -title 'X Mod Key Information'"
+    prog "X RandR" /usr/share/icons/gnome/16x16/mimetypes/exec.png xrandr | gxmessage -font 'monospace 10' -title 'X Window Properties' -file -
+    prog "X Resource Editor" /usr/share/icons/gnome/16x16/mimetypes/exec.png editres
+    prog "X Settings" /usr/share/icons/gnome/16x16/mimetypes/exec.png xset -q|gxmessage -font 'monospace 10' -file - -title 'X Settings'
+    prog "X Video Information" /usr/share/icons/gnome/16x16/mimetypes/exec.png xvinfo|gxmessage -font 'monospace 10' -file - -title 'X Video Information'
+    prog "X Window Dump" /usr/share/icons/gnome/16x16/mimetypes/exec.png bash -c "set -e; xwd>`zenity --entry --text Filename`"
+    prog "X Window Dump Display" /usr/share/icons/gnome/16x16/mimetypes/exec.png bash -c "set -e; xwd>`zenity --entry --text Filename`"
+    prog "X Window Information" /usr/share/icons/gnome/16x16/mimetypes/exec.png xwininfo -root -children | gxmessage -font 'monospace 10' -title 'X Windows' -file -
+    prog "X Window Properties" /usr/share/icons/gnome/16x16/mimetypes/exec.png xprop | gxmessage -font 'monospace 10' -title 'X Window Properties' -file -
+  }
+  menu "Dock Apps" /usr/share/WindowMaker/Icons/GNUstep3D.tiff {
+    prog "Alarm Clock Dock App" /usr/share/WindowMaker/Icons/GNUstep3D.tiff wmclockmon
+    prog "Alsa Mixer" /usr/share/WindowMaker/Icons/GNUstep3D.tiff AlsaMixer.app
+    prog "Analog and Digital Clock" /usr/share/WindowMaker/Icons/GNUstep3D.tiff wmtime
+    prog "Audio Mixer" /usr/share/WindowMaker/Icons/GNUstep3D.tiff wmmixer -w
+    prog "Battery Dock App" /usr/share/WindowMaker/Icons/GNUstep3D.tiff wmbattery
+    prog "Binary Clock Dock App" /usr/share/WindowMaker/Icons/GNUstep3D.tiff wmBinClock
+    prog "Blob Dock App" /usr/share/WindowMaker/Icons/GNUstep3D.tiff wmblob
+    prog "Bubble Monitor" /usr/share/WindowMaker/Icons/GNUstep3D.tiff bubblemon
+    prog "CPU Load Dock App" /usr/share/WindowMaker/Icons/GNUstep3D.tiff wmcpuload
+    prog "CPU Load Dock App (bars)" /usr/share/WindowMaker/Icons/GNUstep3D.tiff wmcpu
+    prog "Calculator Dock App" /usr/share/WindowMaker/Icons/GNUstep3D.tiff wmcalc
+    prog "Calendar Clock Dock App" /usr/share/WindowMaker/Icons/GNUstep3D.tiff wmCalClock
+    prog "Calendar Clock Keyboard Dock App" /usr/share/WindowMaker/Icons/GNUstep3D.tiff wmCalClockKbd
+    prog "Clock Dock App" /usr/share/WindowMaker/Icons/GNUstep3D.tiff lal
+    prog "Core CPU Load" /usr/share/WindowMaker/Icons/GNUstep3D.tiff wmcore
+    prog "Launcher Dock App" /usr/share/WindowMaker/Icons/GNUstep3D.tiff wmappl
+    prog "Monitoring Dock App" /usr/share/WindowMaker/Icons/GNUstep3D.tiff allin1
+    prog "Network Device Monitor" /usr/share/WindowMaker/Icons/GNUstep3D.tiff wmnd
+    prog "Network Monitor" /usr/share/WindowMaker/Icons/GNUstep3D.tiff wmnet
+    prog "System Monitor" /usr/share/WindowMaker/Icons/GNUstep3D.tiff wmsysmon
+    prog "Timer Dock App" /usr/share/WindowMaker/Icons/GNUstep3D.tiff wmtimer
+    prog "Trash Can Dock App" /usr/share/WindowMaker/Icons/GNUstep3D.tiff wmtrash
+    prog "Weather Monitor Dock App" /usr/share/WindowMaker/Icons/GNUstep3D.tiff wmWeather
+    prog "Wifi Monitor" /usr/share/WindowMaker/Icons/GNUstep3D.tiff wmwave
+    prog "Wifi Monitor (LED)" /usr/share/WindowMaker/Icons/GNUstep3D.tiff wmwifi
+  }
+  menu "Other" /usr/share/icons/gnome/16x16/categories/gnome-other.png {
+  }

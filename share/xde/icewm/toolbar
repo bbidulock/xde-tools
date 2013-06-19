@@ -1,0 +1,4 @@
+prog "File Manager" /usr/share/icons/gnome/16x16/apps/file-manager.png pcmanfm
+prog "Web Browser" /usr/share/icons/gnome/16x16/apps/web-browser.png /usr/lib/firefox/firefox
+prog "Terminal" /usr/share/icons/gnome/16x16/apps/terminal.png lxterminal
+prog "Graphical Editor" /usr/share/icons/gnome/16x16/apps/text-editor.png gvim -f

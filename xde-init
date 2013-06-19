@@ -1,0 +1,211 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+    if $running_under_some_shell;
+
+BEGIN {
+    use strict;
+    use warnings;
+    my $here = $0; $here =~ s{/[^/]*$}{};
+    if ($here =~ s{^\.}{}) {
+	chomp(my $cwd = `pwd`);
+	$here = "/$here" if $here;
+	$here = "$cwd$here";
+    }
+    unshift @INC, "$here/lib" unless $here eq '/usr/bin';
+}
+
+use Getopt::Long;
+use Encode;
+use I18N::Langinfo qw(langinfo CODESET);
+use POSIX qw(locale_h);
+use XDE::Session;
+use strict;
+use warnings;
+
+my %OVERRIDES = ();
+my $here = $0; $here =~ s{/[^/]*$}{};
+if ($here =~ s{^\.}{}) {
+    chomp(my $cwd = `pwd`);
+    $here = "/$here" if $here;
+    $here = "$cwd$here";
+}
+unless ($here eq '/usr/bin') {
+    %OVERRIDES = (
+	HERE               => "$here",
+	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
+	XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
+	XDG_ICON_APPEND    => "$here/share/icons:$here/share/pixmaps",
+    );
+    my %path = (map{$_=>1}split(/:/,$ENV{PATH}));
+    $ENV{PATH} = "$here:$ENV{PATH}" unless exists $path{$here};
+}
+
+my %ops = (
+    help	=> '',
+    verbose	=> '',
+    prompt	=> '',
+    banner      => '',
+    noask	=> '',
+    charset	=> langinfo(CODESET),
+    language	=> setlocale(LC_MESSAGES),
+    setdflt     => '',
+    default	=> '',
+    current	=> '',
+    choice	=> '',
+    icons	=> '',
+    vendor	=> '',
+    session	=> '',
+    xdg_rcdir	=> 1,
+    tmp_menu	=> 1,
+    dry_run     => '',
+);
+
+my $xde = XDE::Session->new(%OVERRIDES,ops=>\%ops);
+$xde->getenv;
+
+use constant {
+    SIDES=>{top=>1,bottom=>2,left=>3,right=>4},
+};
+
+my $syntax = GetOptions(
+    "help|h"	    => \$ops{help},
+    "verbose|v"     => \$ops{verbose},
+    "prompt|p!"	    => \$ops{prompt},
+    "banner|b=s"    => \$ops{banner},
+    "side|s=s"	    => sub{$ops{side} = $_[1] if &SIDES->{$_[1]}},
+    "noask|n"	    => \$ops{noask},
+    "charset|c=s"   => \$ops{charset},
+    "language|l=s"  => \$ops{language},
+    "setdflt|d"	    => \$ops{setdflt},
+    "icons|i"	    => \$ops{icons},
+    "vendor|V=s"    => \$ops{vendor},
+);
+
+$ops{choice} = shift @ARGV if @ARGV;
+$ops{choice} = "\L$ops{choice}\E" if $ops{choice};
+$ops{choice} = 'default' unless $ops{choice};
+$ops{choice} = $ops{default} if $ops{choice} eq 'default' and $ops{default};
+
+if (@ARGV) {
+    print STDERR "Too many arguments.\n";
+    show_usage();
+    exit(2);
+}
+
+$xde->default; # reset defaults
+
+if ($ops{help} or not $syntax) {
+    show_usage();
+    exit ($syntax ? 0 : 2);
+}
+
+my ($result,$entry,$managed) = $xde->choose;
+
+if ($result eq 'logout') {
+    print STDERR "Logging out...\n" if $ops{verbose};
+    exit (0);
+}
+
+if ($entry) {
+	$xde->create_session($result,$entry);
+	if ($managed) {
+		print STDERR "Setting up session $result...\n" if $ops{verbose};
+		$xde = $xde->XDE::Setup::setup_session($result);
+		die "Cannot set up session: $result" unless $xde;
+		print STDERR "Launching managed session $result...\n" if $ops{verbose};
+		#$xde->launch_session($ops{session});
+	} else {
+		print STDERR "Launching unmanaged session: $result...\n" if $ops{verbose};
+		exec($entry->{Exec}) or die "cannot launch session";
+	}
+}
+
+exit(1);
+
+sub show_usage {
+    print STDERR <<EOF;
+USAGE:
+    xde-chooser [OPTIONS] [SESSION]
+
+ARGUMENTS:
+    SESSION                 [default: $ops{choice}]
+        specifies the name of the session to choose; special values
+        include: 'default' and 'choose'.  The default when unspecified
+        is 'choose'.
+
+OPTIONS:
+    --help, -h
+        print this usage information and exit.
+
+    --verbose, -v	    [default: $ops{verbose}]
+        print debugging information to standard error during operation.
+
+    --prompt, -p	    [default: $ops{prompt}]
+        prompt the user for the session regardless of the value of the
+        SESSION argument.
+
+    --banner, -b BANNER     [default: $ops{banner}]
+        specifies a custom login logo; depends on environment variables
+        when not unspecified.
+
+    --noask, -n		    [default: $ops{noask}]
+        do not ask the user whether she wishes to set the current
+        session as the default session when SESSION is specified or
+        chosen as something different than the current default.
+
+    --charset, -c CHARSET   [default: $ops{charset}]
+        specify the character set to use to output the menu; defaults to
+        the charset of the current locale.
+
+    --language, -l LANGUAGE [default: $ops{language}]
+        specify the language to use to output the menu; defaults to the
+        value of the current locale.
+
+    --setdflt, -s	    [default: $ops{setdflt}]
+        also set the default to the selected SESSION.
+
+    --icons, -i		    [default: $ops{icons}]
+
+    --vendor, -V VENDOR	    [default: $ops{vendor}]
+        specify the vendor string, VENDOR, for branding.
+
+    --exec, -e
+        execute the Exec= action from the xsessions file rather than
+        returning a string
+
+FILES:
+    $xde->{XDE_BANNER_FILE}
+	the file containing the branding banner.
+
+    $xde->{XDE_DEFAULT_FILE}
+        the file containing the default session.
+
+    $xde->{XDE_CURRENT_FILE}
+        the file containing the current session.
+
+ENVIRONMENT:
+    XDG_DATA_HOME       [default: $xde->{XDG_DATA_HOME}]
+        specifies the user data directory.
+
+    XDG_DATA_DIRS       [default: $xde->{XDG_DATA_DIRS}]
+        specifies the system data directory.
+
+    XDG_CONFIG_HOME     [default: $xde->{XDG_CONFIG_HOME}]
+        specifies the user configuration directory.
+
+    XDG_CONFIG_DIRS     [default: $xde->{XDG_CONFIG_DIRS}]
+        specifies the system configuration directory.
+
+    XDG_CURRENT_DESKTOP [default: $xde->{XDG_CURRENT_DESKTOP}]
+    DESKTOP_SESSION     [default: $xde->{DESKTOP_SESSION}]
+    FBXDG_DE            [default: $xde->{FBXDG_DE}]
+        can also be used to specify the session
+
+EOF
+}
+
+1;
+
+__END__

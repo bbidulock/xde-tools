@@ -1,0 +1,550 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+    if $running_under_some_shell;
+
+BEGIN {
+    use strict;
+    use warnings;
+    my $here = $0; $here =~ s{/[^/]*$}{};
+    if ($here =~ s{^\.}{}) {
+	chomp(my $cwd = `pwd`);
+	$here = "/$here" if $here;
+	$here = "$cwd$here";
+    }
+    unshift @INC, "$here/lib" unless $here eq '/usr/bin';
+}
+
+use Getopt::Long;
+use Encode;
+use I18N::Langinfo qw(langinfo CODESET);
+use POSIX qw(locale_h);
+use Glib qw(TRUE FALSE);
+use Gtk2;
+use Gtk2::Unique;
+use XDE::Input;
+use strict;
+use warnings;
+
+my %OVERRIDES = ();
+my $here = $0; $here =~ s{/[^/]*$}{};
+if ($here =~ s{^\.}{}) {
+    chomp(my $cwd = `pwd`);
+    $here = "/$here" if $here;
+    $here = "$cwd$here";
+}
+unless ($here eq '/usr/bin') {
+    %OVERRIDES = (
+	HERE               => "$here",
+	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
+	XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
+	XDG_ICON_APPEND    => "$here/share/icons:$here/share/pixmaps",
+    );
+    my %path = (map{$_=>1}split(/:/,$ENV{PATH}));
+    $ENV{PATH} = "$here:$ENV{PATH}" unless exists $path{$here};
+}
+
+my $program = $0; $program =~ s{^.*/}{};
+
+Gtk2->init;
+
+my ($w,$n,$s,$v,$p,$h,$f,$b,$m,$q);
+
+$w = Gtk2::Window->new('toplevel');
+$w->signal_connect(delete_event=>sub{
+	Gtk2->main_quit;
+	return Gtk2::EVENT_STOP;
+});
+$w->set_wmclass('xde-xset','Xde-xset');
+$w->set_gravity('center');
+$w->set_type_hint('dialog');
+$w->set_border_width(20);
+$w->set_skip_pager_hint(FALSE);
+$w->set_skip_taskbar_hint(FALSE);
+$w->set_position('center-always');
+$h = Gtk2::HBox->new(FALSE,5);
+$w->add($h);
+$n = Gtk2::Notebook->new;
+$h->pack_start($n,TRUE,TRUE,0);
+
+$v = Gtk2::VBox->new(FALSE,5);
+$v->set_border_width(5);
+$p = $n->append_page($v,"Pointer");
+# AccelerationNumerator
+# AccelerationDenominator
+# Threshold
+
+$f = Gtk2::Frame->new('Acceleration Numerator');
+$f->set_label_align(0.0,0.5);
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$h = Gtk2::HScale->new_with_range(1,100,1);
+$h->set_draw_value(TRUE);
+$f->add($h);
+$h->set_tooltip_markup(
+qq{Set the acceleration numerator.  The effective
+acceleration factor is the numerator divided by
+the denominator.  A typical value is 24.});
+
+$f = Gtk2::Frame->new('Acceleration Denominator');
+$f->set_label_align(0.0,0.5);
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$h = Gtk2::HScale->new_with_range(1,10,1);
+$h->set_draw_value(TRUE);
+$f->add($h);
+$h->set_tooltip_markup(
+qq{Set the acceleration denominator.  The effective
+acceleration factor is the numerator divided by
+the denominator.  A typical value is 10.});
+
+$f = Gtk2::Frame->new('Threshold');
+$f->set_label_align(0.0,0.5);
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$h = Gtk2::HScale->new_with_range(1,100,1);
+$h->set_draw_value(TRUE);
+$f->add($h);
+$h->set_tooltip_markup(
+qq{Set the number of pixels moved before acceleration
+begins.  A typical and usable value is 10 pixels.});
+
+
+$v = Gtk2::VBox->new(FALSE,5);
+$v->set_border_width(5);
+$p = $n->append_page($v,"Keyboard");
+# KeyClickPercent
+# BellPercent
+# BellPitch
+# BellDuration
+# LEDMask
+# GlobalAutoRepeat
+# AutoRepeats
+
+$f = Gtk2::Frame->new;
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$b = Gtk2::CheckButton->new('Global Auto Repeat');
+$f->add($b);
+$b->set_tooltip_markup(
+qq{When enabled, all keyboard keys will auto-repeat;
+otherwise, only per-key autorepeat settings are
+observed.});
+
+$f = Gtk2::Frame->new('Key Click Percent');
+$f->set_label_align(0.0,0.5);
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$h = Gtk2::HScale->new_with_range(0,100,1);
+$h->set_draw_value(TRUE);
+$f->add($h);
+$h->set_tooltip_markup(
+qq{Set the key click volume as a percentage of
+maximum volume: from 0% to 100%.});
+
+$f = Gtk2::Frame->new('Bell Percent');
+$f->set_label_align(0.0,0.5);
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$h = Gtk2::HScale->new_with_range(0,100,1);
+$h->set_draw_value(TRUE);
+$f->add($h);
+$h->set_tooltip_markup(
+qq{Set the bell volume as a percentage of
+maximum volume: from 0% to 100%.});
+
+$f = Gtk2::Frame->new('Bell Pitch (Hz)');
+$f->set_label_align(0.0,0.5);
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$h = Gtk2::HScale->new_with_range(60,2000,20);
+$h->set_draw_value(TRUE);
+$f->add($h);
+$h->set_tooltip_markup(
+qq{Set the bell pitch in Hertz.  Usable values
+are from 200 to 800 Hz.});
+
+$f = Gtk2::Frame->new('Bell Duration (ms)');
+$f->set_label_align(0.0,0.5);
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$h = Gtk2::HScale->new_with_range(60,2000,20);
+$h->set_draw_value(TRUE);
+$f->add($h);
+$h->set_tooltip_markup(
+qq{Set the bell duration in milliseconds.  Usable
+values are 100 to 300 milliseconds.});
+
+$f = Gtk2::Frame->new;
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$b = Gtk2::Button->new('Ring Bell');
+$f->add($b);
+$b->set_tooltip_markup(
+qq{<b>Press</b> to ring bell.});
+
+
+$v = Gtk2::VBox->new(FALSE,5);
+$v->set_border_width(5);
+$p = $n->append_page($v,"XKeyboard");
+
+$s = Gtk2::Notebook->new;
+$v->pack_start($s,TRUE,TRUE,0);
+
+$v = Gtk2::VBox->new(FALSE,5);
+$v->set_border_width(5);
+$p = $s->append_page($v,'Repeat Keys');
+
+$f = Gtk2::Frame->new;
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$b = Gtk2::CheckButton->new('Repeat Keys Enabled');
+$f->add($b);
+$b->set_tooltip_markup(
+qq{When enabled, all keyboard keys will auto-repeat;
+otherwise, only per-key autorepeat settings are
+observed.});
+
+$f = Gtk2::Frame->new('Repeat Delay (milliseconds)');
+$f->set_label_align(0.0,0.5);
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$h = Gtk2::HScale->new_with_range(0,1000,10);
+$h->set_draw_value(TRUE);
+$f->add($h);
+$h->set_tooltip_markup(
+qq{Set the delay after key press before auto-repeat
+begins in milliseconds.  Usable values are from
+250 to 500 milliseconds.});
+
+$f = Gtk2::Frame->new('Repeat Interval (milliseconds)');
+$f->set_label_align(0.0,0.5);
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$h = Gtk2::HScale->new_with_range(10,100,1);
+$h->set_draw_value(TRUE);
+$f->add($h);
+$h->set_tooltip_markup(
+qq{Set the interval between repeats after auto-repeat
+has begun.  Usable values are from 10 to 100
+milliseconds.});
+
+$v = Gtk2::VBox->new(FALSE,5);
+$v->set_border_width(5);
+$p = $s->append_page($v,'Slow Keys');
+
+$f = Gtk2::Frame->new;
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$b = Gtk2::CheckButton->new('Slow Keys Enabled');
+$f->add($b);
+$b->set_tooltip_markup(
+qq{When checked, slow keys are enabled;
+otherwise slow keys are disabled.
+When enabled, keys pressed and released
+before the slow keys delay expires will
+be ignored.});
+
+$f = Gtk2::Frame->new('Slow Keys Delay (milliseconds)');
+$f->set_label_align(0.0,0.5);
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$h = Gtk2::HScale->new_with_range(0,1000,1);
+$h->set_draw_value(TRUE);
+$f->add($h);
+$h->set_tooltip_markup(
+qq{Set the duration in milliseconds for which a
+key must remain pressed to be considered
+a key press.  Usable values are 100 to 300
+milliseconds.});
+
+$v = Gtk2::VBox->new(FALSE,5);
+$v->set_border_width(5);
+$p = $s->append_page($v,'Bounce Keys');
+
+$f = Gtk2::Frame->new;
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$b = Gtk2::CheckButton->new('Bounce Keys Enabled');
+$f->add($b);
+$b->set_tooltip_markup(
+qq{When checked, keys that are repeatedly
+pressed within the debounce delay will be
+ignored; otherwise, keys are not debounced.});
+
+$f = Gtk2::Frame->new('Debounce Delay (milliseconds)');
+$f->set_label_align(0.0,0.5);
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$h = Gtk2::HScale->new_with_range(0,1000,1);
+$h->set_draw_value(TRUE);
+$f->add($h);
+$h->set_tooltip_markup(
+qq{Ignores repeated key presses and releases
+that occur within the debounce delay after
+the key was released.  Usable values are
+300 milliseconds.});
+
+$v = Gtk2::VBox->new(FALSE,5);
+$v->set_border_width(5);
+$p = $s->append_page($v,'Sticky Keys');
+
+$f = Gtk2::Frame->new;
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$b = Gtk2::CheckButton->new('Sticky Keys Enabled');
+$f->add($b);
+$b->set_tooltip_markup(
+qq{When checked, sticky keys are enabled;
+otherwise sticky keys are disabled.
+When enabled, modifier keys will stick
+when pressed and released until a non-
+modifier key is pressed.});
+
+$v = Gtk2::VBox->new(FALSE,5);
+$v->set_border_width(5);
+$p = $s->append_page($v,'Mouse Keys');
+
+$f = Gtk2::Frame->new;
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$b = Gtk2::CheckButton->new('Mouse Keys Enabled');
+$f->add($b);
+$b->set_tooltip_markup(
+qq{When checked, mouse keys are enabled;
+otherwise they are disabled.  Mouse
+keys permit operating the pointer using
+only the keyboard.});
+
+$f = Gtk2::Frame->new;
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$b = Gtk2::CheckButton->new('Mouse Keys Accel Enabled');
+$f->add($b);
+$b->set_tooltip_markup(
+qq{When checked, mouse key acceleration
+is enabled; otherwise it is disabled.});
+
+$f = Gtk2::Frame->new('Mouse Keys Delay (milliseconds)');
+$f->set_label_align(0.0,0.5);
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$h = Gtk2::HScale->new_with_range(0,1000,1);
+$h->set_draw_value(TRUE);
+$f->add($h);
+$h->set_tooltip_markup(
+qq{Specifies the amount of time in milliseconds
+between the initial key press and the first
+repeated motion event.  A usable value is
+about 160 milliseconds.});
+
+$f = Gtk2::Frame->new('Mouse Keys Interval (milliseconds)');
+$f->set_label_align(0.0,0.5);
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$h = Gtk2::HScale->new_with_range(0,1000,1);
+$h->set_draw_value(TRUE);
+$f->add($h);
+$h->set_tooltip_markup(
+qq{Specifies the amout of time in milliseconds
+between repeated mouse key events.  Usable
+values are from 10 to 40 milliseconds.});
+
+$f = Gtk2::Frame->new('Mouse Keys Time to Maximum (count)');
+$f->set_label_align(0.0,0.5);
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$h = Gtk2::HScale->new_with_range(1,100,1);
+$h->set_draw_value(TRUE);
+$f->add($h);
+$h->set_tooltip_markup(
+qq{Sets the number of key presses after which the
+mouse key acceleration will be at the maximum.
+Usable values are from 10 to 40.});
+
+$f = Gtk2::Frame->new('Mouse Keys Maximum Speed (multiplier)');
+$f->set_label_align(0.0,0.5);
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$h = Gtk2::HScale->new_with_range(0,100,1);
+$h->set_draw_value(TRUE);
+$f->add($h);
+$h->set_tooltip_markup(
+qq{Specifies the multiplier for mouse events at
+the maximum speed.  Usable values are
+from 10 to 40.});
+
+$f = Gtk2::Frame->new('Mouse Keys Curve (factor)');
+$f->set_label_align(0.0,0.5);
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$h = Gtk2::HScale->new_with_range(-1000,1000,50);
+$h->set_draw_value(TRUE);
+$f->add($h);
+$h->set_tooltip_markup(
+qq{Sets the curve ramp up to maximum acceleration.
+Negative values ramp sharply to the maximum;
+positive values ramp slowly.  Usable values are
+from -1000 to 1000.});
+
+
+
+
+$v = Gtk2::VBox->new(FALSE,5);
+$v->set_border_width(5);
+$p = $n->append_page($v,"ScreenSaver");
+# Timeout
+# Interval
+# PreferBlanking
+# AllowExposures
+
+$f = Gtk2::Frame->new('Timeout (seconds)');
+$f->set_label_align(0.0,0.5);
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$q = Gtk2::VBox->new(FALSE,0);
+$q->set_border_width(0);
+$f->add($q);
+$h = Gtk2::HScale->new_with_range(0,3600,30);
+$h->set_draw_value(TRUE);
+$q->pack_start($h,FALSE,FALSE,0);
+$b = Gtk2::Button->new('Activate Screen Saver');
+$q->pack_start($b,FALSE,FALSE,0);
+$h->set_tooltip_markup(
+qq{Specify the time in seconds that pointer and keyboard
+must be idle before the screensaver is activated.
+Typical values are 600 seconds (10 minutes).  Set
+to zero to disable the screensaver.});
+
+$f = Gtk2::Frame->new('Interval (seconds)');
+$f->set_label_align(0.0,0.5);
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$q = Gtk2::VBox->new(FALSE,0);
+$q->set_border_width(0);
+$f->add($q);
+$h = Gtk2::HScale->new_with_range(0,3600,30);
+$h->set_draw_value(TRUE);
+$q->pack_start($h,FALSE,FALSE,0);
+$b = Gtk2::Button->new('Rotate Screen Saver');
+$q->pack_start($b,FALSE,FALSE,0);
+$h->set_tooltip_markup(
+qq{Specify the time in seconds after which the screen
+saver will change (if other than blanking).  A
+typical value is 600 seconds (10 minutes).});
+
+$f = Gtk2::Frame->new;
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$b = Gtk2::CheckButton->new('Prefer Blanking');
+$f->add($b);
+$b->set_tooltip_markup(
+qq{When checked, blank the screen instead of using
+a screen saver; otherwise, use a screen saver if
+enabled.});
+
+$f = Gtk2::Frame->new;
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$b = Gtk2::CheckButton->new('Allow Exposures');
+$f->add($b);
+$b->set_tooltip_markup(
+qq{When set, use a screensaver even when the server
+is not capable of peforming screen saving without
+sending exposure events to existing clients.  Not
+normally needed nowadays.});
+
+$v = Gtk2::VBox->new(FALSE,5);
+$v->set_border_width(5);
+$p = $n->append_page($v,"DPMS");
+# Standby Timeout
+# Suspend Timeout
+# Off Timeout
+# Enable/Disable State
+
+$f = Gtk2::Frame->new;
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$b = Gtk2::CheckButton->new('DPMS Enabled');
+$f->add($b);
+
+$f = Gtk2::Frame->new('Standby Timeout (seconds)');
+$f->set_label_align(0.0,0.5);
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$q = Gtk2::VBox->new(FALSE,0);
+$q->set_border_width(0);
+$f->add($q);
+$h = Gtk2::HScale->new_with_range(0,3600,30);
+$h->set_draw_value(TRUE);
+$q->pack_start($h,FALSE,FALSE,0);
+$b = Gtk2::Button->new('Activate Standby');
+$q->pack_start($b,FALSE,FALSE,0);
+
+$f = Gtk2::Frame->new('Suspend Timeout (seconds)');
+$f->set_label_align(0.0,0.5);
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$q = Gtk2::VBox->new(FALSE,0);
+$q->set_border_width(0);
+$f->add($q);
+$h = Gtk2::HScale->new_with_range(0,3600,30);
+$h->set_draw_value(TRUE);
+$q->pack_start($h,FALSE,FALSE,0);
+$b = Gtk2::Button->new('Activate Suspend');
+$q->pack_start($b,FALSE,FALSE,0);
+
+$f = Gtk2::Frame->new('Off Timeout (seconds)');
+$f->set_label_align(0.0,0.5);
+$f->set_shadow_type('etched-in');
+$f->set_border_width(2);
+$v->pack_start($f,FALSE,FALSE,0);
+$q = Gtk2::VBox->new(FALSE,0);
+$q->set_border_width(0);
+$f->add($q);
+$h = Gtk2::HScale->new_with_range(0,3600,30);
+$h->set_draw_value(TRUE);
+$q->pack_start($h,FALSE,FALSE,0);
+$b = Gtk2::Button->new('Activate Off');
+$q->pack_start($b,FALSE,FALSE,0);
+
+
+
+$w->show_all;
+
+Gtk2->main;
+
+
+# vim: sw=4 tw=72

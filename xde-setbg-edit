@@ -1,0 +1,96 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+    if $running_under_some_shell;
+
+=head1 NAME
+
+xde-setbg-edit -- a test program to edit backgrounds for xde-setbg
+
+=head1 SYNOPSIS
+
+xde-setbg-edit [OPTIONS] [DIRECTORY]
+
+=head1 DESCRIPTION
+
+B<xde-setbg-edit> is used to set the backgrounds for L<xde-setbg(1perl)>.
+
+=cut
+
+use Getopt::Long;
+use Glib qw(TRUE FALSE);
+use Gtk2;
+use Gtk2::Notify;
+use Gtk2::Unique;
+use strict;
+use warnings;
+
+Gtk2->init;
+
+use constant {
+	COMMAND_NORMAL	=> 1,
+	COMMAND_EDITOR	=> 2,
+};
+
+my $unique = Gtk2::UniqueApp->new(
+	'com.unexicon.xde-setbg', undef,
+	'xde-setbg' => &COMMAND_NORMAL,
+	'xde-setbg-edit' => &COMMAND_EDITOR,
+);
+if ($unique->is_running) {
+	my $cmd = $0; $cmd =~ s{^.*/}{};
+	$unique->send_message_by_name($cmd=>text=>join('|',$0,@ARGV));
+	print STDERR "Another instance of $cmd is already running.\n";
+	exit(0);
+}
+
+sub message_received {
+	my ($uniq,$command,$msg,$time) = @_;
+	if ($command == &COMMAND_NORMAL) {
+	}
+	elsif ($command == &COMMAND_EDITOR) {
+	}
+	my $startup_id = $msg->get_startup_id;
+	$startup_id = $ENV{DESKTOP_STARTUP_ID} unless $startup_id;
+	if ($startup_id) {
+		Gtk2::Gdk->notify_startup_complete_with_id($startup_id);
+	}
+	else {
+		Gtk2::Gdk->notify_startup_complete();
+	}
+}
+
+my $win = Gtk::Window->new('toplevel');
+$win->set_wmclass('xde-setbg','Xde-setbg');
+$unique->watch_window($win);
+$unique->signal_connect(message_received=>\&message_received);
+$win->set_gravity('center');
+$win->set_type_hint('dialog');
+$win->set_border_width(20);
+$win->set_skip_pager_hint(FALSE);
+$win->set_skip_taskbar_hint(FALSE);
+$win->set_position('center-always');
+my $table;
+my $cols = 4;
+
+{
+	my $vbox = Gtk2::VBox->new(FALSE,5);
+	$win->add($vbox);
+	my $sw = Gtk2::ScrolledWindow->new;
+	$sw->set_shadow_type('etched-in');
+	$sw->set_policy('never','automatic');
+	$sw->set_size_request(800,-1);
+	$vbox->pack_start($sw,TRUE,TRUE,0);
+	$table = Gtk2::Table->new(1,$cols,TRUE);
+	$table->set_col_spacings(1);
+	$table->set_row_spacings(1);
+	$table->set_homogeneous(TRUE);
+	$table->set_size_request(750,-1);
+	$sw->add_with_viewport($table);
+	$win->set_default_size(-1,600);
+	$win->show_all;
+	$win->show_now;
+}
+
+

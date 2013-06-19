@@ -1,0 +1,164 @@
+
+EWMH client messages:
+
+_NET_NUMBER_OF_DESKTOPS: [32] new_number_of_desktops
+
+	Change the number of desktops.
+
+_NET_DESKTOP_GEOMETRY: [32] new_width, new_height
+
+	Change the destop geometry
+
+_NET_DESKTOP_VIEWPORT: [32] new_vx, new_vy
+
+	Change the desktop viewport
+
+_NET_CURRENT_DESKTOP: [32] new_index, timestamp=0
+
+	Change the current desktop
+
+_NET_DESKTOP_NAMES: property, UTF8_STRING[]
+
+	Change the property at any time to change the
+	names of the desktops.
+
+_NET_DESKTOP_ACTIVE_WINDOW: window, [32] source_ind, timestamp, requestor
+
+	Change the active window.
+
+_NET_SHOWING_DESKTOP: [32] boolean (0 or 1)
+
+	Show the desktop or not.
+
+_NET_CLOSE_WINDOW: window [32] timestamp, source_ind
+
+	Close the specified window.
+
+_NET_MOVERESIZE_WINDOW: window [32] gravity_and_flags, x, y, width, height
+
+	Move or resize the specified window.
+
+_NET_WM_MOVERESIZE: window [32] x_root, y_root, direction, button, source_ind
+
+	Initiate WM move or resize of specified window.
+
+_NET_RESTACK_WINDOW: window [32] source_ind, sibling, detail
+
+	Restack the specified window.
+
+_NET_REQUEST_FRAME_EXTENTS: window
+
+	Request WM to set frme extexts.
+
+_NET_WM_DESKTOP: window [32] new_desktop, source_ind
+
+	Change the desktop of the specified window.
+
+_NET_WM_STATE: window [32] action, 1st property, 2nd property, source_ind
+
+	Change the state of a mapped window.
+
+WM_PROTOCOLS: window [32] _NET_WM_PING, timestamp, client_window
+
+	Sent from WM to client and client to root for ping protocol.
+
+_NET_WM_FULLSCREEN_MONITORS: window [32] top, bot, left, right, source_ind
+
+	Set the monitors that define Xinerama fullscreen mode.
+
+
+Testing for window managers:
+
+IceWM:	Sets _NET_SUPPORTING_WM_CHECK(WINDOW) appropriately.  Note that is sets
+	_WIN_SUPPORTING_WM_CHECK(CARDINAL) as well.  Also, it sets both
+	_NET_SUPPORTING_WM_CHECK(WINDOW) and _WIN_SUPPORTING_WM_CHECK to the
+	same window.  It sets _NET_WM_NAME(STRING) to "IceWM 1.3.7 (Linux
+	3.4.0-1-ARCH/x86_64)" or some such.  Extract the first word of the
+	string for the actual name.  Note that _NET_WM_NAME should be
+	(UTF8_STRING) instead of (STRING).  It sets _NET_WM_PID(CARDINAL) to the
+	pid of the window manager; however, it does not set
+	WM_CLIENT_MACHINE(STRING) to the fully qualified domain name of the
+	window manager machine as required by the EWMH specification.
+
+Blackbox:
+	Blackbox is only EWMH compliant and is not ICCCM/WMH compliant.  It
+	properly sets _NET_SUPPORTING_WM_CHECK(WINDOW) on both the root and the
+	check window.  On the check window the only other thing it sets is
+	_NET_WM_NAME(UTF8_STRING) which is a proper UTF8_STRING with the single
+	word "Blackbox".
+
+Fluxbox:
+	Fluxbox is only EWMH compliant and is not ICCCM/WMH compilant.  It
+	properly sets _NET_SUPPORTING_WM_CHECK(WINDOW) no both the root and the
+	check window.  On the check window the other thing it sets is
+	_NET_WM_NAME(UTF8_STRING) which is a proper UTF8_STRING with the singl
+	word "Fluxbox".
+
+	Fluxbox also sets _BLACKBOX_PID(CARDINAL) on the root window.  (Gee,
+	blackbox doesn't!)
+
+Openbox:
+	Openbox is only EWMH compilant and is not ICCCM/WMH compliant.  It
+	properly sets _NET_SUPPORTING_WM_CHECK(WINDOW) on both the root and the
+	check window.  ON the check window the only other thing it sets is
+	_NET_WM_NAME(UTF8_STRING) which is a proper UTF8_STRING with the single
+	word "Openbox".
+
+	Openbox also sets _OPENBOX_PID(CARDINAL) on the root window.  It also
+	sets _OB_VERSION(UTF8_STRING) and _OB_THEME(UTF8_STRING) on the root
+	window: Will changing the _OB_THEME actually change the theme?
+
+FVWM:	FVWM is both ICCCM/WMH and EWMH compliant.  It sets
+	_NET_SUPPORTING_WM_CHECK(WINDOW) properly on the root and check window.
+	On the check window it sets _NET_WM_NAME(UTF8_STRING) to "FVWM".  It
+	sets WM_NAME(STRING) to "fvwm" and WM_CLASS(STRING) to "fvwm", "FVWM".
+	FVWM implements _WIN_SUPPORTING_WM_CHECK(CARDINAL) in a separate window
+	from _NET_SUPPORTING_WM_CHECK(WINDOW), but the same one as
+	_WIN_DESKTOP_BUTTON_PROXY(CARDINAL).  There are no additional properties
+	set on those windows.
+
+WindowMaker:
+	WindowMaker is only EWMH compliant and is not ICCCM/WMH compliant.  It
+	properly sets _NET_SUPPORTING_WM_CHECK(WINDOW) on both the root and the
+	check window.  It does not set the _NET_WM_NAME(UTF8_STRING) on the
+	check window.  It does, however, define a recursive
+	_WINDOWMAKER_NOTICEBOARD(WINDOW) that shares the same window as the
+	check window and sets the _WINDOWMAKER_ICON_TILE(_RGBA_IMAGE) property
+	on this window to the ICON/DOCK/CLIP tile.
+
+Interesting facts about window managers:
+
+All:	All window managers have AT_SPI_BUS(STRING) set to a DBUS session
+	address on the root window.  It appears as though the X Server itself is
+	establishing this session address.
+
+IceWM:	IceWM implements the _WIN_DESKTOP_BUTTON_PROXY(CARDINAL) window from the
+	GNOME window manager specification.  In fact listening for these events
+	is the only way to change the desktop using the mouse scroll wheel.  The
+	geometry of this window is the screen area minus 1 pixel a bottom and
+	right.
+
+	IceWM is the only one of the bunch it seems (other than WindowMaker)
+	that supports WM_ICON_SIZE: it sets a minimum icon size of 32x32,
+	maximum 32x32, incremental size change 1x1.
+
+FVWM:	FVWM implements the _WIN_DESKTOP_BUTTON_PROXY(CARDINAL) window from the
+	GNOME window maanger specification.  In fac listening for these events
+	is a good way to change the desktop using the mouse scroll wheel (as
+	FVWM does not do it itself without customization).
+
+	FVWM supports WindowMaker dock apps (i.e. icon windows) but must launch
+	them itself (like WindowMaker).  Fluxbox, Blackbox, and Openbox handle
+	these automatically.
+
+WindowMaker:
+	WindowMaker sets the _WINDOWMAKER_NOTICEBOARD(WINDOW) attribute on the
+	root window and on the noticeboard window.  I suppose this is where it
+	sends some messages (instead of too root maybe?).  It also sets
+	_WINDOWMAKER_WM_PROTOCOLS(ATOM) to _WINDOWMAKER_MENU,
+	_WINDOWMAKER_WM_FUNCTION and _WINDOWMAKER_NOTICEBOARD.  I suspect that
+	these are ways to get the WM to pop a menu, perform a function or
+	communicate via the noticeboard.  It does set WM_ICON_SIZE(WM_ICON_SIZE)
+	per ICCCM to minimum 8x8, maximum 60x60, increment by 1x1.
+
+vim: ft=README tw=80
