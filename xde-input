@@ -56,9 +56,9 @@ my %ops = (
     language    => setlocale(LC_MESSAGES),
     session     => '',
     desktop     => '',
-    vendor      => '',
-    filename    => '',
     editor      => $editor,
+    filename    => '',
+    vendor      => '',
 );
 
 my $xde = XDE::Input->new(%OVERRIDES,ops=>\%ops);
@@ -71,9 +71,9 @@ my $syntax = GetOptions( \%ops, qw(
     language|l=s
     session|s=s
     desktop|d=s
-    vendor|V=s
-    filename|f=s
     editor|e!
+    filename|f=s
+    vendor|V=s
 ));
 
 $xde->default; # reset defaults
@@ -256,26 +256,6 @@ Prints usage information and defaults to standard output and exits.
 
 Prints debugging information to standard error while operating.
 
-=item B<--charset>, B<-c> I<CHARSET>
-
-Specify the character set to use for output.  The default is to use the
-character set of the current locale.
-
-=item B<--language>, B<-l> I<LANGUAGE>
-
-Specify the language to use for output.  The default is to use the
-language of the current locale.
-
-=item B<--session>, B<-s> I<SESSION>
-
-Specifies the desktop session.  This overrides the setting of the
-B<XDG_CURRENT_DESKTOP> environment variable.
-
-=item B<--desktop>, B<-d> I<DESKTOP>
-
-Specifies the desktop session.  This overrides the setting of the
-B<XDG_CURRENT_DESKTOP> environment variable.
-
 =item B<--editor>, B<-e>
 
 When specified (or when the program is called as F<xde-input-edit>),
@@ -285,8 +265,7 @@ F<xde-input-edit>.
 =item B<--filename>, B<-f> I<FILENAME>
 
 Specify the file to use as the configuration file instead of the
-default.  The default is
-F<$XDG_CONFIG_HOME/xde/$XDG_CURRENT_DESKTOP/input.ini>.  This option
+default.  The default is F<$XDG_CONFIG_HOME/xde/input.ini>.  This option
 does no recognize C<-> as standard input: use F</dev/stdin> instead.
 
 =back
@@ -303,22 +282,14 @@ configuration file and the default configuration files:
 
 When unspecified, defaults to F<$HOME/.config> in accordance with XDG
 specifications.  B<xde-input> looks for user configuration files in
-F<$XDG_CONFIG_HOME/xde/$XDG_CURRENT_DESKTOP/input.ini>.
+F<$XDG_CONFIG_HOME/xde/input.ini>.
 
 =item B<XDG_CONFIG_DIRS>
 
 When unspecified, defaults to F</etc/xdg> in accordance with XDG
 specifications.  XDE will prepend the F</etc/xdg/xde> directory to this
 path if it does not already exist in the path.  B<xde-input> looks for
-system configuration files in
-F<$XDG_CONFIG_DIRS/xde/$XDG_CURRENT_DESKTOP/input.ini>.
-
-=item B<XDG_CURRENT_DESKTOP>
-
-When unspecified, defaults to C<default>.  Other methods can be used to
-determin the session in use when an XDE environment is not present.
-B<xde-input> can be started with the B<--desktop> option to specify the
-desktop in the case that the evironment variable is not present.
+system configuration files in F<$XDG_CONFIG_DIRS/xde/input.ini>.
 
 =back
 
@@ -336,7 +307,7 @@ configuration from the X Server.
 =item B<$SIG{TERM}>
 
 When B<xde-input> receives a C<$SIG{TERM}> signal, it rereads the
-configuration from the X Server, and writes the current settings in to
+configuration from the X Server, and writes the current settings into
 the configuration file if possible before exitting gracefully.
 
 =back
@@ -344,17 +315,16 @@ the configuration file if possible before exitting gracefully.
 =head1 CONFIGURATION FILE
 
 When B<xde-input> starts it reads the configuration file located in
-F<$XDG_CONFIG_HOME/xde/$XDG_CURRENT_DESKTOP/input.ini> unless the
-configuration file was overridden with options on the command line.
-(When B<XDG_CURRENT_DESKTOP> is not defined, it defaults to C<default>.)
-If the configuration file does not exist, it copies the first file it
-finds in F<@XDG_CONFIG_DIRS/xde/$XDG_CURRENT_DESKTOP/input.ini>.  If no
-file is found, it tries F<@XDG_CONFIG_DIRS/xde/default/input.ini>.  When
-no configuration file is found at all, it does not change settings and
-will write the current configuration to the configuration file.
+F<$XDG_CONFIG_HOME/xde/input.ini> unless the configuration file was
+overridden with options on the command line.  If the configuration file
+does not exist, it copies the first file it finds in
+F<@XDG_CONFIG_DIRS/xde/input.ini>.  When no configuration file is found
+at all, it does not change settings and will write the current
+configuration to the configuration file.
 
 B<xde-input> monitors the configuration file for changes and applies
-changes when detected.
+changes when detected.  Note that the file parser is not very robust,
+so when editting by hand, avoid syntax errors.
 
 The configuration file is F<.ini> format and has several sections
 containing the following information as follows:
@@ -366,7 +336,7 @@ containing the following information as follows:
  PowerLevel=DPMSModeOn
  StandbyTimeout=600
  State=1
- SuspendTimeout=600
+ SuspendTimeout=660
 
 =head2 Keyboard
 
@@ -377,14 +347,14 @@ containing the following information as follows:
  BellPitch=400
  GlobalAutoRepeat=On
  KeyClickPercent=0
- LEDMask=0
+ LEDMask=8192
 
 =head2 Pointer
 
  [Pointer]
- AccelerationDenominator=1
- AccelerationNumerator=2
- Threshold=4
+ AccelerationDenominator=10
+ AccelerationNumerator=24
+ Threshold=10
 
 =head2 ScreenSaver
 
@@ -399,7 +369,13 @@ containing the following information as follows:
  [XKeyboard]
  AccessXFeedbackMaskEnabled=true
  AccessXKeysEnabled=false
+ AccessXOptions=3119
+ AccessXTimeout=120
+ AccessXTimeoutMask=30
  AccessXTimeoutMaskEnabled=true
+ AccessXTimeoutOptionsMask=16
+ AccessXTimeoutOptionsValues=0
+ AccessXTimeoutValues=0
  AudibleBellMaskEnabled=true
  BounceKeysEnabled=false
  ControlsEnabledEnabled=false
@@ -411,17 +387,19 @@ containing the following information as follows:
  MouseKeysAccelEnabled=true
  MouseKeysCurve=500
  MouseKeysDelay=160
- MouseKeysEnabled=false
+ MouseKeysDfltBtn=1
+ MouseKeysEnabled=true
  MouseKeysInterval=40
  MouseKeysMaxSpeed=30
  MouseKeysTimeToMax=30
  Overlay1MaskEnabled=false
  Overlay2MaskEnabled=false
+ PerKeyRepeat=00FFFFFFDFFFFBBFFADFFFEFFFEDFFFF9FFFFFFFFFFFFFFFFFF7FFFFFFFFFFFF
  PerKeyRepeatEnabled=false
  RepeatDelay=300
- RepeatInterval=20
+ RepeatInterval=12
  RepeatKeysEnabled=true
- RepeatRate=50
+ RepeatRate=83
  SlowKeysDelay=300
  SlowKeysEnabled=false
  StickyKeysEnabled=false
@@ -432,24 +410,34 @@ The package also installs by default an autostart F<.desktop> file to
 autostart this program when any of the lightweight window managers
 supported by XDE are loaded.
 
+Supported lightweight window managers are: L<fluxbox(1)>,
+L<blackbox(1)>, L<openbox(1)>, L<icewm(1)>, L<fvwm(1)>, and
+L<wmaker(1)>.  Note, however, that although L<wmaker(1)> is capable of
+managing L<xset(1)> parameters itself, it does not support all XKEYBOARD
+extensions, so the default for B<XDE> is to configure window maker to
+not set L<xset(1)> parameters.
+
 =head1 EDITING INPUT SETTINGS
 
-B<xde-input> does not provide a mechanism for editing settings.  Its
-purpose is to act as a session manager for input settings for various
-desktop environments.  A good tool for changing input settings is
-L<lxinput(1)> or L<xset(1)>.  B<xde-input> will record the changes made
-by these tools on termination or when a change that is detectable by
-B<xde-input> has been made.
+B<xde-input> provides a mechanism for editting settings by invoking it
+using the B<--editor> option, or by invoking it as B<xde-input-edit>.
+Other tools for editing input settings are L<lxinput(1)> and L<xset(1)>.
+Values set with these tools are also detected and saved by B<xde-input>.
+Note, however, that some versions of L<lxinput(1)> have bugs and
+annoyingly incorrectly set key repeat rates (they set the rate to the
+interval and intervals to the rate).
 
 =head1 HISTORY
 
 I wrote this tool because none of the lightweight window managers (with
 the notable excpetion of WindowMaker) save or restore the L<xset(1)>
-settings.  I got tire of typing C<xset r rate 300 66> every time I
+settings.  I got tired of typing C<xset r rate 300 66> every time I
 entered an X Window session under L<fluxbox(1)>, so I wrote this tool.
 Unfortunately, I also had to write the
 L<X11::Protocol::Ext::XKEYBOARD(3pm)> extension module to change just
-that: the repeat delay and rate on the keyboard.
+that: the repeat delay and rate on the keyboard.  Then, after
+discovering that L<lxinput(1)> incorrectly sets the rate to the interval
+(or visa versa), I had to include an input editor.
 
 =head1 AUTHOR
 

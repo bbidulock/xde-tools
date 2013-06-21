@@ -2,8 +2,8 @@
 Encoding=UTF-8
 Name=WindowMaker
 Comment=This session logs you into Window Maker
-TryExec=/usr/bin/wmaker
-Exec=/usr/bin/wmaker
+TryExec=wmaker
+Exec=wmaker
 Icon=WindowMaker
 Type=XSession
 

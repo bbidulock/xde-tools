@@ -187,8 +187,8 @@ B<xde-setup> [I<OPTIONS>] [I<SESSION>]
 
 B<xde-setup> is responsible for starting an XDE session for a given
 window manager.  It is responsible for establishing or modifying session
-configuration files and invoking L<xde-session(1p)> with the appropriate
-options and arguments.
+configuration files and invoking L<xde-autostart(1p)> with the
+appropriate options and arguments.
 
 B<xde-setup> is also responsible for establishing XDG environment
 variables when they have not already been set in the environment.
@@ -225,7 +225,9 @@ in the current locale.
 =item B<--vendor>, B<-V>
 
 Specify the vendor string.  This affects the setting of
-B<XDG_MENU_PREFIX> (see L</ENVIRONMENT>).
+B<XDG_MENU_PREFIX> and B<XDG_VENDOR_ID> (see L</ENVIRONMENT>).  When
+unspecified it defaults to C<$XDG_VENDOR_ID> or is derived from
+C<$XDG_MENU_PREFIX>; otherwise, it is set to a null string.
 
 =item B<--session>, B<-s> I<SESSION>
 
@@ -236,7 +238,7 @@ defaults to that obtained from environment variables.
 
 =head1 ARGUMENTS
 
-B<xde-setup> recognizes the following options:
+B<xde-setup> recognizes the following non-option arguments:
 
 =over
 
@@ -275,41 +277,23 @@ of the L<xde-menugen(1p)>  and L<xde-traymenu(1p)> tools in the XDE
 suite so that theme options presented to users in window manager
 specific menus are consistent.
 
-=cut
-
-=pod
-
 The actions performed for specific window managers are as follows:
 
 =over
 
-=item I<fluxbox>
+=item L<fluxbox(1)>
 
-=cut
+=item L<blackbox(1)>
 
-=item I<blackbox>
+=item L<openbox(1)>
 
-=cut
+=item L<icewm(1)>
 
-=item I<openbox>
+=item L<fvwm(1)>, L<fvwm2(1)>
 
-=cut
-
-=item I<icewm>
-
-=cut
-
-=item I<fvwm>, I<fvwm2>
-
-=cut
-
-=item I<wmaker>
-
-=cut
+=item L<wmaker(1)>
 
 =back
-
-=cut
 
 =head1 UTILITIES
 
@@ -319,15 +303,9 @@ B<xde-setup> also sets up the following LXDE and other utilities:
 
 =item L<lxpanel(1)>
 
-=cut
-
 =item L<pcmanfm(1)>
 
-=cut
-
 =back
-
-=cut
 
 =head1 X PROPERTIES
 
@@ -353,8 +331,8 @@ C<$SESSION> is the setting of the I<SESSION> argument.
 
 This X property on the root window is set to the localized path string of
 the primary configuration file of the window manager.  The precise file
-name depends on the I<SESSION> argument.  For example, for a I<Fluxbox>
-session, this is set to F<$XDG_CONFIG_HOME/fluxbox/init>.
+name depends on the I<SESSION> argument.  For example, for a
+L<fluxbox(1)> session, this is set to F<$XDG_CONFIG_HOME/fluxbox/init>.
 
 =item B<_XDE_MENU_FILE>
 
@@ -395,16 +373,17 @@ environment variables:
 
 =item B<DESKTOP_SESSION>
 
-This environment variable is interpreted by L<pcmanfm(1)> and
-L<lxpanel(1)> and is normally set by L<lxsession(1)> to communicate the
-B<--profile> option to these tools.  It is set to the upper-case
-I<SESSION> argument.  For example, for a I<Fluxbox> session, this is set
-to C<FLUXBOX>.
+This environment variable is interpreted by L<pcmanfm(1)> and is
+normally set by L<lxsession(1)> to communicate the B<--profile> option
+to these tools.  It is set to the upper-case I<SESSION> argument.  For
+example, for a L<fluxbox(1)> session, this is set to C<FLUXBOX>.
+Possible values are: C<FLUXBOX>, C<BLACKBOX>, C<OPENBOX>, C<ICEWM>,
+C<FVWM>, C<WMAKER>.
 
 =item B<FBXDG_DE>
 
 This environment variable is interpreted by the L<fbautostart(1)> tool.
-It is set to the same value as B<DESKTOP_SESSION>.
+It is set to the same value as C<$DESKTOP_SESSION>.
 
 =item B<XDG_CONFIG_DIRS>
 
@@ -448,9 +427,24 @@ F<@XDG_CONFIG_DIRS/menus>.  It defaults to unset otherwise.
 
 Specifies the vendor id for branding.  This variable is set to the
 lower-case value of the B<--vendor> argument.  This environment variable
-is only changed whne the B<--vendor> argument has been specified.
+is only changed when the B<--vendor> argument has been specified.
 
 =back
 
+=head1 HISTORY
+
+B<xde-setup> was written to establish the environment necessary for
+running a window-manager under the X Desktop Environment (XDE).
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
+
+L<XDE::Setup(3pm)>,
+L<xde-autostart(1p)>.
+
 =cut
 
+# vim: sw=4 tw=72

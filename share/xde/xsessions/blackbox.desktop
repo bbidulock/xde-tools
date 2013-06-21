@@ -2,8 +2,8 @@
 Encoding=UTF-8
 Name=Blackbox
 Comment=Highly configurable and low resource X11 Window manager
-TryExec=/usr/bin/blackbox
-Exec=/usr/bin/blackbox
+TryExec=blackbox
+Exec=blackbox
 Terminal=false
 Icon=blackbox
 Type=XSession

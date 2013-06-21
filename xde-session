@@ -551,7 +551,8 @@ sub childexit {
 		unless ($status) {
 			if ($data) {
 				if (-x "/usr/bin/lxsession-logout") {
-					system("/usr/bin/lxsession-logout --banner \"$ops{splash}\" --side=$ops{side} --prompt=\"$ops{message}\"")
+					#system("/usr/bin/lxsession-logout --banner \"$ops{splash}\" --side=$ops{side} --prompt=\"$ops{message}\"")
+					system("xde-logout");
 				} else {
 					$cmd = undef;
 					Gtk2->main_quit;

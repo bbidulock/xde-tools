@@ -184,10 +184,10 @@ sub get_input {
 	print STDERR "Keyboard Control:\n";
 	foreach my $key (sort keys %vals) {
 	    my $name = $key; $name =~ s{_}{-}g;
-	    if ($name eq 'led-mask') {
+	    if ($name eq 'led_mask') {
 		printf STDERR "\t%s: 0x%04x\n", $name, $vals{$key};
 	    }
-	    elsif ($name eq 'auto-repeats') {
+	    elsif ($name eq 'auto_repeats') {
 		printf STDERR "\t%s: %s\n", $name, join(' ',map{sprintf "%02X",$_} unpack('C*',$vals{$key}));
 	    }
 	    else {
@@ -465,23 +465,26 @@ sub set_input {
         # $X->ChangeKeyboardControl function must be performed for each
         # 'key' and 'auto_repeat_mode' combination.
         #
-	for (my $i=8;$i<256;$i++) {
-	    $X->ChangeKeyboardControl(key=>$i,auto_repeat_mode=>'On');
+	if (0) {
+	    for (my $i=8;$i<256;$i++) {
+		$X->ChangeKeyboardControl(key=>$i,auto_repeat_mode=>'On');
+	    }
+	    $X->flush;
+	} else {
+	    if (my $a = $k->{AutoRepeats}) {
+		my ($i,$k) = (0,0);
+		foreach my $l (unpack('C*',pack('H*',$a))) {
+		    for (my $j=0;$j<8;$j++,$l>>=1,$k++) {
+			my $m = ($l & 0x1) ? 1 : 0;
+			printf STDERR "Setting key %d '%s'\n", $k, $m if $v;
+			next if $k < 8;
+			$X->ChangeKeyboardControl(key=>$k,auto_repeat_mode=>$m);
+		    }
+		    $i++;
+		}
+		$X->flush;
+	    }
 	}
-	$X->flush;
-#        if (my $a = $k->{AutoRepeats}) {
-#            my ($i,$k) = (0,0);
-#            foreach my $l (unpack('C*',pack('H*',$a))) {
-#                for (my $j=0;$j<8;$j++,$l>>=1,$k++) {
-#                    my $m = ($l & 0x1) ? 1 : 0;
-#                    printf STDERR "Setting key %d '%s'\n", $k, $m if $v;
-#                    next if $k < 8;
-#                    $X->ChangeKeyboardControl(key=>$k,auto_repeat_mode=>$m);
-#                }
-#                $i++;
-#            }
-#            $X->flush;
-#        }
         #
         # 'global_auto_repeat' cannot be set.  'auto_repeat_mode' must be
         # set without a 'key' code provided in the message.
@@ -542,7 +545,7 @@ sub set_input {
 	my $enable = $X->pack_mask(XkbBoolCtrl=>\@enable);
 	my $cntrls = $X->pack_mask(XkbControl=>
 		[qw(RepeatKeys SlowKeys BounceKeys StickyKeys MouseKeys
-		    MouseKeysAccel ControlsEnabled)]);
+		    MouseKeysAccel PerKeyRepeat ControlsEnabled)]);
         $X->XkbSetControls(
 	    'UseCoreKbd',
 	    0=>0,
@@ -563,17 +566,19 @@ sub set_input {
             $k->{MouseKeysTimeToMax},
             $k->{MouseKeysMaxSpeed},
             $k->{MouseKeysCurve},
-            0, # $k->{AccessXOptions},
             0, # $k->{AccessXTimeout},
             0, # $k->{AccessXTimeoutMask},
             0, # $k->{AccessXTimeoutValues},
             0, # $k->{AccessXTimeoutOptionsMask},
             0, # $k->{AccessXTimeoutOptionsValues},
-	    pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'),
-#pack('H*',$k->{PerKeyRepeat}),
+	    pack('H*',$k->{PerKeyRepeat}),
+#pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF'),
 	    );
         $X->flush;
     }
+    $X->flush;
+    $X->xde_process_errors;
+    $X->xde_purge_queue;
 }
 
 =item $xde->B<create_window>()
@@ -815,7 +820,8 @@ sub create_window {
 		my $affect = $X->pack_mask(XkbBoolCtrl=>['RepeatKeys']);
 		my $enable = $u->get_active ? $affect : 0;
 		my $cntrls = $X->pack_mask(XkbControl=>[qw(RepeatKeys ControlsEnabled)]);
-		my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+		my $perkey = pack('H*',$self->{config}{XKeyboard}{PerKeyRepeat});
+		#my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
 		$X->XkbSetControls(
 		    'UseCoreKbd',	# 0 deviceSpec
 		    0=>0,		# 1-2 affectInternalRealMods=>internalRealMods
@@ -863,7 +869,8 @@ sub create_window {
 		if ($h->get_value != $self->{config}{XKeyboard}{RepeatDelay}) {
 		    my $X = $self->{X};
 		    my $cntrls = $X->pack_mask(XkbControl=>['RepeatKeys']);
-		    my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+		    my $perkey = pack('H*',$self->{config}{XKeyboard}{PerKeyRepeat});
+		    #my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
 		    $X->XkbSetControls(
 			'UseCoreKbd',	# 0 deviceSpec
 			0=>0,		# 1-2 affectInternalRealMods=>internalRealMods
@@ -912,7 +919,8 @@ sub create_window {
 		if ($h->get_value != $self->{config}{XKeyboard}{RepeatInterval}) {
 		    my $X = $self->{X};
 		    my $cntrls = $X->pack_mask(XkbControl=>['RepeatKeys']);
-		    my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+		    my $perkey = pack('H*',$self->{config}{XKeyboard}{PerKeyRepeat});
+		    #my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
 		    $X->XkbSetControls(
 			'UseCoreKbd',	# 0 deviceSpec
 			0=>0,		# 1-2 affectInternalRealMods=>internalRealMods
@@ -965,7 +973,8 @@ sub create_window {
 		my $affect = $X->pack_mask(XkbBoolCtrl=>['SlowKeys']);
 		my $enable = $u->get_active ? $affect : 0;
 		my $cntrls = $X->pack_mask(XkbControl=>[qw(SlowKeys ControlsEnabled)]);
-		my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+		my $perkey = pack('H*',$self->{config}{XKeyboard}{PerKeyRepeat});
+		#my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
 		$X->XkbSetControls(
 		    'UseCoreKbd',	# 0 deviceSpec
 		    0=>0,		# 1-2 affectInternalRealMods=>internalRealMods
@@ -1013,7 +1022,8 @@ sub create_window {
 		if ($h->get_value != $self->{config}{XKeyboard}{SlowKeysDelay}) {
 		    my $X = $self->{X};
 		    my $cntrls = $X->pack_mask(XkbControl=>[qw(SlowKeys)]);
-		    my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+		    my $perkey = pack('H*',$self->{config}{XKeyboard}{PerKeyRepeat});
+		    #my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
 		    $X->XkbSetControls(
 			'UseCoreKbd',	# 0 deviceSpec
 			0=>0,		# 1-2 affectInternalRealMods=>internalRealMods
@@ -1066,7 +1076,8 @@ sub create_window {
 		my $affect = $X->pack_mask(XkbBoolCtrl=>['BounceKeys']);
 		my $enable = $u->get_active ? $affect : 0;
 		my $cntrls = $X->pack_mask(XkbControl=>[qw(BounceKeys ControlsEnabled)]);
-		my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+		my $perkey = pack('H*',$self->{config}{XKeyboard}{PerKeyRepeat});
+		#my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
 		$X->XkbSetControls(
 		    'UseCoreKbd',   # 0 deviceSpec
 		    0=>0,	    # 1-2 affectInternalRealMods=>internalRealMods
@@ -1114,7 +1125,8 @@ sub create_window {
 		if ($h->get_value != $self->{config}{XKeyboard}{DebounceDelay}) {
 		    my $X = $self->{X};
 		    my $cntrls = $X->pack_mask(XkbControl=>[qw(BounceKeys)]);
-		    my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+		    my $perkey = pack('H*',$self->{config}{XKeyboard}{PerKeyRepeat});
+		    #my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
 		    $X->XkbSetControls(
 			'UseCoreKbd',   # 0 deviceSpec
 			0=>0,		# 1-2 affectInternalRealMods=>internalRealMods
@@ -1167,7 +1179,8 @@ sub create_window {
 		my $affect = $X->pack_mask(XkbBoolCtrl=>[qw(StickyKeys)]);
 		my $enable = $u->get_active ? $affect : 0;
 		my $cntrls = $X->pack_mask(XkbControl=>[qw(StickyKeys ControlsEnabled)]);
-		my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+		my $perkey = pack('H*',$self->{config}{XKeyboard}{PerKeyRepeat});
+		#my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
 		$X->XkbSetControls(
 		    'UseCoreKbd',   # 0 deviceSpec
 		    0=>0,	    # 1-2 affectInternalRealMods=>internalRealMods
@@ -1219,7 +1232,8 @@ sub create_window {
 		my $affect = $X->pack_mask(XkbBoolCtrl=>['MouseKeys']);
 		my $enable = $u->get_active ? $affect : 0;
 		my $cntrls = $X->pack_mask(XkbControl=>[qw(MouseKeys ControlsEnabled)]);
-		my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+		my $perkey = pack('H*',$self->{config}{XKeyboard}{PerKeyRepeat});
+		#my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
 		$X->XkbSetControls(
 		    'UseCoreKbd',	# 0 deviceSpec
 		    0=>0,		# 1-2 affectInternalRealMods=>internalRealMods
@@ -1270,7 +1284,8 @@ sub create_window {
 		if ($u->get_active_text != $self->{config}{XKeyboard}{MouseKeysDfltBtn}) {
 		    my $X = $self->{X};
 		    my $cntrls = $X->pack_mask(XkbControl=>[qw(MouseKeys)]);
-		    my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+		    my $perkey = pack('H*',$self->{config}{XKeyboard}{PerKeyRepeat});
+		    #my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
 		    $X->XkbSetControls(
 			'UseCoreKbd',	# 0 deviceSpec
 			0=>0,		# 1-2 affectInternalRealMods=>internalRealMods
@@ -1319,7 +1334,8 @@ sub create_window {
 		my $affect = $X->pack_mask(XkbBoolCtrl=>[qw(MouseKeysAccel)]);
 		my $enable = $u->get_active ? $affect : 0;
 		my $cntrls = $X->pack_mask(XkbControl=>[qw(MouseKeysAccess ControlsEnabled)]);
-		my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+		my $perkey = pack('H*',$self->{config}{XKeyboard}{PerKeyRepeat});
+		#my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
 		$X->XkbSetControls(
 		    'UseCoreKbd',	# 0 deviceSpec
 		    0=>0,		# 1-2 affectInternalRealMods=>internalRealMods
@@ -1367,7 +1383,8 @@ sub create_window {
 		if ($h->get_value != $self->{config}{XKeyboard}{MouseKeysDelay}) {
 		    my $X = $self->{X};
 		    my $cntrls = $X->pack_mask(XkbControl=>[qw(MouseKeysAccel)]);
-		    my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+		    my $perkey = pack('H*',$self->{config}{XKeyboard}{PerKeyRepeat});
+		    #my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
 		    $X->XkbSetControls(
 			'UseCoreKbd',	# 0 deviceSpec
 			0=>0,		# 1-2 affectInternalRealMods=>internalRealMods
@@ -1416,7 +1433,8 @@ sub create_window {
 		if ($h->get_value != $self->{config}{XKeyboard}{MouseKeysInterval}) {
 		    my $X = $self->{X};
 		    my $cntrls = $X->pack_mask(XkbControl=>[qw(MouseKeysAccel)]);
-		    my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+		    my $perkey = pack('H*',$self->{config}{XKeyboard}{PerKeyRepeat});
+		    #my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
 		    $X->XkbSetControls(
 			'UseCoreKbd',	# 0 deviceSpec
 			0=>0,		# 1-2 affectInternalRealMods=>internalRealMods
@@ -1465,7 +1483,8 @@ sub create_window {
 		if ($h->get_value != $self->{config}{XKeyboard}{MouseKeysTimeToMax}) {
 		    my $X = $self->{X};
 		    my $cntrls = $X->pack_mask(XkbControl=>[qw(MouseKeysAccel)]);
-		    my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+		    my $perkey = pack('H*',$self->{config}{XKeyboard}{PerKeyRepeat});
+		    #my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
 		    $X->XkbSetControls(
 			'UseCoreKbd',	# 0 deviceSpec
 			0=>0,		# 1-2 affectInternalRealMods=>internalRealMods
@@ -1514,7 +1533,8 @@ sub create_window {
 		if ($h->get_value != $self->{config}{XKeyboard}{MouseKeysMaxSpeed}) {
 		    my $X = $self->{X};
 		    my $cntrls = $X->pack_mask(XkbControl=>[qw(MouseKeysAccel)]);
-		    my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+		    my $perkey = pack('H*',$self->{config}{XKeyboard}{PerKeyRepeat});
+		    #my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
 		    $X->XkbSetControls(
 			'UseCoreKbd',	# 0 deviceSpec
 			0=>0,		# 1-2 affectInternalRealMods=>internalRealMods
@@ -1563,7 +1583,8 @@ sub create_window {
 		if ($h->get_value != $self->{config}{XKeyboard}{MouseKeysCurve}) {
 		    my $X = $self->{X};
 		    my $cntrls = $X->pack_mask(XkbControl=>[qw(MouseKeysAccel)]);
-		    my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
+		    my $perkey = pack('H*',$self->{config}{XKeyboard}{PerKeyRepeat});
+		    #my $perkey = pack('H*','00FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF');
 		    $X->XkbSetControls(
 			'UseCoreKbd',	# 0 deviceSpec
 			0=>0,		# 1-2 affectInternalRealMods=>internalRealMods

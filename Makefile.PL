@@ -2,28 +2,34 @@ use ExtUtils::MakeMaker;
 WriteMakefile(
 	NAME => 'xdg-tools',
 	VERSION => '0.01',
-	EXE_FILES => [
-		'xde-autostart',
-		'xde-chooser',
-		'xde-icon',
-		'xde-input',
-		'xde-logout',
-		'xde-menugen',
-		'xde-pager',
-		'xde-session',
-		'xde-session-ctrl',
-		'xde-session-edit',
-		'xde-session-logout',
-		'xde-session-menu',
-		'xde-session-run',
-		'xde-setbg',
-		'xde-setbg-edit',
-		'xde-setup',
-		'xde-settings',
-		'xde-startup',
-		'xde-theme',
-		'xde-traymenu',
-	],
+	EXE_FILES => [qw(
+		xde-autostart
+		xde-chooser
+		xde-fluxbox
+		xde-icon
+		xde-init
+		xde-input
+		xde-input-edit
+		xde-logout
+		xde-menugen
+		xde-pager
+		xde-session
+		xde-session.conf.pod
+		xde-session-ctrl
+		xde-session-edit
+		xde-session-logout
+		xde-session-menu
+		xde-session-run
+		xde-setbg
+		xde-setbg2
+		xde-setbg-edit
+		xde-settings
+		xde-setup
+		xde-startup
+		xde-theme
+		xde-traymenu
+		xde-xset
+	)],
 	PREREQ_PM => {
 		'Getopt::Long' => 0,
 		'Encode' => 0,

@@ -73,15 +73,15 @@ automatically.  Defaults to false.
 =item default => $xsession_label
 
 The user's current default selection.  Defaults to the value obtained
-from the user's F<$XDG_CONFIG_HOME/xde/.default> file; or when the file
-does not exist, any F<$XDG_CONFIG_DIRS/xde/.default> file; or when that
+from the user's F<$XDG_CONFIG_HOME/xde/default> file; or when the file
+does not exist, any F<$XDG_CONFIG_DIRS/xde/default> file; or when that
 does not exist, a null string.
 
 =item current => $xsession_label
 
 The users's current selection.  This is the last session that the user
 launched and defaults to that obtained from the user's
-F<$XDG_CONFIG_HOME/xde/.current> file; or when the file does not exist,
+F<$XDG_CONFIG_HOME/xde/current> file; or when the file does not exist,
 the null string.
 
 =item choice => $xsession_label
@@ -132,8 +132,8 @@ sub new {
 Internal method that establishes only defaults specific to this module
 upon instance creation.  This method does not invoke the superior
 (inherited method) as does the B<default> method.  Reads the C<default>
-string from the first F<@XDG_CONFIG_DIRS/xde/.default> file found.  Reads
-the C<current> string from the F<$XDG_CONFIG_HOME/xde/.current> file if
+string from the first F<@XDG_CONFIG_DIRS/xde/default> file found.  Reads
+the C<current> string from the F<$XDG_CONFIG_HOME/xde/current> file if
 it exists.
 
 =cut
@@ -142,7 +142,7 @@ sub defaults {
     my $self = shift;
     unless ($self->{ops}{default}) {
 	my $default = '';
-	foreach my $fn (map{"$_/xde/.default"} $self->XDG_CONFIG_ARRAY) {
+	foreach my $fn (map{"$_/xde/default"} $self->XDG_CONFIG_ARRAY) {
 	    if (-f $fn) {
 		if (open(my $fh,"<",$fn)) {
 		    while (<$fh>) {
@@ -158,7 +158,7 @@ sub defaults {
     }
     unless ($self->{ops}{current}) {
 	my $current = '';
-	my $fn = "$self->{XDG_CONFIG_HOME}/xde/.current";
+	my $fn = "$self->{XDG_CONFIG_HOME}/xde/current";
 	if (-f $fn) {
 		if (open(my $fh,"<",$fn)) {
 		    while (<$fh>) {
@@ -196,15 +196,15 @@ sub choose {
     if ($ops{verbose}) {
 	foreach (@xsessions) {
 	    print STDERR "----------------------\n";
-	    print STDERR "Label: ",$_->{Label},"\n";
-	    print STDERR "XSession: ",$_->{Name},"\n";
-	    print STDERR "Comment: ",$_->{Comment},"\n";
-	    print STDERR "Exec: ",$_->{Exec},"\n";
-	    print STDERR "TryExec: ",$_->{TryExec},"\n";
-	    print STDERR "SessionManaged: ",$_->{SessionManaged},"\n";
-	    print STDERR "X-XDE-Managed: ",$_->{'X-XDE-Managed'},"\n";
-	    print STDERR "File: ",$_->{file},"\n";
-	    print STDERR "Icon: ",$_->{Icon},"\n";
+	    foreach my $tag (qw(Label Name Comment Exec TryExec SessionManaged X-XDE-Managed Icon file)) {
+		print STDERR "$tag: ";
+		if (defined $_->{$tag}) {
+		    print STDERR $_->{$tag};
+		} else {
+		    print STDERR "(undef)";
+		}
+		print STDERR "\n";
+	    }
 	}
     }
 
@@ -258,8 +258,8 @@ sub choose {
 Launch the session specified by the I<$label> argument with the
 xsessions desktop file passed in the I<$session> argument.  This method
 writes the selection and default to the users's current and default
-files in F<$XDG_CONFIG_HOME/xde/.current> and
-F<$XDG_CONFIG_HOME/xde/.default>, sets the option variables
+files in F<$XDG_CONFIG_HOME/xde/current> and
+F<$XDG_CONFIG_HOME/xde/default>, sets the option variables
 C<$xde-E<gt>{ops}{current}> and C<$xde-E<gt>{ops}{default}> and quits
 the main loop.
 
@@ -665,5 +665,17 @@ sub make_login_choice {
 =cut
 
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
+
+L<XDE::Context(3pm)>, L<XDE::X11(3pm)>
+
+=cut
 
 # vim: sw=4 tw=72
