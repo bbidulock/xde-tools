@@ -1,5 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=firefox
-Exec=firefox %u
-NoDisplay=true

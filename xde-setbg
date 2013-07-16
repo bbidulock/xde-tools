@@ -236,7 +236,7 @@ notification (if it was requested).  It then determines whether an
 XSETTINGS daemon is in operation, and if so, will read its settings from
 the XSETTINGS daemon.  In the absence of an xsettings daemon, it will
 read its configuration from its configuration file, see
-L</CONFIGURATION> for how the configuraiton file is selected.
+L</CONFIGURATION> for how the configuration file is selected.
 
 The configuration will then be used to set backgrounds on the current
 desktop and any additional desktops provided by the window manager and
@@ -252,7 +252,7 @@ L<hsetroot(1)> or L<xsetroot(1)>), command line invocation arguments,
 from settings of the XSETTINGS daemon, or from configuration file
 changes.
 
-B<xde-setbg> also understands the file an style settings for various
+B<xde-setbg> also understands the file and style settings for various
 lightweight window managers: L<fluxbox(1)>, L<blackbox(1)>,
 L<openbox(1)>, L<icewm(1)>, L<fvwm(1)>, L<lxde(1)>, and L<wmaker(1)>.
 It can also detect when an instance of L<pcmanfm(1)> is controlling the

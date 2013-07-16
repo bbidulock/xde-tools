@@ -1,7 +1,0 @@
-[Desktop Entry]
-Type=Application
-Name=xdg-open
-Exec=xdg-open %f
-Categories=Other;
-NoDisplay=true
-MimeType=application/x-desktop

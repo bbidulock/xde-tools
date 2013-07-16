@@ -797,13 +797,16 @@ sub event_handler_PropertyNotify_NET_CURRENT_DESKTOP {
 	my $desktop = unpack('L',substr($val,0,4));
 	printf STDERR "new desktop %d (was %d)\n", $desktop, $d if $v;
 	if ($desktop != $d) {
-	    my $oldid = ${$screen->{pmids}[$d]};
-	    my $newid = ${$screen->{pmids}[$desktop]};
-	    printf STDERR "new pixmap 0x%08x (was 0x%08x)\n", $newid, $oldid if $v;
-	    if ($newid != $oldid) {
-		# need to change pixmap on root
-		$self->set_deferred_pixmap($screen);
-		#$self->set_pixmap($screen->{root},$newid);
+	    if (defined $screen->{pmids}[$d] and
+		defined $screen->{pmids}[$desktop]) {
+		my $oldid = ${$screen->{pmids}[$d]};
+		my $newid = ${$screen->{pmids}[$desktop]};
+		printf STDERR "new pixmap 0x%08x (was 0x%08x)\n", $newid, $oldid if $v;
+		if ($newid != $oldid) {
+		    # need to change pixmap on root
+		    $self->set_deferred_pixmap($screen);
+		    #$self->set_pixmap($screen->{root},$newid);
+		}
 	    }
 	    $screen->{desktop} = $desktop;
 	}

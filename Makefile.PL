@@ -11,6 +11,7 @@ WriteMakefile(
 		xde-input
 		xde-input-edit
 		xde-logout
+		xde-menu
 		xde-menugen
 		xde-pager
 		xde-session
