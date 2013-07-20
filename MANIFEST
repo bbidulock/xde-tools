@@ -110,8 +110,6 @@ gtkrc-2.0
 Makefile.PL
 MANIFEST
 MANIFEST.SKIP
-MYMETA.json
-MYMETA.yml
 NOTES
 xde-autostart
 xde-chooser
