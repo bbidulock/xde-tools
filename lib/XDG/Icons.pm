@@ -100,9 +100,6 @@ arrayref or a scalar comma-separated list of extensions.
 =cut
 
 sub new {
-}
-
-sub old_new {
     my $self = bless {}, shift;
     my $options = shift; $options = {} unless $options;
     $self->{dirs} = [];

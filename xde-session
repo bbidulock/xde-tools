@@ -162,8 +162,8 @@ EOF
 # prepend vendor directories
 
 if ($ops{vendor}) {
-    $XDG_CONFIG_DIRS = join(':',"/etc/xdg/$ops{vendor}",$XDG_CONFIG_DIRS);
-    $XDG_DATA_DIRS = join(':',"/usr/share/$ops{vendor}",$XDG_DATA_DIRS);
+    $XDG_CONFIG_DIRS = join(':',"/etc/xdg/xde","/etc/xdg/$ops{vendor}",$XDG_CONFIG_DIRS);
+    $XDG_DATA_DIRS = join(':',"/usr/share/xde","/usr/share/$ops{vendor}",$XDG_DATA_DIRS);
     $ENV{XDG_CONFIG_DIRS} = $XDG_CONFIG_DIRS;
     $ENV{XDG_DATA_DIRS} = $XDG_DATA_DIRS;
     @XDG_CONFIG_DIRS = (split(/:/,join(':',$XDG_CONFIG_HOME,$XDG_CONFIG_DIRS)));

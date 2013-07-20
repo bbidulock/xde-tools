@@ -1,5 +1,4 @@
-require XDG::Icons;
-
+use XDG::Icons;
 
 
 package XDG::Menu::Layout::Item;
@@ -85,6 +84,7 @@ sub new {
 }
 
 package XDG::Menu::DesktopEntry;
+use Carp qw(cluck croak confess);
 use strict;
 use warnings;
 
@@ -95,6 +95,7 @@ sub get_icons {
     $icons = XDG::Icons->new({
 	Append => '/usr/share/WindowMaker/Icons',
     }) unless $icons;
+    confess "no icons" unless defined $icons;
     return $icons;
 }
 

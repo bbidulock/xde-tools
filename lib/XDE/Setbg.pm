@@ -1260,6 +1260,33 @@ sub read_icewm_theme {
     return %r;
 }
 
+=item $xde->B<read_jwm_theme>(I<$file>) => %resources
+
+JWM has a way of specifying backgrounds, but we don't expect to use it
+because it cannot fill the background (only aspect-scales); therefore,
+this function always returnes an empty set of resources.
+
+=cut
+
+sub read_jwm_theme {
+    my ($self,$file) = @_;
+    my %r = ();
+    return %r;
+}
+
+=item $xde->B<read_pekwm_theme>(I<$file>) => %resources
+
+PekWM does not have a way of specifying backgrounds; therefore, this
+function always returns an empty set of resources.
+
+=cut
+
+sub read_pekwm_theme {
+    my ($self,$file) = @_;
+    my %r = ();
+    return %r;
+}
+
 =item $xde->B<read_anybox_style>(I<$file>) => $stylefile
 
 Reads the init or rc file specified by C<$file> and obtains the file
@@ -1317,6 +1344,62 @@ sub read_icewm_style {
 	print STDERR "File '$file' does not exist\n";
     }
     return @styles;
+}
+
+=item $xde->B<read_jwm_style>(I<$file>) => $stylefiles
+
+Reads the ~/.jwm/style file specified by C<$file> and obtains the file
+name in the <Include> tag.
+
+=cut
+
+sub read_jwm_style {
+    my ($self,$file) = @_;
+    my $style = undef;
+    if (-f $file) {
+	if (open(my $fh,"<",$file)) {
+	    while (<$fh>) { chomp;
+		next unless m{<Include>([^<]*)</Include>};
+		$style = $1;
+		print STDERR "JWM style file is: $style\n"
+		    if $self->{ops}{verbose};
+		last;
+	    }
+	} else {
+	    warn $!;
+	}
+    } else {
+	print STDERR "File '$file' does not exist\n";
+    }
+    return $style;
+}
+
+=item $xde->B<read_pekwm_style>(I<$file>) => $stylefiles
+
+Reads the config file specified by C<$file> and obtains the file name
+specified against the C<Theme> resource.
+
+=cut
+
+sub read_pekwm_style {
+    my ($self,$file) = @_;
+    my $style = undef;
+    if (-f $file) {
+	if (open(my $fh,"<",$file)) {
+	    while (<$fh>) { chomp;
+		next unless m{^\s*Theme\s*=\s*"([^"]*)"};
+		$style = $1;
+		print STDERR "PekWM style file is: $style\n"
+		    if $self->{ops}{verbose};
+		last;
+	    }
+	} else {
+	    warn $!;
+	}
+    } else {
+	print STDERR "File '$file' does not exist\n";
+    }
+    return $style
 }
 
 =item $xde->B<_find_image>(I<$img>,I<\@dirs>) => $filename
@@ -1434,14 +1517,20 @@ sub set_desktops {
 	if $r->{workspaceNames} and not $r->{workspaces};
     # blackbox needs names first
     if (defined $r->{workspaceNames}) {
+	print STDERR "Setting workspace names to ",
+	      join(',',@{$r->{workspaceNames}}), "\n" if $v;
 	my $data = pack('(Z*)*',@{$r->{workspaceNames}});
 	$X->ChangeProperty($X->root,
 		$X->atom('_NET_DESKTOP_NAMES'),
 		$X->atom('UTF8_STRING'),
 		8, 'Replace', $data);
 	$X->flush;
+    } else {
+	print STDERR "There are no workspace names!\n";
     }
     if (defined $r->{workspaces}) {
+	print STDERR "Setting desktop number to ", $r->{workspaces},
+	      "\n" if $v;
 	$X->SendEvent($X->root, 0,
 		$X->pack_event_mask('StructureNotify'),
 		$X->pack_event(
@@ -1452,6 +1541,8 @@ sub set_desktops {
 		    data=>pack('LLLLL',$r->{workspaces},0,0,0,0),
 		));
 	$X->flush;
+    } else {
+	print STDERR "There are no workspaces!\n";
     }
     # we want to process the main event loop so that any responses are
     # processed before we continue.
@@ -1682,7 +1773,7 @@ sub get_theme_by_name {
 	$e{Theme}{Name} = $name unless $e{Theme}{Name};
 	$e{Xsettings}{'Xde/ThemeName'} = $e{Theme}{Name}
 	    unless $e{Xsettings}{'Xde/ThemeName'};
-	foreach my $wm (qw(fluxbox blackbox openbox icewm fvwm wmaker)) {
+	foreach my $wm (qw(fluxbox blackbox openbox icewm jwm pekwm fvwm wmaker)) {
 	    foreach (keys %{$e{Theme}}) {
 		$e{$wm}{$_} = $e{Theme}{$_} unless exists $e{$wm}{$_};
 	    }
@@ -1978,6 +2069,83 @@ sub check_theme_ICEWM {
     if ($style) {
 	%r = $self->read_icewm_theme($style) unless %r;
     }
+    return unless %r;
+    $self->{style} = $style;
+    my $styledir = $style; $styledir =~ s{/[^/]*$}{};
+    # where to go looking for background images
+    return unless $self->find_images(\%r,
+	    [$styledir]);
+    $self->set_desktops(\%r);
+    $self->set_images(\%r);
+    return 1;
+}
+
+=item $xde->B<check_theme_JWM>() $new_theme or 0 or undef
+
+Called to check whether L<jwm(1)> has changed the theme or when the
+L<jwm(1)> window manager starts and restarts.  When L<jwm(1)> changes
+its style, it rewrites ~/.jwm/style to include a new file and restarts.
+JWM can perform its own per-desktop background setting; however, it does
+not fill the screen with the image (doesn't fully scale) leaving black
+bars.  So, we do it ourselves here.
+
+The ~/.jwm/style file looks like:
+
+ <?xml version="1.0"?>
+ <JWM>
+    <Include>/usr/share/jwm/styles/Squared-blue</Include>
+ </JWM>
+
+The last component of the path is the theme name.
+
+=cut
+
+sub check_theme_JWM {
+    my $self = shift;
+    my $config = "$ENV{HOME}/.jwm/style";
+    $self->watch_theme_file(config=>$config);
+    my $style = $self->read_jwm_style($config) or return;
+    return 0 if $self->{style} and $self->{style} eq $style;
+    my %r;
+    my $theme = $style; $theme =~ s{.*/}{};
+    %r = $self->get_theme_by_name($theme);
+    %r = $self->read_jwm_theme($style) unless %r;
+    return unless %r;
+    $self->{style} = $style;
+    my $styledir = $style; $styledir =~ s{/[^/]*$}{};
+    # where to go looking for background images
+    return unless $self->find_images(\%r,
+	    [$styledir]);
+    $self->set_desktops(\%r);
+    $self->set_images(\%r);
+    return 1;
+}
+
+=item $xde->B<check_theme_PEKWM>() $new_theme or 0 or undef
+
+Called to check whether L<pekwm(1)> has changed the theme or when the
+L<pekwm(1)> window manager starts and restarts.  When L<pekwm(1)>
+changes its style, it places the theme directory into the
+~/.pekwm/config file.  This normally has the form:
+
+ Files {
+     Theme = "/usr/share/pekwm/themes/Airforce"
+ }
+
+The last component of the path is the theme name.
+
+=cut
+
+sub check_theme_PEKWM {
+    my $self = shift;
+    my $config = "$ENV{HOME}/.pekwm/config";
+    $self->watch_theme_file(config=>$config);
+    my $style = $self->read_pekwm_style($config) or return;
+    return 0 if $self->{style} and $self->{style} eq $style;
+    my %r;
+    my $theme = $style; $theme =~ s{.*/}{};
+    %r = $self->get_theme_by_name($theme);
+    %r = $self->read_pekwm_theme($style) unless %r;
     return unless %r;
     $self->{style} = $style;
     my $styledir = $style; $styledir =~ s{/[^/]*$}{};

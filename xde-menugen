@@ -40,6 +40,9 @@ use XDG::Menu::Parser;
 use XDG::Menu::Fluxbox;
 use XDG::Menu::Blackbox;
 use XDG::Menu::Icewm;
+use XDG::Menu::Wmaker;
+use XDG::Menu::Jwm;
+use XDG::Menu::Pekwm;
 use Getopt::Long;
 use Encode;
 use I18N::Langinfo qw(langinfo CODESET);
@@ -137,6 +140,8 @@ my %outputs = (
     blackbox    => [ "$HOME/.blackbox/menu", "$HOME/.bbmenu" ],
     openbox     => [ "$HOME/.openbox/menu", "$HOME/.config/openbox/menu" ],
     icewm       => [ "$HOME/.icewm/menu" ],
+    jwm         => [ "$HOME/.jwm/menu" ],
+    pekwm       => [ "$HOME/.pekwm/menu" ],
 );
 
 my %formats = (
@@ -146,6 +151,8 @@ my %formats = (
     icewm       => [qw(ICEWM    XDG::Menu::Icewm    )],
     openbox3    => [qw(LXDE     XDG::Menu::Openbox3 )],
     wmaker      => [qw(WMAKER   XDG::Menu::Wmaker   )],
+    jwm         => [qw(JWM      XDG::Menu::Jwm      )],
+    pekwm       => [qw(PEKWM    XDG::Menu::Pekwm    )],
 );
 
 my %desktops = (
@@ -155,6 +162,8 @@ my %desktops = (
     OPENBOX     => [qw(openbox  XDG::Menu::Openbox  )],
     LXDE        => [qw(openbox3 XDG::Menu::Openbox3 )],
     ICEWM       => [qw(icewm    XDG::Menu::Icewm    )],
+    JWM         => [qw(jwm      XDG::Menu::Jwm      )],
+    PEKWM       => [qw(pekwm    XDG::Menu::Pekwm    )],
 );
 
 =head1 OPTIONS

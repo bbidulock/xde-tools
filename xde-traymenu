@@ -65,6 +65,8 @@ if ($here ne '/usr/bin') {
 	Gtk2::Rc->set_default_files("$ENV{HOME}/.gtkrc-2.0.mine");
 }
 
+Gtk2::Rc->parse_string('gtk-theme-name="Squared-blue"'."\n");
+
 Gtk2->init;
 
 require XDG::Menu::Parser;
@@ -142,6 +144,8 @@ my %outputs = (
     blackbox    => [ "$HOME/.blackbox/menu", "$HOME/.bbmenu" ],
     openbox     => [ "$HOME/.openbox/menu", "$HOME/.config/openbox/menu" ],
     icewm       => [ "$HOME/.icewm/menu" ],
+    jwm		=> [ "$HOME/.jwm/menu" ],
+    pekwm       => [ "$HOME/.pekwm/menu" ],
 );
 
 my %formats = (
@@ -151,6 +155,8 @@ my %formats = (
     icewm       => [qw(ICEWM    XDG::Menu::Tray	)],
     openbox3    => [qw(LXDE     XDG::Menu::Tray )],
     wmaker      => [qw(WMAKER   XDG::Menu::Tray	)],
+    jwm         => [qw(JWM      XDG::Menu::Tray )],
+    pekwm       => [qw(PEKWM    XDG::Menu::Tray )],
 );
 
 my %desktops = (
@@ -160,6 +166,8 @@ my %desktops = (
     OPENBOX     => [qw(openbox  XDG::Menu::Tray	)],
     LXDE        => [qw(openbox3 XDG::Menu::Tray )],
     ICEWM       => [qw(icewm    XDG::Menu::Tray	)],
+    JWM         => [qw(jwm      XDG::Menu::Tray )],
+    PEKWM       => [qw(pekwm    XDG::Menu::Tray )],
 );
 
 
@@ -183,7 +191,7 @@ Print debugging information on standard error during operation.
 Specify the output format.  Recognized output formats are as follows:
 C<twm>, C<wmaker>, C<windowmaker>, C<fvwm>, C<fvwm2>, C<fvwm-crystal>,
 C<ion3>, C<blackbox>, C<fluxbox>, C<openbox>, C<xfce4>, C<openbox3>,
-C<openbox3-pipe>, C<awesome>, C<icewm>.
+C<openbox3-pipe>, C<awesome>, C<icewm>, C<jwm>, C<pekwm>.
 
 When unspecified, the setting of the B<XDG_CURRENT_DESKTOP> environment
 variable is used to determine the format.  This is accomplished by
@@ -491,8 +499,8 @@ foreach my $state (qw(normal active prelight selected insensitive)) {
 my $parser = new XDG::Menu::Parser;
 my $tree = $parser->parse_menu($ops{root_menu});
 my $tray = new XDG::Menu::Tray;
-#$tray->{style} = $style;
-#$tray->{colors} = \@colors;
+$tray->{style} = $style;
+$tray->{colors} = \@colors;
 my $menu = $tray->create($tree);
 
 my $icon = new Gtk2::StatusIcon->new_from_icon_name('redhat-starthere');
@@ -503,11 +511,16 @@ $icon->signal_connect(button_press_event=>sub{
     my $button = $ev->button;
     return Gtk2::EVENT_PROPAGATE unless $button == 1 or $button == 2 or $button == 3;
     my $time = $ev->time;
+    my $menu = $tray->create($tree);
     $menu->popup(undef,undef,undef,undef,$button,$time);
     return Gtk2::EVENT_STOP;
 });
 $icon->signal_connect(popup_menu=>sub{
     my ($icon,$button,$time) = @_;
+#    Gtk2::Rc->parse_string('gtk-theme-name="Squared-green"'."\n");
+#    Gtk2::Rc->reset_styles('gtk-theme-name');
+#    Gtk2::Rc->reparse_all;
+    my $menu = $tray->create($tree);
     $menu->popup(undef,undef,undef,undef,$button,$time);
     return Gtk2::EVENT_PROPAGATE;
 });
