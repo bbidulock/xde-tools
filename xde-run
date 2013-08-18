@@ -1,0 +1,37 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+    if $running_under_some_shell;
+
+use strict;
+
+#
+# are we installed or running in a sandbox?
+#
+use lib (-e '/usr/lib/perlpanel' ? '/usr/lib/perlpanel' : $ENV{PWD}.'/lib/');
+
+use Gtk2;
+
+Gtk2::Rc->set_default_files("$ENV{HOME}/.gtkrc-2.0.xde");
+
+use PerlPanel;
+
+#
+# set the values for prefix and libdir:
+#
+$PerlPanel::PREFIX = (-e '/usr' ? '/usr' : $ENV{PWD});
+$PerlPanel::LIBDIR = (-e '/usr/lib/perlpanel' ? '/usr/lib/perlpanel' : $ENV{PWD}.'/lib/');
+
+#
+# if we're in a sandbox then it's handy to add ./src to the PATH:
+#
+$ENV{PATH} = $ENV{PATH}.':'.$ENV{PWD}.'/src' if (!-e '/usr');
+
+Gtk2->init;
+use PerlPanel::Applet::Commander;
+my $commander = PerlPanel::Applet::Commander->new;
+$commander->configure('no-widget');
+$commander->run;
+Gtk2->main;
+
