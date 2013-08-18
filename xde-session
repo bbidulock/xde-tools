@@ -589,7 +589,7 @@ sub startup {
 	if ($child) {
 		# we are the parent
 		print STDERR "Child $child started...\n";
-		$restarts{$child} = 1 if $restart;
+		$restarts{$child} = $cmd if $restart;
 		$children{$child} = 1;
 		$watchers{$child} = Glib::Child->watch_add($child,\&childexit,$data);
 	} else {

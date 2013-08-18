@@ -29,6 +29,19 @@ sub new {
     return bless {}, shift;
 }
 
+sub icon {
+    my ($self,$name) = @_;
+    return '' unless $name;
+    return $name if $name =~ m{/} and -f $name;
+    $name =~ s{.*/}{};
+    $name =~ s{\.(png|xpm|svg|jpg)$}{};
+    my $icons = XDG::Menu::DesktopEntry->get_icons;
+    return '' unless $icons;
+    my $fn = $icons->FindIcon($name,16,[qw(png xpm jpg)]);
+    $fn = '' unless $fn;
+    return sprintf("icon=\"%s\" ", $fn);
+}
+
 =item $jwm->B<create>($tree) => scalar
 
 Creates the JWM menu from menu tree, C<$tree>, and returns the menu
@@ -45,22 +58,30 @@ sub create {
     $text .= q(<?xml version="1.0"?>)."\n";
     $text .= q(<JWM>)."\n";
     $text .= $self->build($item,'  ');
-    $text .= q(   <Desktops icon="" label="Desktops"/>)."\n";
-    $text .= q(   <Menu icon="" label="Window Menu">)."\n";
-    $text .= q(      <SendTo/>)."\n";
-    $text .= q(      <Stick/>)."\n";
-    $text .= q(      <Maximize/>)."\n";
-    $text .= q(      <Minimize/>)."\n";
-    $text .= q(      <Shade/>)."\n";
-    $text .= q(      <Move/>)."\n";
-    $text .= q(      <Resize/>)."\n";
-    $text .= q(      <Kill/>)."\n";
-    $text .= q(      <Close/>)."\n";
-    $text .= q(   </Menu>)."\n";
-    $text .= q(   <Separator/>)."\n";
-    $text .= q(   <Restart label="Restart" icon="restart.png"/>)."\n";
-    $text .= q(   <Program icon="lock.png" label="Lock">slock</Program>)."\n";
-    $text .= q(   <Exit label="Exit" confirm="true" icon="quit.png"/>)."\n";
+    $text .= q(  <Separator/>)."\n";
+    $text .= q(  <Menu ).$self->icon('jwm').q(label="JWM">)."\n";
+    $text .= q(    <Menu ).$self->icon('preferences-system-windows').q(label="Window Menu">)."\n";
+    $text .= q(      <SendTo ).$self->icon('window-sendto').q(label="Send To ..." />)."\n";
+    $text .= q(      <Stick ).$self->icon('window-stick').q(label="(Un)stick" />)."\n";
+    $text .= q(      <Maximize ).$self->icon('window-maximize').q(label="(Un)maximize" />)."\n";
+    $text .= q(      <Minimize ).$self->icon('window-minimize').q(label="(Un)minimize" />)."\n";
+    $text .= q(      <Shade ).$self->icon('window-shade').q(label="(Un)shade" />)."\n";
+    $text .= q(      <Program ).$self->icon('window-above').q(label="Above/Normal">wmctrl -r :SELECT: -b toggle,above</Program>)."\n";
+    $text .= q(      <Program ).$self->icon('window-below').q(label="Below/Normal">wmctrl -r :SELECT: -b toggle,below</Program>)."\n";
+    $text .= q(      <Move ).$self->icon('window-move').q(label="Move" />)."\n";
+    $text .= q(      <Resize ).$self->icon('window-resize').q(label="Resize" />)."\n";
+    $text .= q(      <Kill ).$self->icon('window-kill').q(label="Kill" />)."\n";
+    $text .= q(      <Close ).$self->icon('window-close').q(label="Close" />)."\n";
+    $text .= q(    </Menu>)."\n";
+    $text .= q(    <Desktops ).$self->icon('preferences-desktop-display').q(label="Desktops"/>)."\n";
+    $text .= $self->themes('    ');
+    $text .= $self->styles('    ');
+    $text .= q(    <Program ).$self->icon('gtk-refresh').q(label="Regenerate Menu">xde-menugen -o /home/brian/.jwm/menu.new</Program>)."\n";
+    $text .= q(  </Menu>)."\n";
+    $text .= q(  <Separator/>)."\n";
+    $text .= q(  <Restart ).$self->icon('gtk-refresh').q(label="Restart"/>)."\n";
+    $text .= q(  <Program ).$self->icon('gnome-lockscreen').q(label="Lock">slock</Program>)."\n";
+    $text .= q(  <Exit ).$self->icon('gtk-quit').q(label="Exit" confirm="true"/>)."\n";
     $text .= q(</JWM>)."\n";
     return $text;
 }
@@ -112,6 +133,88 @@ sub Directory {
     return $text;
 }
 
+sub themes {
+    my ($self,$indent) = @_;
+    my $base = '/usr/share/jwm';
+    my @sthemes = ();
+    my $sdir = "$base/themes";
+    if (opendir (my $fh, $sdir)) {
+	foreach my $f (readdir($fh)) {
+	    next if $f eq '.' or $f eq '..';
+	    if (-f "$sdir/$f") {
+		push @sthemes, $f;
+	    }
+	}
+    }
+    my @uthemes = ();
+    my $udir = "$ENV{HOME}/.jwm/themes";
+    if (opendir (my $fh, $udir)) {
+	foreach my $f (readdir($fh)) {
+	    next if $f eq '.' or $f eq '..';
+	    if (-f "$udir/$f") {
+		push @uthemes, $f;
+	    }
+	}
+    }
+    my $text = '';
+    if (@sthemes or @uthemes) {
+	my $icon = $self->icon('style');
+	$text .= "$indent<Menu ${icon}label=\"Themes\">\n";
+	foreach (sort @sthemes) {
+	    $text .= "$indent   <Program ${icon}label=\"$_\">$base/setstyle $sdir/$_</Program>\n";
+	}
+	if (@sthemes and @uthemes) {
+	    $text .= "$indent   <Separator/>\n";
+	}
+	foreach (sort @uthemes) {
+	    $text .= "$indent   <Program ${icon}label=\"$_\">$base/setstyle $udir/$_</Program>\n";
+	}
+	$text .= "$indent</Menu>\n";
+    }
+    return $text;
+}
+
+sub styles {
+    my ($self,$indent) = @_;
+    my $base = '/usr/share/jwm';
+    my @sstyles = ();
+    my $sdir = "$base/styles";
+    if (opendir (my $fh, $sdir)) {
+	foreach my $f (readdir($fh)) {
+	    next if $f eq '.' or $f eq '..';
+	    if (-f "$sdir/$f") {
+		push @sstyles, $f;
+	    }
+	}
+    }
+    my @ustyles = ();
+    my $udir = "$ENV{HOME}/.jwm/styles";
+    if (opendir (my $fh, $udir)) {
+	foreach my $f (readdir($fh)) {
+	    next if $f eq '.' or $f eq '..';
+	    if (-f "$udir/$f") {
+		push @ustyles, $f;
+	    }
+	}
+    }
+    my $text = '';
+    if (@sstyles or @ustyles) {
+	my $icon = $self->icon('style');
+	$text .= "$indent<Menu ${icon}label=\"Styles\">\n";
+	foreach (sort @sstyles) {
+	    $text .= "$indent   <Program ${icon}label=\"$_\">$base/setstyle $sdir/$_</Program>\n";
+	}
+	if (@sstyles and @ustyles) {
+	    $text .= "$indent   <Separator/>\n";
+	}
+	foreach (sort @ustyles) {
+	    $text .= "$indent   <Program ${icon}label=\"$_\">$base/setstyle $udir/$_</Program>\n";
+	}
+	$text .= "$indent</Menu>\n";
+    }
+    return $text;
+}
+
 1;
 
 __END__
@@ -122,3 +225,4 @@ L<XDG::Menu(3pm)>
 
 =cut
 
+# vim: set sw=4 tw=72:

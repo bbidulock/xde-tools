@@ -59,13 +59,15 @@ unless ($here eq '/usr/bin') {
     $ENV{PATH} = "$here:$ENV{PATH}" unless exists $path{$here};
 }
 
-if ($here ne '/usr/bin') {
-	Gtk2::Rc->set_default_files("$here/themes/Unexicon/gtk-2.0/gtkrc", "$here/gtkrc-2.0");
-} else {
-	Gtk2::Rc->set_default_files("$ENV{HOME}/.gtkrc-2.0.mine");
-}
+Gtk2::Rc->set_default_files("$ENV{HOME}/.gtkrc-2.0.xde");
 
-Gtk2::Rc->parse_string('gtk-theme-name="Squared-blue"'."\n");
+#if ($here ne '/usr/bin') {
+#	Gtk2::Rc->set_default_files("$here/themes/Unexicon/gtk-2.0/gtkrc", "$here/gtkrc-2.0");
+#} else {
+#	Gtk2::Rc->set_default_files("$ENV{HOME}/.gtkrc-2.0.mine");
+#}
+#
+#Gtk2::Rc->parse_string('gtk-theme-name="Squared-blue"'."\n");
 
 Gtk2->init;
 
@@ -443,7 +445,7 @@ EOF
     exit($retval);
 }
 
-my $style = Gtk2::RcStyle->new;
+#my $style = Gtk2::RcStyle->new;
 my @colors = (
     Gtk2::Gdk::Color->new(0x16*257,0x16*257,0x16*257), # 0
     Gtk2::Gdk::Color->new(0x37*257,0x37*257,0x37*257), # 1
@@ -484,26 +486,26 @@ my %colors = (
     },
 );
 
-my $font = Pango::FontDescription->from_string('Liberation Sans 8');
-$style->font_desc($font);
+#my $font = Pango::FontDescription->from_string('Liberation Sans 8');
+#$style->font_desc($font);
 #$style->name('default');
 
 foreach my $state (qw(normal active prelight selected insensitive)) {
-    $style->color_flags($state,[qw(base fg bg text)]);
-    $style->base($state,$colors{'base'}{$state});
-    $style->bg($state,$colors{'bg'}{$state});
-    $style->fg($state,$colors{'fg'}{$state});
-    $style->text($state,$colors{'text'}{$state});
+#$style->color_flags($state,[qw(base fg bg text)]);
+#$style->base($state,$colors{'base'}{$state});
+#$style->bg($state,$colors{'bg'}{$state});
+#$style->fg($state,$colors{'fg'}{$state});
+#$style->text($state,$colors{'text'}{$state});
 }
 
 my $parser = new XDG::Menu::Parser;
 my $tree = $parser->parse_menu($ops{root_menu});
 my $tray = new XDG::Menu::Tray;
-$tray->{style} = $style;
-$tray->{colors} = \@colors;
+#$tray->{style} = $style;
+#$tray->{colors} = \@colors;
 my $menu = $tray->create($tree);
 
-my $icon = new Gtk2::StatusIcon->new_from_icon_name('redhat-starthere');
+my $icon = new Gtk2::StatusIcon->new_from_icon_name('arch-logo');
 $icon->set_tooltip_text('Click for menu...');
 $icon->set_visible(1);
 $icon->signal_connect(button_press_event=>sub{
@@ -511,16 +513,23 @@ $icon->signal_connect(button_press_event=>sub{
     my $button = $ev->button;
     return Gtk2::EVENT_PROPAGATE unless $button == 1 or $button == 2 or $button == 3;
     my $time = $ev->time;
-    my $menu = $tray->create($tree);
+#   my $menu = $tray->create($tree);
+#    Gtk2::Rc->reparse_all;
+#    Gtk2::Rc->parse("$ENV{HOME}/.gtkrc-2.0");
+#    Gtk2::Rc->reset_styles('gtk-theme-name');
     $menu->popup(undef,undef,undef,undef,$button,$time);
     return Gtk2::EVENT_STOP;
 });
 $icon->signal_connect(popup_menu=>sub{
     my ($icon,$button,$time) = @_;
 #    Gtk2::Rc->parse_string('gtk-theme-name="Squared-green"'."\n");
-#    Gtk2::Rc->reset_styles('gtk-theme-name');
 #    Gtk2::Rc->reparse_all;
-    my $menu = $tray->create($tree);
+#    Gtk2::Rc->reset_styles('gtk-theme-name');
+#    my $menu = $tray->create($tree);
+#    Gtk2::Rc->set_default_files("$ENV{HOME}/.gtkrc-2.0");
+#    Gtk2::Rc->reparse_all;
+#    Gtk2::Rc->parse("$ENV{HOME}/.gtkrc-2.0");
+#    Gtk2::Rc->reset_styles('gtk-theme-name');
     $menu->popup(undef,undef,undef,undef,$button,$time);
     return Gtk2::EVENT_PROPAGATE;
 });
@@ -531,6 +540,10 @@ $icon->signal_connect(activate=>sub{
 });
 $icon->signal_connect(query_tooltip=>sub{
     my ($icon,$x,$y,$bool,$tooltip) = @_;
+    return Gtk2::EVENT_PROPAGATE;
+});
+$icon->signal_connect(size_changed=>sub{
+    my ($icon,$size) = @_;
     return Gtk2::EVENT_PROPAGATE;
 });
 

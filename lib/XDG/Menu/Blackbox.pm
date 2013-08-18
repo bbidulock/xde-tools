@@ -51,7 +51,7 @@ sub create {
 	$text .= "\n";
 	$text .= $self->build($item,'  ');
 	$text .= "\n";
-	$text .= sprintf "%s\n", '  [nop] (----------------------------) {}',
+	$text .= sprintf "%s\n", '  [nop] (————————————) {}',
 	$text .= "\n";
 	$text .= sprintf "%s\n", '  [workspaces] (Workspace List)';
 	$text .= sprintf "%s\n", '  [config] (Configuration)';
@@ -72,7 +72,7 @@ sub create {
 	$text .= sprintf "%s\n", '  [end]';
 	$text .= sprintf "%s\n", '  [reconfig] (Reconfigure)';
 	$text .= "\n";
-	$text .= sprintf "%s\n", '  [nop] (----------------------------) {}',
+	$text .= sprintf "%s\n", '  [nop] (————————————) {}',
 	$text .= "\n";
 	$text .= sprintf "%s\n", '  [exit] (Exit)';
 	$text .= sprintf "%s\n", '[end]';
@@ -105,7 +105,7 @@ sub Header {
 }
 sub Separator {
 	my ($self,$item,$indent) = @_;
-	return sprintf "\n%s[nop] (----------------------------) {}\n\n",
+	return sprintf "\n%s[nop] (————————————) {}\n\n",
 	       $indent;
 }
 sub Application {

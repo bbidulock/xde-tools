@@ -397,6 +397,48 @@ sub set_vendor {
     return $vendor;
 }
 
+=item $xdg->B<get_entry>(I<$d>,I<$f>,I<@sections>) => HASH
+
+Read the desktop entry into a hash and return a reference to the hash or
+undef if there is a problem reading the desktop entry.  C<$d> is the
+full path to the directory and C<$f> is the filename within the
+directory, C<@sections> are the sections to parse in the file.
+
+=cut
+
+sub get_entry {
+    my ($self,$d,$f,@sections) = @_;
+    my %e = ();
+    open(my $fh,"<","$d/$f") or return %e;
+    $e{file} = "$d/$f"; $e{id} = $f;
+    my %xl = ();
+    my $sections = ';'.join(';',@sections).';';
+    my $section;
+    while (<$fh>) { chomp;
+	if (/^\[([^]]*)\]/) {
+	    $section = $1;
+	    $section = '' unless $sections =~ m{;$section;};
+	}
+	elsif ($section and /^([^=\[]+)\[([^=\]]+)\]=([^[:cntrl:]]*)/) {
+	    $xl{$1}{$2} = $3;
+	}
+	elsif ($section and /^([^=]*)=([^[:cntrl:]]*)/) {
+	    $e{$1} = $2 unless exists $e{$1};
+	}
+    }
+    close($fh);
+    $self->{ops}{lang} =~ m{^(..)}; my $short = $1;
+    foreach (keys %xl) {
+	if (exists $xl{$_}{$self->{ops}{lang}}) {
+	    $e{$_} = $xl{$_}{$self->{ops}{lang}};
+	}
+	elsif ($short and exists $xl{$_}{$short}) {
+	    $e{$_} = $xl{$_}{$short};
+	}
+    }
+    return %e;
+}
+
 =item $xdg->B<get_autostart>() => HASHREF
 
 Search out all XDG autostart files and collect them into a hash
@@ -404,7 +446,7 @@ reference.  The keys of the hash are the names of the F<.desktop> files
 collected.  Autostart files follow XDG precedence rules for XDG
 configuration directories.
 
-Also establishes a hash reference in $xdg->{dirs}{autostart} that
+Also establishes a hash reference in C<$xdg-E<gt>{dirs}{autostart}> that
 contains all of the directories searched (whether they existed or not)
 for use in conjuction with L<Linux::Inotify2(3pm)>.  See
 L<XDE::Inotify(3pm)>.
@@ -420,36 +462,8 @@ sub get_autostart {
 	opendir(my $dir, $d) or next;
 	foreach my $f (readdir($dir)) {
 	    next unless -f "$d/$f" and $f =~ /\.desktop$/;
-	    open (my $fh,"<","$d/$f") or next;
-	    my $parsing = 0;
-	    my %e = (file=>"$d/$f",id=>$f);
-	    my %xl = {};
-	    while (<$fh>) {
-                if (/^\[([^]]*)\]/) {
-		    my $section = $1;
-		    if ($section eq 'Desktop Entry') {
-			$parsing = 1;
-		    } else {
-			$parsing = 0;
-		    }
-		}
-                elsif ($parsing and /^([^=\[]+)\[([^=\]]+)\]=([^[:cntrl:]]*)/) {
-                    $xl{$1}{$2} = $3;
-                }
-                elsif ($parsing and /^([^=]*)=([^[:cntrl:]]*)/) {
-                    $e{$1} = $2 unless exists $e{$1};
-                }
-	    }
-            close($fh);
-            $self->{ops}{lang} =~ m{^(..)}; my $short = $1;
-            foreach (keys %xl) {
-                if (exists $xl{$_}{$self->{ops}{lang}}) {
-                    $e{$_} = $xl{$_}{$self->{ops}{lang}};
-                }
-                elsif (exists $xl{$_}{$short}) {
-                    $e{$_} = $xl{$_}{$short};
-                }
-            }
+	    my %e = $self->get_entry($d,$f,'Desktop Entry');
+	    next unless %e;
             $e{Name} = '' unless $e{Name};
             $e{Exec} = '' unless $e{Exec};
             $e{Comment} = $e{Name} unless $e{Comment};
@@ -541,36 +555,8 @@ sub get_xsessions {
         opendir(my $dir, $d) or next;
         foreach my $f (readdir($dir)) {
             next unless -f "$d/$f" and $f =~ /\.desktop$/;
-            open (my $fh, "<", "$d/$f") or next;
-            my $parsing = 0;
-            my %e = (file=>"$d/$f");
-            my %xl = ();
-            while (<$fh>) {
-                if (/^\[([^]]*)\]/) {
-                    my $section = $1;
-                    if ($section eq 'Desktop Entry' or $section eq 'Window Manager') {
-                        $parsing = 1;
-                    } else {
-                        $parsing = 0;
-                    }
-                }
-                elsif ($parsing and /^([^=\[]+)\[([^=\]]+)\]=([^[:cntrl:]]*)/) {
-                    $xl{$1}{$2} = $3;
-                }
-                elsif ($parsing and /^([^=]*)=([^[:cntrl:]]*)/) {
-                    $e{$1} = $2 unless exists $e{$1};
-                }
-            }
-            close($fh);
-            $self->{ops}{lang} =~ m{^(..)}; my $short = $1;
-            foreach (keys %xl) {
-                if (exists $xl{$_}{$self->{ops}{lang}}) {
-                    $e{$_} = $xl{$_}{$self->{ops}{lang}};
-                }
-                elsif (exists $xl{$_}{$short}) {
-                    $e{$_} = $xl{$_}{$short};
-                }
-            }
+	    my %e = $self->get_entry($d,$f,'Desktop Entry','Window Manager');
+	    next unless %e;
             $e{Name} = '' unless $e{Name};
             $e{Exec} = '' unless $e{Exec};
             $e{SessionManaged} = 'false' unless $e{SessionManaged};
@@ -587,6 +573,7 @@ sub get_xsessions {
     undef %files;
     # Get rid of those that are not to be displayed.
     my @todelete = ();
+    my @PATH = split(/:/,$ENV{PATH});
     foreach my $s (keys %sessions) {
         my $e = $sessions{$s};
         unless ($e->{Name}) {
@@ -627,7 +614,6 @@ sub get_xsessions {
                 }
             }
             else {
-                my @PATH = split(/:/,$ENV{PATH});
                 my $found = 0;
                 foreach (@PATH) {
                     if (-x "$_/$x") {
@@ -651,6 +637,141 @@ sub get_xsessions {
     }
     $self->{dirs}{xsessions} = \%sessiondirs;
     return \%sessions;
+}
+
+=item $xdg->B<get_applications>() => HASHREF
+
+Search out all XDG application files and collect them into a hash
+reference.  The keys of the hash are the names of the F<.desktop> files
+collected.  Application files follow XDG precedence rules for XDG
+data directories.
+
+Also establishes a hash reference in C<$xdg-E<gt>{dirs}{applications}>
+that contains all of the directories searched (whether they existed or
+not) for use in conjunction with L<Linux::Inotify2(3pm)>.  See
+L<XDE::Inotify(3pm)>.
+
+=cut
+
+sub get_applications {
+    my $self = shift;
+    my %appdirs = ();
+    my %files;
+    foreach my $d (reverse map {"$_/applications"} @{$self->{XDG_DATA_ARRAY}}) {
+	$appdirs{$d} = 1;
+	opendir(my $dir, $d) or next;
+	foreach my $f (readdir($dir)) {
+	    next unless -f "$d/$f" and $f =~ /\.desktop$/;
+	    my %e = $self->get_entry($d,$f,'Desktop Entry');
+	    next unless %e;
+            $e{Name} = '' unless $e{Name};
+            $e{Exec} = '' unless $e{Exec};
+            $e{Comment} = $e{Name} unless $e{Comment};
+            $files{$f} = \%e;
+	}
+	closedir($dir);
+    }
+    # Mark those that are not to be run...
+    my $desktop = $self->{XDG_CURRENT_DESKTOP};
+    my @PATH = split(/:/,$ENV{PATH});
+    foreach my $e (values %files) {
+	unless ($e->{Name}) {
+	    $e->{'X-Disable'} = 'true';
+	    $e->{'X-Disable-Reason'} = "No Name";
+	    next;
+	}
+	unless ($e->{Exec}) {
+	    $e->{'X-Disable'} = 'true';
+	    $e->{'X-Disable-Reason'} = "No Exec";
+	    next;
+	}
+	if ($e->{Hidden} and $e->{Hidden} =~ m{true|yes}i) {
+	    $e->{'X-Disable'} = 'true';
+	    $e->{'X-Disable-Reason'} = "Hidden";
+	     #next;
+	}
+	if ($e->{OnlyShowIn} and ";$e->{OnlyShowIn};" !~ /;$desktop;/) {
+	    $e->{'X-Disable'} = 'true';
+	    $e->{'X-Disable-Reason'} = "Only shown in $e->{OnlyShowIn}";
+	     #next;
+	}
+	if ($e->{NotShowIn} and ";$e->{NotShowIn};" =~ /;$desktop;/) {
+	    $e->{'X-Disable'} = 'true';
+	    $e->{'X-Disable-Reason'} = "Not shown in $e->{NotShowIn}";
+	     #next;
+	}
+        unless ($e->{TryExec}) {
+            my @words = split(/\s+/,$e->{Exec});
+            $e->{TryExec} = $words[0];
+        }
+        if (my $x = $e->{TryExec}) {
+            if ($x =~ m{/}) {
+                unless (-x "$x") {
+		    $e->{'X-Disable'} = 'true';
+		    $e->{'X-Disable-Reason'} = "$x is not executable";
+                     #next;
+                }
+            }
+            else {
+                my $found = 0;
+                foreach (@PATH) {
+                    if (-x "$_/$x") {
+                        $found = 1;
+                        last;
+                    }
+                }
+                unless ($found) {
+		    $e->{'X-Disable'} = 'true';
+		    $e->{'X-Disable-Reason'} = "$x is not executable";
+                     #next;
+                }
+            }
+        }
+#	$e->{'X-Disable'} = 'false';
+    }
+    $self->{dirs}{applications} = \%appdirs;
+    return \%files;
+}
+
+=item $xdg->B<get_mimeapps>() => HASHREF
+
+Merge all the F<mimeapps.list> files into a single hash element with
+C<Default Applications>, C<Added Associations> and C<Removed
+Associations> tags.
+
+=cut
+
+sub get_mimeapps {
+    my $self = shift;
+    my %hash;
+    my %appdirs = ();
+    my $f = 'mimeapps.list';
+    foreach my $d (reverse map {"$_/applications"} @{$self->{XDG_DATA_ARRAY}}) {
+	$appdirs{$d} = 1;
+	next unless -f "$d/$f";
+	open(my $fh,"<","$d/$f") or next;
+	my $section = '';
+	push @{$hash{files}}, "$d/$f";
+	while (<$fh>) { chomp;
+	    my %xl = ();
+	    if (m{^\[([^]]*)\]}) {
+		$section = $1;
+		$section = '' unless
+		    $section eq 'Default Applications' or
+		    $section eq 'Added Associations' or
+		    $section eq 'Removed Associations';
+	    }
+	    elsif ($section and m{^([^=]*)=([^[:cntrl:]]*)}) {
+		my ($mime,$apps) = ($1,$2);
+		$hash{$section}{$mime} = [ map{$_?$_:()} split(/;/,$apps) ];
+	    }
+	}
+	close($fh);
+    }
+    foreach (keys %appdirs) {
+	$self->{dirs}{applications}{$_} = 1;
+    }
+    return \%hash;
 }
 
 =back

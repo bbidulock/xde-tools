@@ -69,7 +69,7 @@ sub apply_style {
 sub make_transparent {
     my $menu = shift;
     my $window = $menu->get_parent_window;
-#   $window->set_opacity(0.92) if $window;
+    $window->set_opacity(0.92) if $window;
     return Gtk2::EVENT_PROPAGATE;
 }
 
@@ -78,9 +78,15 @@ sub create {
     my $m = Gtk2::Menu->new;
     $self->apply_style($m);
     $m->signal_connect(map=>\&make_transparent);
+
+    my $mi = Gtk2::TearoffMenuItem->new;
+    $self->apply_style($mi);
+    $mi->show_all;
+    $m->append($mi);
+
     $self->build($item,$m);
 
-    my $mi = Gtk2::SeparatorMenuItem->new;
+    $mi = Gtk2::SeparatorMenuItem->new;
     $self->apply_style($mi);
     $mi->show_all;
     $m->append($mi);
@@ -132,6 +138,9 @@ sub Header {
     my $mi = Gtk2::ImageMenuItem->new;
     $self->apply_style($mi);
     $mi->set_label($name);
+    if (my $tool = $item->{Entry}{Comment}) {
+	$mi->set_tooltip_text($tool);
+    }
     my $ic = $item->{Entry}{Icon}; $ic = 'gtk-unknown' unless $ic;
     my $im = Gtk2::Image->new_from_icon_name($ic,'menu');
     $self->apply_style($im) if $im;
@@ -152,6 +161,9 @@ sub Application {
     my $mi = Gtk2::ImageMenuItem->new;
     $self->apply_style($mi);
     $mi->set_label($name);
+    if (my $tool = $item->{Entry}{Comment}) {
+	$mi->set_tooltip_text($tool);
+    }
     my $ic = $item->{Entry}{Icon}; $ic = 'gtk-unknown' unless $ic;
     my $im = Gtk2::Image->new_from_icon_name($ic,'menu');
     $self->apply_style($im) if $im;
@@ -173,6 +185,9 @@ sub Directory {
     my $mi = Gtk2::ImageMenuItem->new;
     $self->apply_style($mi);
     $mi->set_label($name);
+    if (my $tool = $item->{Entry}{Comment}) {
+	$mi->set_tooltip_text($tool);
+    }
     my $ic = $item->{Entry}{Icon}; $ic = 'gtk-unknown' unless $ic;
     my $im = Gtk2::Image->new_from_icon_name($ic,'menu');
     $self->apply_style($im) if $im;

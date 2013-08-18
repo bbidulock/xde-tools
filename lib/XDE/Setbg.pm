@@ -266,7 +266,10 @@ sub _init {
     if ($self->{wmname} and $self->{wmname} eq 'icewm') {
 	# icewmbg gets in the way, tell it to quit
 	$X->SendEvent($X->root, 0,
-		$X->pack_event_mask('StructureNotify'),
+		$X->pack_event_mask(qw(
+			StructureNotify
+			SubstructureNotify
+			SubstructureRedirect)),
 		$X->pack_event(
 		    name=>'ClientMessage',
 		    window=>$X->root,
@@ -379,18 +382,21 @@ sub set_pixmap {
     my $grab = $self->{ops}{grab};
     printf STDERR "setting root window 0x%08x to pixmap 0x%08x\n",
 	   $root, $pmid if $verbose;
-    $X->GrabServer   if $grab;
     $X->ChangeWindowAttributes($root,
 	    background_pixmap=>$pmid);
-    $X->ClearArea($root,0,0,0,0,'True');
+    $X->flush;
+    $X->ClearArea($root,0,0,0,0,0);
+    $X->flush;
     my $data = pack('L',$pmid);
-    foreach (qw(_XROOTPMAP_ID ESETROOT_PMAP_ID _XSETROOT_ID
-		_XROOTMAP_ID)) {
+    $X->GrabServer   if $grab;
+    foreach (qw(_XROOTPMAP_ID))
+#   foreach (qw(_XROOTPMAP_ID ESETROOT_PMAP_ID _XSETROOT_ID _XROOTMAP_ID))
+    {
 	$X->ChangeProperty($root, $X->atom($_),
 		$X->atom('PIXMAP'), 32, 'Replace', $data);
     }
-    $X->flush;
     $X->UngrabServer if $grab;
+    $X->flush;
 }
 
 sub deferred_set_pixmap {
@@ -1046,7 +1052,10 @@ sub event_handler_ButtonRelease {
     }
     if ($screen->{desktop} != $desktop) {
 	$X->SendEvent($X->root, 0,
-		$X->pack_event_mask('StructureNotify'),
+		$X->pack_event_mask(qw(
+			StructureNotify
+			SubstructureNotify
+			SubstructureRedirect)),
 		$X->pack_event(
 		    name=>'ClientMessage',
 		    window=>$X->root,
@@ -1507,6 +1516,13 @@ to ask the window manager to change the number of desktops and their
 names.  The current number of desktops is not changed until the window
 manager actually changes the property in response to the client message.
 
+Note that the window managers that actually support this (respond to the
+message by changing the number of desktops) are: L<fluxbox(1)>,
+L<pekwm(1)>, L<blackbox(1)>, L<openbox(1)>, L<wmaker(1)>.  The window
+managers that report support but do not change the number of desktops in
+response to this message are: L<jwm(1)>, L<icewm(1)>, L<fvwm(1)>.  I
+don't know about L<afterstep(1)>.
+
 =cut
 
 sub set_desktops {
@@ -1532,7 +1548,10 @@ sub set_desktops {
 	print STDERR "Setting desktop number to ", $r->{workspaces},
 	      "\n" if $v;
 	$X->SendEvent($X->root, 0,
-		$X->pack_event_mask('StructureNotify'),
+		$X->pack_event_mask(qw(
+			StructureNotify
+			SubstructureNotify
+			SubstructureRedirect)),
 		$X->pack_event(
 		    name=>'ClientMessage',
 		    window=>$X->root,
@@ -1874,6 +1893,7 @@ sub check_theme_FLUXBOX {
     my $style = $self->read_anybox_style($config) or return;
     $style = "$style/theme.cfg" if -d $style;
     return 0 if $self->{style} and $self->{style} eq $style;
+#   THEME CHANGED
     my %r;
     my $theme = $style; $theme =~ s{/theme\.cfg$}{}; $theme =~ s{.*/}{};
     %r = $self->get_theme_by_name($theme);
@@ -1933,6 +1953,7 @@ sub check_theme_BLACKBOX {
     $self->watch_theme_file(config=>$config);
     my $style = $self->read_anybox_style($config) or return;
     return 0 if $self->{style} and $self->{style} eq $style;
+#   THEME CHANGED
     my %r;
     my $theme = $style; $theme =~ s{.*/}{};
     %r = $self->get_theme_by_name($theme);
@@ -1995,6 +2016,7 @@ sub check_theme_OPENBOX {
     }
     return unless $style;
     return 0 if $self->{style} and $self->{style} eq $style;
+#   THEME CHANGED
     my %r;
     %r = $self->get_theme_by_name($theme);
     %r = $self->read_anybox_theme($style) unless %r;
@@ -2060,6 +2082,7 @@ sub check_theme_ICEWM {
 	last if $style;
     }
     return 0 if $self->{style} and $self->{style} eq $style;
+#   THEME CHANGED
     my %r;
     if ($theme) {
 	$theme =~ s{/default\.theme$}{};
@@ -2106,6 +2129,7 @@ sub check_theme_JWM {
     $self->watch_theme_file(config=>$config);
     my $style = $self->read_jwm_style($config) or return;
     return 0 if $self->{style} and $self->{style} eq $style;
+#   THEME CHANGED
     my %r;
     my $theme = $style; $theme =~ s{.*/}{};
     %r = $self->get_theme_by_name($theme);
@@ -2142,6 +2166,7 @@ sub check_theme_PEKWM {
     $self->watch_theme_file(config=>$config);
     my $style = $self->read_pekwm_style($config) or return;
     return 0 if $self->{style} and $self->{style} eq $style;
+#   THEME CHANGED
     my %r;
     my $theme = $style; $theme =~ s{.*/}{};
     %r = $self->get_theme_by_name($theme);

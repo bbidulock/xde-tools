@@ -1,6 +1,8 @@
 lib/X11/XDG/StartupNotification.pm
 lib/X11/XDG/Xsettings.pm
 lib/X11/Xsm.pm
+lib/XDE/EWMH.pm
+lib/XDE/Keys.pm
 lib/XDE/Autostart/Command.pm
 lib/XDE/Autostart.pm
 lib/XDE/Autostart/Task.pm
@@ -17,7 +19,6 @@ lib/XDE/Session.pm
 lib/XDE/Setbg.pm
 lib/XDE/Setroot.pm
 lib/XDE/Settings.pm
-lib/XDE/.Settings.pm.swp
 lib/XDE/Setup.pm
 lib/XDE/Startup.pm
 lib/XDE/X11.pm
@@ -47,7 +48,6 @@ lib/XDG/Menu/Tray/Openbox.pm
 lib/XDG/Menu/Tray.pm
 lib/XDG/Menu/Tray/Wmaker.pm
 lib/XDG/Menu/Wmaker.pm
-lib/XDG/Menu/.Wmaker.pm.swp
 share/lxpanel/profile/BLACKBOX/config
 share/lxpanel/profile/BLACKBOX/panels/panel
 share/lxpanel/profile/FLUXBOX/config

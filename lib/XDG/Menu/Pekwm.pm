@@ -29,6 +29,19 @@ sub new {
     return bless {}, shift;
 }
 
+sub icon {
+    my ($self,$name) = @_;
+    return '' unless $name;
+    return $name if $name =~ m{/} and -f $name;
+    $name =~ s{.*/}{};
+    $name =~ s{\.(png|xpm|svg|jpg)$}{};
+    my $icons = XDG::Menu::DesktopEntry->get_icons;
+    return '' unless $icons;
+    my $fn = $icons->FindIcon($name,16,[qw(png xpm)]);
+    return sprintf("Icon = \"%s\"; ", $fn) if $fn;
+    return '';
+}
+
 =item $pekwm->B<create>($tree) => scalar
 
 Creates the PekWM menu from menu tree, C<$tree>, and returns the menu in
@@ -42,31 +55,48 @@ parsing the XDG menu using XDG::Menu::Parser (see L<XDG::Menu(3pm)>).
 sub create {
     my ($self,$item) = @_;
     my $text = '';
+    $text .= q(# Menu config for pekwm)."\n";
+    $text .= q()."\n";
+    $text .= q(# Variables)."\n";
     $text .= q(INCLUDE = "vars")."\n";
     $text .= q()."\n";
     $text .= q(RootMenu = "Pekwm" {)."\n";
-    $text .= $self->build($item,'    ');
+    $text .= $self->build($item,'');
     $text .= q(    Separator {})."\n";
-    $text .= q(    Submenu = "Go to" {)."\n";
-    $text .= q(        SubMenu = "Workspace" {)."\n";
+    $text .= q(    Submenu = "Pekwm" { ).$self->icon('pekwm')."\n";
+    $text .= q(        Entry = "Run Command..." { ).$self->icon('gtk-execute').q(Actions = "ShowCmdDialog" })."\n";
+    $text .= q(        SubMenu = "Workspace List" { ).$self->icon('preferences-desktop-display')."\n";
     $text .= q(            Entry = "" { Actions = "Dynamic $_PEKWM_SCRIPT_PATH/pekwm_ws_menu.sh goto dynamic" })."\n";
     $text .= q(        })."\n";
-    $text .= q(        Entry = "Window.." { Actions = "ShowMenu GotoClient True" })."\n";
-    $text .= q(    })."\n";
-    $text .= q(    Submenu = "Pekwm" {)."\n";
-    $text .= q(        Submenu = "Themes" {)."\n";
+    $text .= q(        Entry = "Window List" { ).$self->icon('preferences-system-windows').q(Actions = "ShowMenu GotoClient True" })."\n";
+    $text .= q(        Submenu = "Themes" { ).$self->icon('style')."\n";
     $text .= q(            Entry { Actions = "Dynamic $_PEKWM_SCRIPT_PATH/pekwm_themeset.sh $_PEKWM_THEME_PATH" })."\n";
     $text .= q(            Entry { Actions = "Dynamic $_PEKWM_SCRIPT_PATH/pekwm_themeset.sh ~/.pekwm/themes" })."\n";
     $text .= q(        })."\n";
-    $text .= q(        Entry = "Reload" { Actions = "Reload" })."\n";
-    $text .= q(        Entry = "Restart" { Actions = "Restart" })."\n";
-    $text .= q(        Entry = "Exit" { Actions = "Exit" })."\n";
-    $text .= q(        Submenu = "Exit to" {)."\n";
-    $text .= q(            Entry = "Xterm" { Actions = "RestartOther xterm" })."\n";
-    $text .= q(            Entry = "TWM" { Actions = "RestartOther twm" })."\n";
+    $text .= q(        Submenu = "Window Managers" { ).$self->icon('gtk-quit')."\n";
+    $text .= q(            Entry = "Blackbox" { ).$self->icon('blackbox').q(Actions = "RestartOther blackbox" })."\n";
+    $text .= q(            Entry = "Fluxbox" { ).$self->icon('fluxbox').q(Actions = "RestartOther fluxbox" })."\n";
+    $text .= q(            Entry = "FVWM" { ).$self->icon('fvwm').q(Actions = "RestartOther fvwm2" })."\n";
+    $text .= q(            Entry = "IceWM" { ).$self->icon('icewm').q(Actions = "RestartOther icewm" })."\n";
+    $text .= q(            Entry = "JWM" { ).$self->icon('archlinux-wm-jwm').q(Actions = "RestartOther jwm" })."\n";
+    $text .= q(            Entry = "Openbox" { ).$self->icon('openbox').q(Actions = "RestartOther openbox" })."\n";
+    $text .= q(            Entry = "TWM" { ).$self->icon('twm').q(Actions = "RestartOther twm" })."\n";
+    $text .= q(            Entry = "WindowMaker" { ).$self->icon('wmaker').q(Actions = "RestartOther wmaker" })."\n";
+    $text .= q(            Entry = "Terminal" { ).$self->icon('terminal').q(Actions = "RestartOther lxterminal" })."\n";
+    $text .= q(            Separator {})."\n";
+    $text .= q(            Entry = "Reload" { ).$self->icon('gtk-redo-ltr.png').q(Actions = "Reload" })."\n";
+    $text .= q(            Entry = "Restart" { ).$self->icon('gtk-refresh').q(Actions = "Restart" })."\n";
+    $text .= q(            Entry = "Exit" { ).$self->icon('gtk-quit').q(Actions = "Exit" })."\n";
     $text .= q(        })."\n";
     $text .= q(    })."\n";
+    $text .= q(    Entry = "Reload" { ).$self->icon('gtk-redo-ltr.png').q(Actions = "Reload" })."\n";
+    $text .= q(    Entry = "Restart" { ).$self->icon('gtk-refresh.png').q(Actions = "Restart" })."\n";
+    $text .= q(    Separator {})."\n";
+    $text .= q(    Entry = "Exit" { ).$self->icon('gtk-quit').q(Actions = "Exit" })."\n";
     $text .= q(})."\n";
+    $text .= q()."\n";
+    $text .= q(COMMAND = "cat $HOME/.pekwm/window")."\n";
+    $text .= q()."\n";
     return $text;
 }
 sub build {
