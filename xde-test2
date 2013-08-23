@@ -1,0 +1,29 @@
+#!/usr/bin/perl
+
+BEGIN {
+	unshift @INC, './lib';
+}
+
+use X11::Protocol;
+use strict;
+use warnings;
+
+
+my $x = X11::Protocol->new();
+
+my @already = keys %{$x->{ext}};
+
+print "Loaded extensions are: ",join(',',sort @already),"\n";
+
+$x->init_extension('SYNC')
+or warn "Cannot initialize SYNC!";
+
+my(@names) = $x->ListExtensions;
+
+print "Supported extensions are: ",join(',',sort @names),"\n";
+
+$x->init_extensions();
+
+my @good = keys %{$x->{ext}};
+
+print "Loaded extensions are: ",join(',',sort @good),"\n";

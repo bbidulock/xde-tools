@@ -1,0 +1,7 @@
+#!/usr/bin/perl
+
+use X11::Protocol;
+
+foreach my $key (keys %{*{'X11::Protocol'}}) {
+	print "$key => ",*{'X11::protocol'}->{$key},"\n";
+}

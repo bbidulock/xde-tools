@@ -1,0 +1,43 @@
+#!/usr/bin/perl
+
+use Gtk2 -init;
+use Gnome2::VFS;
+use strict;
+use warnings;
+
+my $file = "/home/brian/Desktop/wm-spec-1.5.html";
+#my $file = "/home/brian/Desktop/x11protocol.pdf";
+my $type = Gnome2::VFS->get_mime_type_for_name($file);
+
+print "Mime type is $type\n";
+chomp($type = `file -b --mime-type $file`);
+print "Mime type is $type\n";
+
+my $mime = Gnome2::VFS::Mime::Type->new($type);
+
+my $icon = $mime->get_icon;
+print "Icon is $icon\n" if $icon;
+
+my $path = Gnome2::VFS->icon_path_from_filename($file);
+
+print "Path is $path\n";
+
+my %icons = ();
+my $fn = "/usr/share/mime/generic-icons";
+if (open(my $fh,"<",$fn)) {
+	while (<$fh>) { chomp;
+		my ($t,$i) = split(/:/,$_,2);
+		next unless $t and $i;
+		$icons{$t} = $i;
+	}
+	close($fh);
+}
+
+$icon = $icons{$type};
+print "Icon is $icon\n" if $icon;
+
+exit 0;
+
+1;
+
+__END__

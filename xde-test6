@@ -1,0 +1,163 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+    if $running_under_some_shell;
+
+BEGIN {
+    use strict;
+    use warnings;
+    my $here = $0; $here =~ s{/[^/]*$}{};
+    if ($here =~ s{^\.}{}) {
+	chomp(my $cwd = `pwd`);
+	$here = "/$here" if $here;
+	$here = "$cwd$here";
+    }
+    unshift @INC, "$here/lib" unless $here eq '/usr/bin';
+}
+
+use Getopt::Long;
+use Encode;
+use I18N::Langinfo qw(langinfo CODESET);
+use POSIX qw(locale_h);
+use XDE::Desktop3;
+use strict;
+use warnings;
+
+my %OVERRIDES = ();
+my $here = $0; $here =~ s{/[^/]*$}{};
+if ($here =~ s{^\.}{}) {
+    chomp(my $cwd = `pwd`);
+    $here = "/$here" if $here;
+    $here = "$cwd$here";
+}
+unless ($here eq '/usr/bin') {
+    %OVERRIDES = (
+	HERE               => "$here",
+	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
+	XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
+	XDG_ICON_APPEND    => "$here/share/icons:$here/share/pixmaps",
+    );
+    my %path = (map{$_=>1}split(/:/,$ENV{PATH}));
+    $ENV{PATH} = "$here:$ENV{PATH}" unless exists $path{$here};
+}
+
+my $program = $0; $program =~ s{^.*/}{};
+
+my %ops = (
+    help	=> '',
+    verbose	=> '',
+    prompt	=> '',
+    banner      => '',
+    noask	=> '',
+    charset	=> langinfo(CODESET),
+    language	=> setlocale(LC_MESSAGES),
+    setdflt     => '',
+    default	=> '',
+    current	=> '',
+    choice	=> '',
+    vendor	=> '',
+    monitor	=> 1,
+    grab	=> 1,
+    theme	=> '',
+    id		=> '',
+    setroot	=> 1,
+);
+
+my $xde = XDE::Desktop3->new(%OVERRIDES,ops=>\%ops);
+$xde->getenv;
+
+my $syntax = GetOptions(
+    'help|h'	    => \$ops{help},
+    'verbose|v'	    => \$ops{verbose},
+    'monitor!'	    => \$ops{monitor},
+    'setroot|s'	    => \$ops{setroot},
+    'grab|g'	    => \$ops{grab},
+    'n'		    => sub{ $ops{monitor} = 0 },
+    'id=s'	    => \$ops{id},
+);
+
+$xde->default; # reset defaults
+
+$xde->init;
+$xde->create_window("/usr/share/icons/gnome/48x48/actions/gtk-execute.png");
+$xde->main;
+$xde->term;
+
+exit(0);
+
+__END__
+
+if (0) {
+
+#Gtk2::Window->set_auto_startup_notification(TRUE);
+
+my $w = Gtk2::Window->new('toplevel');
+$w->set_decorated(FALSE);
+$w->set_wmclass('xde-test4','XDE-test4');
+$w->set_title('test 4');
+$w->set_type_hint('desktop');
+$w->set_skip_pager_hint(TRUE);
+$w->set_skip_taskbar_hint(TRUE);
+$w->stick;
+$w->set_urgency_hint(TRUE);
+$w->set_opacity(0.0);
+$w->set_default_size(72,72);
+$w->parse_geometry('72x72+36+36');
+#$w->set_keep_above(TRUE);
+$w->set_keep_below(TRUE);
+$w->set_frame_dimensions(0,0,0,0);
+$w->set_has_frame(FALSE);
+#$w->set_resizable(FALSE);
+$w->set_app_paintable(TRUE);
+my $root = Gtk2::Gdk->get_default_root_window;
+my $visual = $root->get_visual;
+my $colormap = Gtk2::Gdk::Colormap->new($visual,TRUE);
+my $screen = Gtk2::Gdk::Screen->get_default;
+#my ($width,$height) = ($screen->get_width,$screen->get_height);
+#my $bg = Gtk2::Gdk::Pixbuf->get_from_drawable($root, undef, 0, 0, 0, 0, $width, $height);
+my $atom = Gtk2::Gdk::Atom->new(_XROOTPMAP_ID=>TRUE);
+$root->set_events([qw(property-change-mask)]);
+$root->signal_connect(property_notify=>sub{
+  my $e = shift;
+  if ($e->atom->name eq "_XROOPMAP_ID") {
+    my $win = $w->window;
+    my $cr = Gtk2::Gdk::Cairo::Context->create($win);
+    my ($type,$format,$data) = $root->property_get($atom,undef,0,1,FALSE);
+    my $pixmap = Gtk2::Gdk::Pixmap->foreign_new($data);
+    $pixmap->set_colormap($colormap);
+    $cr->set_source_pixmap($pixmap,-36,-36);
+    $cr->paint;
+    my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file(
+	  "/usr/share/icons/gnome/48x48/actions/gtk-execute.png");
+    $cr->set_source_pixbuf($pixbuf,12,12);
+    $cr->paint;
+  }
+});
+$w->signal_connect(expose_event=>sub{
+  print STDERR "Exposed!\n";
+  my $win = $w->window;
+  $win->set_override_redirect(TRUE);
+  $win->set_events([qw(exposure-mask pointer-motion-mask button-motion-mask button-press-mask
+		  button-release-mask key-press-mask key-release-mask structure-mask
+		  property-change-mask visibility-notify-mask substructure-mask scroll-mask)]);
+  my $cr = Gtk2::Gdk::Cairo::Context->create($win);
+  my ($type,$format,$data) = $root->property_get($atom,undef,0,1,FALSE);
+  my $pixmap = Gtk2::Gdk::Pixmap->foreign_new($data);
+  $pixmap->set_colormap($colormap);
+  #$cr->set_source_pixbuf($bg,-36,-36);
+  $cr->set_source_pixmap($pixmap,-36,-36);
+  $cr->paint;
+  my $pixbuf = Gtk2::Gdk::Pixbuf->new_from_file(
+	  "/usr/share/icons/gnome/48x48/actions/gtk-execute.png");
+  $cr->set_source_pixbuf($pixbuf,12,12);
+  $cr->paint;
+});
+$w->show_all;
+$w->show_now;
+
+Gtk2->main;
+
+}
+
+

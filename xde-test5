@@ -1,0 +1,36 @@
+#!/usr/bin/perl
+
+use X11::Protocol;
+use strict;
+use warnings;
+
+my $X = X11::Protocol->new();
+
+my $pixmap = $X->new_rsrc;
+
+$X->CreatePixmap($pixmap,
+	$X->root,
+	$X->root_depth,
+	$X->width_in_pixels,
+	$X->height_in_pixel);
+
+my ($val,$type) = $X->GetProperty($X->root,
+	$X->atom('_XROOTPMAP_ID'),
+	$X->atom('PIXMAP'), 0, 1);
+
+die "No pixmap" unless $type;
+
+my $bgrnd = unpack('L',$val);
+
+my $cid = $X->new_rsrc;
+
+$X->CreateGC($cid, $X->root);
+
+$X->CopyArea($bgrnd,$pixmap,$cid,
+	0,0,
+	$X->width_in_pixels,
+	$X->height_in_pixels,
+	0,0);
+
+
+# vim: set sw=4 tw=72:

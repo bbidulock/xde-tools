@@ -1,0 +1,19 @@
+#!/usr/bin/perl
+
+use X11::Protocol;
+use strict;
+use warnings;
+
+
+my $x = X11::Protocol->new();
+
+for (my $i = 1; $i < 1000; $i++) {
+	printf STDOUT "%s(%d)\n", $x->atom_name($i), $i;
+}
+
+#my %atoms = (
+#    begin => $x->atom('_NET_STARTUP_NOTIFY_BEGIN'),
+#    after => $x->atom('_NET_STARTUP_NOTIFY'),
+#);
+
+

@@ -1,0 +1,54 @@
+#!/usr/bin/perl
+
+use Gnome2::VFS;
+use strict;
+use warnings;
+
+my %icons = {};
+if (open(my $fh,"<","/usr/share/mime/generic-icons")) {
+	while (<$fh>) { chomp;
+		if (m{^([^:]*):(.*)$}) {
+			$icons{$1} = $2;
+		}
+	}
+	close($fh);
+}
+
+Gnome2::VFS->init();
+
+my $fn = $ARGV[0];
+
+my $uri = Gnome2::VFS::URI->new($fn);
+my ($result,$info) = $uri->get_file_info(['default','get-mime-type']);
+if ($info) {
+	print STDERR "Info is: ",join(',',%$info),"\n";
+	my $mime = $info->get_mime_type;
+	print STDERR "Mime type is $mime\n";
+
+	my @list = Gnome2::VFS::ApplicationRegistry->get_applications($mime);
+	print STDERR "Applications are: ",join(',',@list),"\n";
+
+	my $mime2 = Gnome2::VFS->get_mime_type_for_name($fn);
+	print STDERR "Mime type is $mime2\n";
+	my @icons = ();
+	my $icon = $mime2; $icon =~ s{/}{-}g;
+	push @icons, $icon, "gnome-mime-$icon";
+	my $icon3 = $icons{$mime2};
+	push @icons, $icon3;
+	my $icon2 = $mime2; $icon2 =~ s{/.*}{};
+	push @icons, $icon2, "gnome-mime-$icon2";
+
+	print STDERR "Icons are: ",join(';',@icons),"\n";
+	foreach my $i (@icons) {
+		my $path = Gnome2::VFS->icon_path_from_filename($icon);
+		print STDERR "Icon $i is at $path\n" if $path;
+	}
+
+	exit (0);
+}
+
+
+die "did not get info";
+
+
+
