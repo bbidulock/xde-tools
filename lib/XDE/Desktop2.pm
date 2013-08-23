@@ -30,6 +30,8 @@ my %MIME_APPLICATIONS;
 my %MIME_SUBCLASSES;
 my %MIME_ALIASES;
 my %MIME_GENERIC_ICONS;
+my %XDG_DESKTOPS;
+my %XDG_CATEGORIES;
 
 use constant {
     ICON_WIDE=>80,
@@ -137,6 +139,24 @@ sub get_apps_and_subs {
 	@subs = sort {$a->{Name} cmp $b->{Name}} @subs;
     }
     return \@apps, \@subs;
+}
+
+sub get_desktops {
+    my $selfortype = shift;
+    my @des = reverse sort{$XDG_DESKTOPS{$a} <=> $XDG_DESKTOPS{$b}} keys %XDG_DESKTOPS;
+    foreach (@des) {
+	printf STDERR "Desktop %-20s -> %d\n", $_, $XDG_DESKTOPS{$_};
+    }
+    return \@des;
+}
+
+sub get_categories {
+    my $selfortype = shift;
+    my @cats = reverse sort{$XDG_CATEGORIES{$a} <=> $XDG_CATEGORIES{$b}} keys %XDG_CATEGORIES;
+    foreach (@cats) {
+	printf STDERR "Category %-20s -> %d\n", $_, $XDG_CATEGORIES{$_};
+    }
+    return \@cats;
 }
 
 =item $desktop->B<_init>() => $desktop
@@ -325,7 +345,24 @@ sub read_mimeapps {
     }
     undef $apps;
     %MIME_APPLICATIONS = ();
+    %XDG_DESKTOPS = ();
+    %XDG_CATEGORIES = ();
     foreach my $app (values %{$self->{applications}}) {
+	if (my $show = $app->{OnlyShowIn}) {
+	    foreach (split(/;/,$show)) {
+		if ($_) { $XDG_DESKTOPS{$_} += 1; }
+	    }
+	}
+	if (my $show = $app->{NotShowIn}) {
+	    foreach (split(/;/,$show)) {
+		if ($_) { $XDG_DESKTOPS{$_} += 1; }
+	    }
+	}
+	if (my $cat = $app->{Categories}) {
+	    foreach (split(/;/,$cat)) {
+		if ($_) { $XDG_CATEGORIES{$_} += 1; }
+	    }
+	}
 	if (my $mime = $app->{MimeType}) {
 	    my %types = ();
 	    foreach my $type (split(/;/,$mime)) {
@@ -348,6 +385,8 @@ sub read_mimeapps {
 	    }
 	}
     }
+    $self->get_desktops;
+    $self->get_categories;
     $self->{mimeapps} = $self->get_mimeapps;
 }
 

@@ -405,7 +405,7 @@ sub get_NET_WM_ICON_NAME {
 
 sub event_handler_PropertyNotify_NET_WM_ICON_NAME {
     my($self,$e,$X,$v) = @_;
-    $self->get_NET_WM_ICON_NAM($e->{window});
+    $self->get_NET_WM_ICON_NAME($e->{window});
 }
 
 sub get_NET_WM_VISIBLE_ICON_NAME {

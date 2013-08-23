@@ -24,7 +24,7 @@ use Getopt::Long;
 use Encode;
 use I18N::Langinfo qw(langinfo CODESET);
 use POSIX qw(locale_h);
-use XDE::Desktop2;
+use XDE::Dock;
 use strict;
 use warnings;
 
@@ -68,7 +68,7 @@ my %ops = (
     setroot	=> 1,
 );
 
-my $xde = XDE::Desktop2->new(%OVERRIDES,ops=>\%ops);
+my $xde = XDE::Dock->new(%OVERRIDES,ops=>\%ops);
 $xde->getenv;
 
 my $syntax = GetOptions(
@@ -84,8 +84,6 @@ my $syntax = GetOptions(
 $xde->default; # reset defaults
 
 $xde->init;
-$xde->read_primary_data;
-$xde->update_desktop;
 $xde->main;
 $xde->term;
 

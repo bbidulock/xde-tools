@@ -115,17 +115,6 @@ sub new {
     return XDE::Desktop::Icon2::new_from_entry($type,$directory,\%e);
 }
 
-=item $icon->B<props>()
-
-Launch a window showing the directory properties.
-
-=cut
-
-sub props {
-    my $self = shift;
-    # TODO: finish this...
-}
-
 1;
 
 =back

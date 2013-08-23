@@ -1,5 +1,8 @@
 package XDE::Desktop::Icon2;
 use URI::file;
+use File::stat;
+use Fcntl qw(S_IRUSR S_IWUSR S_IXUSR :mode);
+use Time::gmtime;
 use X11::Protocol;
 use Glib qw(TRUE FALSE);
 use Gtk2;
@@ -552,6 +555,10 @@ sub open_with {
 			$menu->append($item);
 			$item->set_state('insensitive')
 			    if $app->{'X-Disable'} and $app->{'X-Disable'} eq 'true';
+			$item->set_state('insensitive')
+			    if $app->{NoDisplay} and $app->{NoDisplay} eq 'true';
+			$item->set_state('insensitive')
+			    if $app->{Hidden} and $app->{Hidden} eq 'true';
 		    }
 		    $item = Gtk2::SeparatorMenuItem->new;
 		    $item->show_all;
@@ -600,10 +607,7 @@ sub popup {
 #	$menu->append($item);
 
 	if ($self->can('launch')) {
-	    $item = Gtk2::ImageMenuItem->new;
-	    $item->set_label('Launch...');
-	    my $image = Gtk2::Image->new_from_icon_name('gtk-execute','menu');
-	    $item->set_image($image) if $image;
+	    $item = Gtk2::ImageMenuItem->new_from_stock('gtk-execute');
 	    my $command = $self->{entry}{Exec};
 	    $command = 'false' unless $command;
 	    $command =~ s{%[dDnNickvmfFuU]}{}g;
@@ -616,10 +620,7 @@ sub popup {
 	    $menu->append($item);
 	}
 	if ($self->can('open')) {
-	    $item = Gtk2::ImageMenuItem->new;
-	    $item->set_label('Open...');
-	    $image = Gtk2::Image->new_from_icon_name('gtk-open','menu');
-	    $item->set_image($image) if $image;
+	    $item = Gtk2::ImageMenuItem->new_from_stock('gtk-open');
 	    my $command = "xdg-open $self->{path}";
 	    $item->signal_connect(activate=>sub{
 		    print STDERR "START $command\n";
@@ -643,30 +644,21 @@ sub popup {
 	    $menu->append($item);
 	}
 
-	$item = Gtk2::ImageMenuItem->new;
-	$item->set_label('Cut');
-	$image = Gtk2::Image->new_from_icon_name('gtk-cut','menu');
-	$item->set_image($image) if $image;
+	$item = Gtk2::ImageMenuItem->new_from_stock('gtk-cut');
 	$item->signal_connect(activate=>sub{
 		print STDERR "Not yet...\n";
 	});
 	$item->show_all;
 	$menu->append($item);
 
-	$item = Gtk2::ImageMenuItem->new;
-	$item->set_label('Copy');
-	$image = Gtk2::Image->new_from_icon_name('gtk-copy','menu');
-	$item->set_image($image) if $image;
+	$item = Gtk2::ImageMenuItem->new_from_stock('gtk-copy');
 	$item->signal_connect(activate=>sub{
 		print STDERR "Not yet...\n";
 	});
 	$item->show_all;
 	$menu->append($item);
 
-	$item = Gtk2::ImageMenuItem->new;
-	$item->set_label('Delete');
-	$image = Gtk2::Image->new_from_icon_name('gtk-delete','menu');
-	$item->set_image($image) if $image;
+	$item = Gtk2::ImageMenuItem->new_from_stock('gtk-delete');
 	$item->signal_connect(activate=>sub{
 		print STDERR "Not yet...\n";
 	});
@@ -688,10 +680,14 @@ sub popup {
 	    $item->show_all;
 	    $menu->append($item);
 
+	    if (0) {
 	    $item = Gtk2::ImageMenuItem->new;
 	    $item->set_label('Properties...');
-	    $image = Gtk2::Image->new_from_icon_name('gtk-settings','menu');
+	    $image = Gtk2::Image->new_from_icon_name('gtk-properties','menu');
 	    $item->set_image($image) if $image;
+	    } else {
+	    $item = Gtk2::ImageMenuItem->new_from_stock('gtk-properties');
+	    }
 	    $item->signal_connect_swapped(activate=>sub{
 		    my $self = shift;
 		    $self->props;
@@ -704,6 +700,431 @@ sub popup {
 #	$self->{menu} = $menu;
     }
     $menu->popup(undef,undef,undef,undef,$event->button,$event->time);
+}
+
+=item $icon->B<props>()
+
+Launch a window showing the file properties.
+
+=cut
+
+sub no_press {
+    my $cb = shift;
+    $cb->set_active(not $cb->get_active);
+    Gtk2::Gdk->beep;
+    return Gtk2::EVENT_STOP;
+}
+
+sub do_toggle {
+    my ($cb,$flag,$path) = @_;
+    my $st = stat($path);
+    my $mode = $st->mode;
+    if ($cb->get_active) {
+	chmod($mode|$flag,$path);
+    } else {
+	chmod($mode&~$flag,$path);
+    }
+    return Gtk2::EVENT_PROPAGATE;
+}
+
+sub props {
+    my $self = shift;
+    my $window = $self->{props};
+    unless ($window) {
+	$window = new Gtk2::Window('toplevel');
+	$window->set_default_size(600,420);
+	$window->set_title("Properties: $self->{path}");
+	$window->set_role('properties');
+	$window->set_type_hint('dialog');
+	my $vbox = new Gtk2::VBox;
+	$window->add($vbox);
+	my $book = new Gtk2::Notebook;
+	my $bbox = new Gtk2::HButtonBox;
+	my $frame;
+	if ($self->{path}) {
+	    $frame = new Gtk2::VBox;
+	    $frame->set_border_width(2);
+	     #$frame = new Gtk2::Frame('General');
+	    $book->append_page($frame,'General');
+	    my $tab = new Gtk2::Table(20,2,FALSE);
+	    $tab->set_border_width(2);
+	    $tab->set_col_spacings(5);
+	    $tab->set_row_spacings(0);
+	    my $sw = new Gtk2::ScrolledWindow;
+	    $sw->set_policy('automatic','automatic');
+	    $sw->add_with_viewport($tab);
+	    $frame->add($sw);
+	    my $path = $self->{path};
+	    my $st = stat($self->{path});
+	    my $row = 0;
+	    my %trans = (
+		dev=>['FS Device ID',undef],
+		ino=>['Inode number',undef],
+		mode=>['Mode',sub{
+		    my $val = shift;
+		    my $mine = ($st->uid == $< or $st->uid == $>);
+		    my $tab = new Gtk2::Table(3,5,TRUE);
+		    my ($cb,$lab);
+		    $lab = new Gtk2::Label('Owner:');
+		    $lab->set_justify('left');
+		    $lab->set_alignment(0.0,0.5);
+		    $tab->attach_defaults($lab,0,1,0,1);
+		    $cb = new Gtk2::CheckButton('Set User');
+		    $cb->set_active($val & S_ISUID);
+		    if ($mine) {
+			$cb->signal_connect(toggled=>sub{
+			    return do_toggle($_[0],S_ISUID,$path);
+			    });
+		    } else {
+			$cb->signal_connect(pressed=>\&no_press);
+		    }
+		    $tab->attach_defaults($cb,4,5,0,1);
+		    $cb = new Gtk2::CheckButton('Read');
+		    $cb->set_active($val & S_IRUSR);
+		    if ($mine) {
+			$cb->signal_connect(toggled=>sub{
+			    return do_toggle($_[0],S_IRUSR,$path);
+			    });
+		    } else {
+			$cb->signal_connect(pressed=>\&no_press);
+		    }
+		    $tab->attach_defaults($cb,1,2,0,1);
+		    $cb = new Gtk2::CheckButton('Write');
+		    $cb->set_active($val & S_IWUSR);
+		    if ($mine) {
+			$cb->signal_connect(toggled=>sub{
+			    return do_toggle($_[0],S_IWUSR,$path);
+			    });
+		    } else {
+			$cb->signal_connect(pressed=>\&no_press);
+		    }
+		    $tab->attach_defaults($cb,2,3,0,1);
+		    $cb = new Gtk2::CheckButton('Execute');
+		    $cb->set_active($val & S_IXUSR);
+		    if ($mine) {
+			$cb->signal_connect(toggled=>sub{
+			    return do_toggle($_[0],S_IXUSR,$path);
+			    });
+		    } else {
+			$cb->signal_connect(pressed=>\&no_press);
+		    }
+		    $tab->attach_defaults($cb,3,4,0,1);
+
+		    $lab = new Gtk2::Label('Group:');
+		    $lab->set_justify('left');
+		    $lab->set_alignment(0.0,0.5);
+		    $tab->attach_defaults($lab,0,1,1,2);
+		    $cb = new Gtk2::CheckButton('Set Group');
+		    $cb->set_active($val & S_ISGID);
+		    if ($mine) {
+			$cb->signal_connect(toggled=>sub{
+			    return do_toggle($_[0],S_ISGID,$path);
+			    });
+		    } else {
+			$cb->signal_connect(pressed=>\&no_press);
+		    }
+		    $tab->attach_defaults($cb,4,5,1,2);
+		    $cb = new Gtk2::CheckButton('Read');
+		    $cb->set_active($val & S_IRGRP);
+		    if ($mine) {
+			$cb->signal_connect(toggled=>sub{
+			    return do_toggle($_[0],S_IRGRP,$path);
+			    });
+		    } else {
+			$cb->signal_connect(pressed=>\&no_press);
+		    }
+		    $tab->attach_defaults($cb,1,2,1,2);
+		    $cb = new Gtk2::CheckButton('Write');
+		    $cb->set_active($val & S_IWGRP);
+		    if ($mine) {
+			$cb->signal_connect(toggled=>sub{
+			    return do_toggle($_[0],S_IWGRP,$path);
+			    });
+		    } else {
+			$cb->signal_connect(pressed=>\&no_press);
+		    }
+		    $tab->attach_defaults($cb,2,3,1,2);
+		    $cb = new Gtk2::CheckButton('Execute');
+		    $cb->set_active($val & S_IXGRP);
+		    if ($mine) {
+			$cb->signal_connect(toggled=>sub{
+			    return do_toggle($_[0],S_IXGRP,$path);
+			    });
+		    } else {
+			$cb->signal_connect(pressed=>\&no_press);
+		    }
+		    $tab->attach_defaults($cb,3,4,1,2);
+
+		    $lab = new Gtk2::Label('Others:');
+		    $lab->set_justify('left');
+		    $lab->set_alignment(0.0,0.5);
+		    $tab->attach_defaults($lab,0,1,2,3);
+		    $cb = new Gtk2::CheckButton('Sticky');
+		    $cb->set_active($val & S_ISVTX);
+		    if ($mine) {
+			$cb->signal_connect(toggled=>sub{
+			    return do_toggle($_[0],S_ISVTX,$path);
+			    });
+		    } else {
+			$cb->signal_connect(pressed=>\&no_press);
+		    }
+		    $tab->attach_defaults($cb,4,5,2,3);
+		    $cb = new Gtk2::CheckButton('Read');
+		    $cb->set_active($val & S_IROTH);
+		    if ($mine) {
+			$cb->signal_connect(toggled=>sub{
+			    return do_toggle($_[0],S_IROTH,$path);
+			    });
+		    } else {
+			$cb->signal_connect(pressed=>\&no_press);
+		    }
+		    $tab->attach_defaults($cb,1,2,2,3);
+		    $cb = new Gtk2::CheckButton('Write');
+		    $cb->set_active($val & S_IWOTH);
+		    if ($mine) {
+			$cb->signal_connect(toggled=>sub{
+			    return do_toggle($_[0],S_IWOTH,$path);
+			    });
+		    } else {
+			$cb->signal_connect(pressed=>\&no_press);
+		    }
+		    $tab->attach_defaults($cb,2,3,2,3);
+		    $cb = new Gtk2::CheckButton('Execute');
+		    $cb->set_active($val & S_IXOTH);
+		    if ($mine) {
+			$cb->signal_connect(toggled=>sub{
+			    return do_toggle($_[0],S_IXOTH,$path);
+			    });
+		    } else {
+			$cb->signal_connect(pressed=>\&no_press);
+		    }
+		    $tab->attach_defaults($cb,3,4,2,3);
+		    return $tab;
+		}],
+		nlink=>['Hard links',undef],
+		uid=>['Owner user ID',sub{
+		    my $val = shift;
+		    my ($name,$passwd,$uid,$gid,$quota,$comment,$gcos,$dir,$shell,$expire)
+			= getpwuid($val);
+		    my $str = "$name ($uid)";
+		    $str .= " -- $gcos" if $gcos;
+		    my $ent = new Gtk2::Entry;
+		    $ent->set_editable(FALSE);
+		    $ent->append_text($str);
+		    return $ent;
+		}],
+		gid=>['Owner group ID',sub{
+		    my $val = shift;
+		    my ($name,$passwd,$gid,$members) = 
+			getgrgid($val);
+		    my $str = "$name ($gid)";
+		    my $ent = new Gtk2::Entry;
+		    $ent->set_editable(FALSE);
+		    $ent->append_text($str);
+		    return $ent;
+		}],
+		rdev=>['Raw device ID',undef],
+		size=>['Total size',sub{
+		    my $val = shift;
+		    my $unit = '';
+		    if ($val > 1024) {
+			$val = "$val.0"/1024.0;
+			$unit = 'k';
+			if ($val > 1024) {
+			    $val = $val/1024.0;
+			    $unit = 'M';
+			    if ($val > 1024) {
+				$val = $val/1024.0;
+				$unit = 'G';
+			    }
+			}
+		    }
+		    my $str = sprintf "%.1f %s",$val,$unit;
+		    my $ent = new Gtk2::Entry;
+		    $ent->set_editable(FALSE);
+		    $ent->append_text($str);
+		    return $ent;
+		}],
+		atime=>['Access time',sub{
+		    my $val = shift;
+		    my $ent = new Gtk2::Entry;
+		    $ent->set_editable(FALSE);
+		    $ent->append_text(gmctime($val));
+		    return $ent;
+		}],
+		mtime=>['Modify time',sub{
+		    my $val = shift;
+		    my $ent = new Gtk2::Entry;
+		    $ent->set_editable(FALSE);
+		    $ent->append_text(gmctime($val));
+		    return $ent;
+		}],
+		ctime=>['Change time',sub{
+		    my $val = shift;
+		    my $ent = new Gtk2::Entry;
+		    $ent->set_editable(FALSE);
+		    $ent->append_text(gmctime($val));
+		    return $ent;
+		}],
+		blksize=>['Block size',sub{
+		    my $val = shift;
+		    my $unit = '';
+		    if ($val > 1024) {
+			$val = $val/1024.0;
+			$unit = 'k';
+			if ($val > 1024) {
+			    $val = $val/1024.0;
+			    $unit = 'M';
+			    if ($val > 1024) {
+				$val = $val/1024.0;
+				$unit = 'G';
+			    }
+			}
+		    }
+		    my $str = sprintf "%.1f %s",$val,$unit;
+		    my $ent = new Gtk2::Entry;
+		    $ent->set_editable(FALSE);
+		    $ent->append_text($str);
+		    return $ent;
+		}],
+		blocks=>['Blocks',undef],
+	    );
+	    my $uid = $st->uid;
+	    foreach (qw(dev ino mode nlink uid gid rdev size atime mtime
+			ctime blksize blocks)) {
+		my ($desc,$sub) = @{$trans{$_}};
+		my $lab = new Gtk2::Label("$desc:");
+		$lab->set_justify('right');
+		$lab->set_alignment(1.0,0.5);
+		my $ent;
+		if ($sub) {
+		    $ent = &$sub($st->$_);
+		} else {
+		    $ent = new Gtk2::Entry;
+		    $ent->set_editable(FALSE);
+		    $ent->append_text($st->$_);
+		}
+		$tab->attach($lab,0,1,$row,$row+1,['fill'],['fill'],0,0);
+		$tab->attach($ent,1,2,$row,$row+1,['fill','expand'],['fill'],0,0);
+		$row += 1;
+	    }
+	    {
+		my $lab = new Gtk2::Label('Access:');
+		$lab->set_justify('right');
+		$lab->set_alignment(1.0,0.5);
+		my ($tbl,$l,$cb);
+		$tbl = new Gtk2::Table(2,5,TRUE);
+
+		$l = new Gtk2::Label('Effective:');
+		$l->set_justify('left');
+		$l->set_alignment(0.0,0.5);
+		$tbl->attach_defaults($l,0,1,0,1);
+		$cb = new Gtk2::CheckButton('Read');
+		$cb->set_active($st->cando(S_IRUSR,TRUE));
+		$cb->signal_connect(pressed=>\&no_press);
+		$tbl->attach_defaults($cb,1,2,0,1);
+		$cb = new Gtk2::CheckButton('Write');
+		$cb->set_active($st->cando(S_IWUSR,TRUE));
+		$cb->signal_connect(pressed=>\&no_press);
+		$tbl->attach_defaults($cb,2,3,0,1);
+		$cb = new Gtk2::CheckButton('Execute');
+		$cb->set_active($st->cando(S_IXUSR,TRUE));
+		$cb->signal_connect(pressed=>\&no_press);
+		$tbl->attach_defaults($cb,3,4,0,1);
+		$cb = new Gtk2::CheckButton('Owner');
+		$cb->set_active($st->uid == $<);
+		$cb->signal_connect(pressed=>\&no_press);
+		$tbl->attach_defaults($cb,4,5,0,1);
+
+		$l = new Gtk2::Label('Real:');
+		$l->set_justify('left');
+		$l->set_alignment(0.0,0.5);
+		$tbl->attach_defaults($l,0,1,1,2);
+		$cb = new Gtk2::CheckButton('Read');
+		$cb->set_active($st->cando(S_IRUSR,FALSE));
+		$cb->signal_connect(pressed=>\&no_press);
+		$tbl->attach_defaults($cb,1,2,1,2);
+		$cb = new Gtk2::CheckButton('Write');
+		$cb->set_active($st->cando(S_IWUSR,FALSE));
+		$cb->signal_connect(pressed=>\&no_press);
+		$tbl->attach_defaults($cb,2,3,1,2);
+		$cb = new Gtk2::CheckButton('Execute');
+		$cb->set_active($st->cando(S_IXUSR,FALSE));
+		$cb->signal_connect(pressed=>\&no_press);
+		$tbl->attach_defaults($cb,3,4,1,2);
+		$cb = new Gtk2::CheckButton('Owner');
+		$cb->set_active($st->uid == $>);
+		$cb->signal_connect(pressed=>\&no_press);
+		$tbl->attach_defaults($cb,4,5,1,2);
+
+		$tab->attach($lab,0,1,$row,$row+1,['fill'],['fill'],0,0);
+		$tab->attach($tbl,1,2,$row,$row+1,['fill','expand'],['fill'],0,0);
+		$row += 1;
+	    }
+	    $tab->resize($row,2);
+	}
+	if ($self->{entry}) {
+	    $frame = new Gtk2::VBox;
+	    $frame->set_border_width(2);
+	    #$frame = new Gtk2::Frame('Desktop Entry');
+	    $book->append_page($frame,'Entry');
+	    my %e = ( %{$self->{entry}} );
+	    delete $e{file};
+	    delete $e{id};
+	    my $tab = new Gtk2::Table(scalar(keys(%e)),2,FALSE);
+	    $tab->set_border_width(2);
+	    my $sw = new Gtk2::ScrolledWindow;
+	    $sw->set_policy('automatic','automatic');
+	    $sw->add_with_viewport($tab);
+	    $frame->add($sw);
+	    my $row = 0;
+	    foreach (qw(Type Encoding Version Name GenericName Comment
+			Icon Hidden OnlyShowIn NotShowIn TryExec Exec
+			Path Terminal MimeType Categories StartupNotify
+			StartupWMClass URL)) {
+		next unless exists $e{$_};
+		my $lab = new Gtk2::Label("$_=");
+		$lab->set_justify('right');
+		$lab->set_alignment(1.0,0.5);
+		my $ent = new Gtk2::Entry;
+		$ent->append_text($e{$_});
+		$tab->attach($lab,0,1,$row,$row+1,['fill'],['fill'],0,0);
+		$tab->attach($ent,1,2,$row,$row+1,['fill','expand'],['fill'],0,0);
+		$row += 1;
+		delete $e{$_};
+	    }
+	    foreach (sort keys %e) {
+		my $lab = new Gtk2::Label("$_=");
+		$lab->set_justify('right');
+		$lab->set_alignment(1.0,0.5);
+		my $ent = new Gtk2::Entry;
+		$ent->append_text($e{$_});
+		$tab->attach($lab,0,1,$row,$row+1,['fill'],['fill'],0,0);
+		$tab->attach($ent,1,2,$row,$row+1,['fill','expand'],['fill'],0,0);
+		$row += 1;
+	    }
+	    $tab->resize($row,2);
+	}
+	$frame = new Gtk2::Frame('Page 3');
+	$book->append_page($frame,'Page 3');
+	$bbox->set_spacing_default(0);
+	$bbox->set_layout_default('end');
+	$vbox->pack_start($book,TRUE,TRUE,0);
+	$vbox->pack_start($bbox,FALSE,TRUE,0);
+	my $button;
+	$button = Gtk2::Button->new_from_stock('gtk-cancel');
+	$button->set_border_width(5);
+	$bbox->pack_end($button,FALSE,FALSE,0);
+	$button->show_all;
+	$button = Gtk2::Button->new_from_stock('gtk-ok');
+	$button->set_border_width(5);
+	$bbox->pack_end($button,FALSE,FALSE,0);
+	$button->show_all;
+	$bbox->show_all;
+	$vbox->show_all;
+    }
+    $window->show_all;
+    $window->show;
 }
 
 

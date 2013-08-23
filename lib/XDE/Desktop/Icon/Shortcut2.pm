@@ -81,11 +81,6 @@ sub click {
     return shift->launch(@_);
 }
 
-sub props {
-    my $self = shift;
-    # TODO: finish this...
-}
-
 1;
 
 =back

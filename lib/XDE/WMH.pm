@@ -41,7 +41,7 @@ sub get_WIN_SUPPORTING_WM_CHECK {
 }
 
 sub event_handler_PropertyNotify_WIN_SUPPORTING_WM_CHECK {
-    shift->get_WIN_SUPPORING_WM_CHECK;
+    shift->get_WIN_SUPPORTING_WM_CHECK;
 }
 
 sub get_WIN_PROTOCOLS {
@@ -210,6 +210,10 @@ use constant {
     _WIN_TRAY_MINIMIZED	    => 1,
     _WIN_TRAY_EXCLUSIVE	    => 2,
 };
+
+sub get_ICEWM_TRAY {
+    return $_[0]->getWMPropertyInt($_[1],'_ICEWM_TRAY');
+}
 
 sub set_ICEWM_TRAY {
     my ($self,$window,$option,$timestamp) = @_;

@@ -9,14 +9,26 @@ sub GetProperty {
     $win = $X->root unless $win;
     my $atom = $X->atom($prop);
     $type = 0 unless $type;
-    my ($data,$val,$after,$format);
-    ($val,$type,$format,$after) =
-	$X->GetProperty($win, $atom, $type, 0, 1);
-    if ($val) {
-	$data = $val;
-	if ($after) {
-	    ($val) = $X->GetProperty($win, $atom, $type, 1, (($after+3)>>2));
-	    $data .= $val;
+    my ($data,$val,$after,$format,$error);
+    $error = $X->robust_req(GetProperty=>$win,$atom,$type,0,1);
+    if (ref $error eq 'ARRAY') {
+	($val,$type,$format,$after) = @$error;
+	if ($val) {
+	    if ($after) {
+		my $part = $val;
+		$error = $X->robust_req(GetProperty=>$win, $atom, $type, 1, (($after+3)>>2));
+		if (ref $error eq 'ARRAY') {
+		    ($val) = @$error;
+		    $data = $part.$val;
+		} else {
+		    warn sprintf "Could not get property %s for window 0x%x", $prop, $win;
+		}
+	    } else {
+		$data = $val;
+	    }
+	} else {
+	    warn sprintf "Could not get property %s for window 0x%x", $prop, $win
+		if $self->{ops}{verbose};
 	}
     } else {
 	warn sprintf "Could not get property %s for window 0x%x", $prop, $win;
@@ -209,11 +221,48 @@ use constant {
 
     WM_HINTS_WITHDRAWNSTATE	    => 0,
     WM_HINTS_NORMALSTATE	    => 1,
+    WM_HINTS_ZOOMSTATE		    => 2,
     WM_HINTS_ICONICSTATE	    => 3,
+    WM_HINTS_INACTIVESTATE	    => 4,
+
+    WM_HINTS_FIELDNAMES		    => [qw(
+	    input
+	    initial_state
+	    icon_pixmap
+	    icon_window
+	    icon_x
+	    icon_y
+	    icon_mask
+	    window_group)],
+
+    WM_HINTS_STATENAMES		    => [qw(
+	    WithdrawnState
+	    NormalState
+	    ZoomState
+	    IconicState
+	    InactiveState)],
 };
 
 sub getWM_HINTS {
-    return $_[0]->getWMPropertyInts($_[1],'WM_HINTS');
+    my ($self,$window) = @_;
+    return $self->getWMPropertyDecode($window,'WM_HINTS',sub{
+	    my $data = shift;
+	    my %result = ();
+	    my ($flags,@fields) = unpack('LLLLLllLL',$data);
+	    for(my $i=0;$i<9;$i++) {
+		$result{&WM_HINTS_FIELDNAMES->[$i]} = $fields[$i]
+		    if $flags & (1<<$i);
+	    }
+	    foreach (qw(icon_pixmap icon_window icon_mask window_group)) {
+		$result{$_} = 'None' if exists $result{$_} and $result{$_} == 0;
+	    }
+	    $result{initial_state} = &WM_HINTS_STATENAMES->[$result{initial_state}]
+		if exists $result{initial_state} and
+		    defined &WM_HINTS_STATENAMES->[$result{initial_state}];
+#	    $result{input} = $result{input} ? 'True' : 'False'
+#		if exists $result{input};
+	    return \%result;
+	    });
 }
 sub event_handler_PropertyNotifyWM_HINTS {
     my ($self,$e,$X,$v) = @_;
@@ -263,11 +312,26 @@ sub event_handler_PropertyNotifyWM_CLIENT_MACHINE {
 use constant {
     WM_STATE_WITHDRAWNSTATE	=> 0,
     WM_STATE_NORMALSTATE	=> 1,
+    WM_STATE_ZOOMSTATE		=> 2,
     WM_STATE_ICONICSTATE	=> 3,
+    WM_STATE_INACTIVESTATE	=> 4,
+    WM_STATE_STATENAMES		=> [qw(
+	    WithdrawnState
+	    NormalState
+	    ZoomState
+	    IconicState
+	    InactiveState)],
 };
 
 sub getWM_STATE {
-    return $_[0]->getWMPropertyInts($_[1], 'WM_STATE');
+    my ($self,$window) = @_;
+    return $self->getWMPropertyDecode($window,'WM_STATE',sub{
+	    my ($state,$icon) = unpack('LL',shift);
+	    $state = &WM_STATE_STATENAMES->[$state]
+		if exists &WM_STATE_STATENAMES->[$state];
+	    $icon = 'None' unless $icon;
+	    return [$state,$icon];
+	    });
 }
 sub event_handler_PropertyNotifyWM_STATE {
     my ($self,$e,$X,$v) = @_;
@@ -275,7 +339,7 @@ sub event_handler_PropertyNotifyWM_STATE {
 }
 
 sub getWM_COMMAND {
-    return $_[0]->getWMPropertyString($_[1], 'WM_COMMAND');
+    return $_[0]->getWMPropertyStrings($_[1], 'WM_COMMAND');
 }
 sub event_handler_PropertyNotifyWM_COMMAND {
     my ($self,$e,$X,$v) = @_;
