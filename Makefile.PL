@@ -1,10 +1,14 @@
 use ExtUtils::MakeMaker;
 WriteMakefile(
-	NAME => 'xdg-tools',
+	NAME => 'xde-tools',
 	VERSION => '0.01',
 	EXE_FILES => [qw(
 		xde-autostart
 		xde-chooser
+		xde-clock
+		xde-desktop
+		xde-desktop2
+		xde-dock
 		xde-fluxbox
 		xde-icon
 		xde-init
@@ -14,8 +18,9 @@ WriteMakefile(
 		xde-menu
 		xde-menugen
 		xde-pager
+		xde-panel
+		xde-run
 		xde-session
-		xde-session.conf.pod
 		xde-session-ctrl
 		xde-session-edit
 		xde-session-logout
@@ -32,14 +37,30 @@ WriteMakefile(
 		xde-xset
 	)],
 	PREREQ_PM => {
-		'Getopt::Long' => 0,
-		'Encode' => 0,
-		'I18N::Langinfo' => 0,
-		'POSIX' => 0,
-		'Glib' => 0,
-		'Gtk2' => 0,
-		'Net::DBus' => 0,
-		'Net::DBus::GLib' => 0,
+		'Carp' => 0,			# perl
+		'Encode' => 0,			# perl
+		'Fcntl' => 0,			# perl
+		'File::Path' => 0,		# perl
+		'File::stat' => 0,		# perl
+		'File::Which' => 0,		# perl-file-which
+		'Getopt::Long' => 0,		# perl
+		'Glib' => 0,			# glib-perl
+		'Gnome2::VFS' => 0,		# gnome-vfs-perl
+		'Gtk2' => 0,			# gtk2-perl
+		'I18N::Langinfo' => 0,		# perl
+		'IO::Select' => 0,		# perl
+		'Linux::Inotify2' => 0,		# perl-linux-inotify2
+		'Net::DBus' => 0,		# perl-dbus-git
+		'Net::DBus::GLib' => 0,		# perl-net-dbus-glib
+		'POSIX' => 0,			# perl
+		'Time::gmtime' => 0,		# perl
+		'Time::HiRes' => 0,		# perl
+		'URI::file' => 0,		# perl-uri
+		'X11::Keysyms' => 0,		# perl-x11-protocol
+		'X11::Protocol' => 0,		# perl-x11-protocol
+						# perl-x11-protocol-other
+						# perl-x11-protocol-more
+		'XML::SAX::ParserFactory' => 0,	# perl-xml-sax
 	},
 );
 

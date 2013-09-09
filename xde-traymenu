@@ -13,7 +13,7 @@ BEGIN {
 	$here = "/$here" if $here;
 	$here = "$cwd$here";
     }
-    unshift @INC, "$here/lib" unless $here eq '/usr/bin';
+    unshift @INC, "$here/lib" unless $here =~ m{^/usr/bin};
 }
 
 =head1 NAME
@@ -48,7 +48,7 @@ if ($here =~ s{^\.}{}) {
     $here = "/$here" if $here;
     $here = "$cwd$here";
 }
-unless ($here eq '/usr/bin') {
+unless ($here =~ m{^/usr/bin}) {
     %OVERRIDES = (
 	HERE               => "$here",
 	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
@@ -61,7 +61,7 @@ unless ($here eq '/usr/bin') {
 
 Gtk2::Rc->set_default_files("$ENV{HOME}/.gtkrc-2.0.xde");
 
-#if ($here ne '/usr/bin') {
+#if ($here !~ m{^/usr/bin}) {
 #	Gtk2::Rc->set_default_files("$here/themes/Unexicon/gtk-2.0/gtkrc", "$here/gtkrc-2.0");
 #} else {
 #	Gtk2::Rc->set_default_files("$ENV{HOME}/.gtkrc-2.0.mine");

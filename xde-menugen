@@ -13,7 +13,7 @@ BEGIN {
 	$here = "/$here" if $here;
 	$here = "$cwd$here";
     }
-    unshift @INC, "$here/lib" unless $here eq '/usr/bin';
+    unshift @INC, "$here/lib" unless $here =~ m{^/usr/bin};
 }
 
 =head1 NAME
@@ -57,7 +57,7 @@ if ($here =~ s{^\.}{}) {
     $here = "/$here" if $here;
     $here = "$cwd$here";
 }
-unless ($here eq '/usr/bin') {
+unless ($here =~ m{^/usr/bin}) {
     %OVERRIDES = (
 	HERE               => "$here",
 	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",

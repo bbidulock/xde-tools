@@ -25,7 +25,7 @@ if ($here =~ s{^\.}{}) {
     $here = "/$here" if $here;
     $here = "$cwd$here";
 }
-unless ($here eq '/usr/bin') {
+unless ($here =~ m{^/usr/bin}) {
     %OVERRIDES = (
 	HERE               => "$here",
 	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
