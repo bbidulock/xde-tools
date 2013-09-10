@@ -3,6 +3,26 @@ use base qw(XDE::WMH XDE::EWMH);
 use strict;
 use warnings;
 
+=head1 NAME
+
+XDE::Actions -- provides methods for controlling window manager behaviour.
+
+=head1 DESCRIPTION
+
+Provides a modules with methods that can be used to control a window manager.
+
+=head1 METHODS
+
+This module provides the following methods:
+
+=over
+
+=cut
+
+=item $ewmh->B<setup>
+
+=cut
+
 sub setup {
     my $self = shift;
     {
@@ -54,6 +74,25 @@ sub setup {
     }
 }
 
+=back
+
+=head2 Viewport Actions
+
+The following methods provide control over the viewport.  These methods
+have no effect unless the virtual desktop is larger than the screen.
+
+=over
+
+=cut
+
+=item $ewmh->B<ViewportLast>(I<$time>) => $status
+
+Move the viewport to the last position if defined.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+=cut
+
 sub ViewportLast {
     my ($self,$time) = @_;
     $time = 0 unless $time;
@@ -68,6 +107,16 @@ sub ViewportLast {
 	}
     }
 }
+
+=item $ewmh->B<ViewportRight>(I<$time>,I<$incr>) => $status
+
+Move the viewport to the right by C<$incr> pixels.  The default
+C<$incr> is 5.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+=cut
+
 sub ViewportRight {
     my ($self,$time,$incr) = @_;
     $time = 0 unless $time;
@@ -89,6 +138,16 @@ sub ViewportRight {
 	}
     }
 }
+
+=item $ewmh->B<ViewportLeft>(I<$time>,I<$incr>) => $status
+
+Move the viewport to the left by C<$incr> pixels.  The default
+C<$incr> is 5.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+=cut
+
 sub ViewportLeft {
     my ($self,$time,$incr) = @_;
     $time = 0 unless $time;
@@ -110,6 +169,16 @@ sub ViewportLeft {
 	}
     }
 }
+
+=item $ewmh->B<ViewportUp>(I<$time>,I<$incr>) => $status
+
+Move the viewport up by C<$incr> pixels.  The default C<$incr>
+is 5.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+=cut
+
 sub ViewportUp {
     my ($self,$time,$incr) = @_;
     $time = 0 unless $time;
@@ -131,6 +200,16 @@ sub ViewportUp {
 	}
     }
 }
+
+=item $ewmh->B<ViewportDown>(I<$time>,I<$incr>) => $status
+
+Move the viewport down by C<$incr> pixels.  The default
+C<$incr> is 5.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+=cut
+
 sub ViewportDown {
     my ($self,$time,$incr) = @_;
     $time = 0 unless $time;
@@ -152,6 +231,27 @@ sub ViewportDown {
 	}
     }
 }
+
+=back
+
+=head2 Work Area Actions
+
+The following methods control the work area within the desktop at which
+the viewport is positioned.  These methods have no effect unless the
+virtual desktop is larger than the screen.
+
+=over
+
+=cut
+
+=item $ewmh->B<WorkareaLast>(I<$time>) => $status
+
+Move the viewport to the last viewed viewport if defined.
+This uses _NET_DESKTOP_VIEWPORT or _WIN_AREA, whichever is available.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+=cut
 
 sub WorkareaLast {
     my ($self,$time) = @_;
@@ -182,6 +282,18 @@ sub WorkareaLast {
 	}
     }
 }
+
+=item $ewmh->B<WorkareaNext>(I<$time>,I<$incr>,I<$wrap>) => $status
+
+Move the viewport to the work area C<$incr> steps next (left to
+right, top to bottom).  When C<$wrap> is true, wrap to the first work
+area from the last.  This uses _NET_DESKTOP_VIEWPORT or _WIN_AREA,
+whichever is available.  The default C<$incr> is 1.  The default
+C<$wrap> is true.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+=cut
 
 sub WorkareaNext {
     my ($self,$time,$incr,$wrap) = @_;
@@ -237,6 +349,18 @@ sub WorkareaNext {
     }
 }
 
+=item $ewmh->B<WorkareaPrev>(I<$time>,I<$incr>,I<$wrap>) => $status
+
+Move the viewport to the work area C<$incr> steps previous (left to
+right, top to bottom).  When C<$wrap> is true, wrap to the last work
+area from the first.  This uses _NET_DESKTOP_VIEWPORT or _WIN_AREA,
+whichever is available.  The default C<$incr> is 1.  The default
+C<$wrap> is true.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+=cut
+
 sub WorkareaPrev {
     my ($self,$time,$incr,$wrap) = @_;
     $time = 0 unless $time;
@@ -290,6 +414,19 @@ sub WorkareaPrev {
     }
 }
 
+=item $ewmh->B<WorkareaRight>(I<$time>,I<$incr>,I<$wrap>) => $status
+
+Move the viewport to the area C<$incr> steps right of the current
+area (if such an area exists).  When C<$wrap> is true, wrap to the left
+upon passing the rightmost workarea.  The default C<$incr> is 1.
+The default C<$wrap> is false.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+This uses _NET_DESKTOP_VIEWPORT or _WIN_AREA, whichever is available.
+
+=cut
+
 sub WorkareaRight {
     my ($self,$time,$incr,$wrap) = @_;
     $time = 0 unless $time;
@@ -338,6 +475,19 @@ sub WorkareaRight {
 	}
     }
 }
+
+=item $ewmh->B<WorkareaLeft>(I<$time>,I<$incr>,I<$wrap>) => $status
+
+Move the viewport to the area C<$incr> steps left of the current
+area (if such an area exists).  When C<$wrap> is true, wrap to the rigth
+upon passing the leftmost workarea.  The default C<$incr> is 1.
+The default C<$wrap> is false.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+This uses _NET_DESKTOP_VIEWPORT or _WIN_AREA, whichever is available.
+
+=cut
 
 sub WorkareaLeft {
     my ($self,$time,$incr,$wrap) = @_;
@@ -388,6 +538,19 @@ sub WorkareaLeft {
     }
 }
 
+=item $ewmh->B<WorkareaUp>(I<$time>,I<$incr>,I<$wrap>) => $status
+
+Move the viewport to the area C<$incr> stops above the current area
+(if such an area exists).  When C<$wrap> is true, wrap to the bottom
+upon passing the uppermost workarea.  The default C<$incr> is 1.
+The default C<$wrap> is false.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+This uses _NET_DESKTOP_VIEWPORT or _WIN_AREA, whichever is available.
+
+=cut
+
 sub WorkareaUp {
     my ($self,$time,$incr,$wrap) = @_;
     $time = 0 unless $time;
@@ -421,6 +584,19 @@ sub WorkareaUp {
 	}
     }
 }
+
+=item $ewmh->B<WorkareaDown>(I<$time>,I<$incr>,I<$wrap>) => $status
+
+Move the viewport to the area C<$incr> steps below the current area
+(if such an area exists).  When C<$wrap> is true, wrap to the top upon
+passing the bottommost workarea.  The default C<$incr> is 1.
+The default C<$wrap> is false.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+This uses _NET_DESKTOP_VIEWPORT or _WIN_AREA, whichever is available.
+
+=cut
 
 sub WorkareaDown {
     my ($self,$time,$incr,$wrap) = @_;
@@ -456,6 +632,25 @@ sub WorkareaDown {
     }
 }
 
+=back
+
+=head2 Desktop Actions
+
+The following methods control the desktop.  These functions are normally
+supported by all EWMH/WMH compliant window managers.
+
+=over
+
+=cut
+
+=item $ewmh->B<DesktopLast>(I<$time>) => $status
+
+Move the desktop to the last viewed desktop if defined.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+=cut
+
 sub DesktopLast {
     my($self,$time) = @_;
     $time = 0 unless $time;
@@ -470,6 +665,19 @@ sub DesktopLast {
     }
     return 0;
 }
+
+=item $ewmh->B<DesktopNext>(I<$time>,I<$incr>,I<$wrap>) => $status
+
+Move the desktop to the next desktop, wrapping from the last desktop to
+the first desktop.
+When C<$wrap> is true, wrap to the first desktop from the last when
+necessary.
+The default C<$incr> is 1.
+The default C<$wrap> is false.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+=cut
 
 sub DesktopNext {
     my($self,$time,$incr,$wrap) = @_;
@@ -490,6 +698,19 @@ sub DesktopNext {
     return 0;
 }
 
+=item $ewmh->B<DesktopPrev>(I<$time>,I<$incr>,I<$wrap>) => $status
+
+Move the desktop to the previous desktop, wrapping from the first
+desktop to the last desktop.
+When C<$wrap> is true, wrap to the last desktop from the first when
+necessary.
+The default C<$incr> is 1.
+The default C<$wrap> is false.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+=cut
+
 sub DesktopPrev {
     my($self,$time,$incr,$wrap) = @_;
     $time = 0 unless $time;
@@ -508,6 +729,13 @@ sub DesktopPrev {
     }
     return 0;
 }
+
+=item $ewmh->B<DesktopMove>(I<$time>,I<$cinc>,I<$rinc>,I<$wrap>) => $status
+
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+=cut
 
 sub DesktopMove {
     my ($self,$time,$cinc,$rinc,$wrap) = @_;
@@ -631,12 +859,36 @@ sub DesktopMove {
 
 }
 
+=item $ewmh->B<DesktopUp>(I<$time>,I<$incr>,I<$wrap>) => $status
+
+Move the desktop to the desktop above the current desktop, if such a
+desktop exists.
+When C<$wrap> is true, wrap to the bottom when necessary.
+The default C<$incr> is 1.
+The default C<$wrap> is false.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+=cut
+
 sub DesktopUp {
     my($self,$time,$incr,$wrap) = @_;
     $time = 0 unless $time;
     $incr = 1 unless $incr and $incr > 0;
     return $self->DesktopMove($time,0,-$incr,$wrap);
 }
+
+=item $ewmh->B<DesktopDown>(I<$time>,I<$incr>,I<$wrap>) => $status
+
+Move the desktop to the desktop below the current desktop, if such a
+desktop exists.
+When C<$wrap> is true, wrap to the top when necessary.
+The default C<$incr> is 1.
+The default C<$wrap> is false.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+=cut
 
 sub DesktopDown {
     my($self,$time,$incr,$wrap) = @_;
@@ -645,12 +897,36 @@ sub DesktopDown {
     return $self->DesktopMove($time,0,$incr,$wrap);
 }
 
+=item $ewmh->B<DesktopLeft>(I<$time>,I<$incr>,I<$wrap>) => $status
+
+Move the desktop to the desktop to the left of the current desktop, if
+such a desktop exists.
+When C<$wrap> is true, wrap to the right when necessary.
+The default C<$incr> is 1.
+The default C<$wrap> is false.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+=cut
+
 sub DesktopLeft {
     my($self,$time,$incr,$wrap) = @_;
     $time = 0 unless $time;
     $incr = 1 unless $incr and $incr > 0;
     return $self->DesktopMove($time,-$incr,0,$wrap);
 }
+
+=item $ewmh->B<DesktopRight>(I<$time>,I<$incr>,I<$wrap>) => $status
+
+Move the desktop to the desktop to the right of the current desktop, if
+such a desktop exists.
+When C<$wrap> is true, wrap to the left when necessary.
+The default C<$incr> is 1.
+The default C<$wrap> is false.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+=cut
 
 sub DesktopRight {
     my($self,$time,$incr,$wrap) = @_;
@@ -659,12 +935,36 @@ sub DesktopRight {
     return $self->DesktopMove($time,$incr,0,$wrap);
 }
 
+=item $ewmh->B<DesktopUpLeft>(I<$time>,I<$incr>,I<$wrap>) => $status
+
+Move the desktop to the desktop above and to the left of the current
+desktop, if such a desktop exists.
+When C<$wrap> is true, wrap to the bottom right when necessary.
+The default C<$incr> is 1.
+The default C<$wrap> is false.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+=cut
+
 sub DesktopUpLeft {
     my($self,$time,$incr,$wrap) = @_;
     $time = 0 unless $time;
     $incr = 1 unless $incr and $incr > 0;
     return $self->DesktopMove($time,-$incr,-$incr,$wrap);
 }
+
+=item $ewmh->B<DesktopUpRight>(I<$time>,I<$incr>,I<$wrap>) => $status
+
+Move the desktop to the desktop above and to the right of the current
+desktop, if such a desktop exists.
+When C<$wrap> is true, wrap to the bottom left when necessary.
+The default C<$incr> is 1.
+The default C<$wrap> is false.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+=cut
 
 sub DesktopUpRight {
     my($self,$time,$incr,$wrap) = @_;
@@ -673,12 +973,36 @@ sub DesktopUpRight {
     return $self->DesktopMove($time,$incr,-$incr,$wrap);
 }
 
+=item $ewmh->B<DesktopDownLeft>(I<$time>,I<$incr>,I<$wrap>) => $status
+
+Move the desktop to the desktop below and to the left of the current
+desktop, if such a desktop exists.
+When C<$wrap> is true, wrap to the top right when necessary.
+The default C<$incr> is 1.
+The default C<$wrap> is false.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+=cut
+
 sub DesktopDownLeft {
     my($self,$time,$incr,$wrap) = @_;
     $time = 0 unless $time;
     $incr = 1 unless $incr and $incr > 0;
     return $self->DesktopMove($time,-$incr,$incr,$wrap);
 }
+
+=item $ewmh->B<DesktopDownRight>(I<$time>,I<$incr>,I<$wrap>) => $status
+
+Move the desktop to the desktop below and to the right of the current
+desktop, if such a desktop exists.
+When C<$wrap> is true, wrap to the top left when necessary.
+The default C<$incr> is 1.
+The default C<$wrap> is false.
+C<$time> is the X-Server time of the keystroke or button press
+initiating the action, or 0 to indicate current time.
+
+=cut
 
 sub DesktopDownRight {
     my($self,$time,$incr,$wrap) = @_;
@@ -690,131 +1014,6 @@ sub DesktopDownRight {
 1;
 
 __END__
-
-=head1 NAME
-
-XDE::Actions -- provides methods for controlling window manager behaviour.
-
-=head1 DESCRIPTION
-
-Provides a modules with methods that can be used to control a window manager.
-
-=head1 METHODS
-
-This module provides the following methods:
-
-=over
-
-=item $ewmh->B<ViewportRight>($time,$incr)
-
-Move the viewport to the right by C<$incr> pixels.  The default
-C<$incr> is 5.
-
-=item $ewmh->B<ViewportLeft>($time,$incr)
-
-Move the viewport to the left by C<$incr> pixels.  The default
-C<$incr> is 5.
-
-=item $ewmh->B<ViewportUp>($time,$incr)
-
-Move the viewport up by C<$incr> pixels.  The default C<$incr>
-is 5.
-
-=item $ewmh->B<ViewportDown>($time,$incr)
-
-Move the viewport down by C<$incr> pixels.  The default
-C<$incr> is 5.
-
-=item $ewmh->B<WorkareaLast>($time)
-
-Move the viewport to the last viewed viewport if defined.
-This uses _NET_DESKTOP_VIEWPORT or _WIN_AREA, whichever is available.
-
-=item $ewmh->B<WorkareaNext>($time,$incr,$wrap)
-
-Move the viewport to the work area C<$incr> steps next (left to
-right, top to bottom).  When C<$wrap> is true, wrap to the first work
-area from the last.  This uses _NET_DESKTOP_VIEWPORT or _WIN_AREA,
-whichever is available.  The default C<$incr> is 1.  The default
-C<$wrap> is true.
-
-=item $ewmh->B<WorkareaPrev>($time,$incr,$wrap)
-
-Move the viewport to the work area C<$incr> steps previous (left to
-right, top to bottom).  When C<$wrap> is true, wrap to the last work
-area from the first.  This uses _NET_DESKTOP_VIEWPORT or _WIN_AREA,
-whichever is available.  The default C<$incr> is 1.  The default
-C<$wrap> is true.
-
-=item $ewmh->B<WorkareaRight>($time,$incr,$wrap)
-
-Move the viewport to the area C<$incr> steps right of the current
-area (if such an area exists).  When C<$wrap> is true, wrap to the left
-upon passing the rightmost workarea.  The default C<$incr> is 1.
-The default C<$wrap> is false.
-
-This uses _NET_DESKTOP_VIEWPORT or _WIN_AREA, whichever is available.
-
-=item $ewmh->B<WorkareaLeft>($time,$incr,$wrap)
-
-Move the viewport to the area C<$incr> steps left of the current
-area (if such an area exists).  When C<$wrap> is true, wrap to the rigth
-upon passing the leftmost workarea.  The default C<$incr> is 1.
-The default C<$wrap> is false.
-
-This uses _NET_DESKTOP_VIEWPORT or _WIN_AREA, whichever is available.
-
-=item $ewmh->B<WorkareaUp>($time,$incr,$wrap)
-
-Move the viewport to the area C<$incr> stops above the current area
-(if such an area exists).  When C<$wrap> is true, wrap to the bottom
-upon passing the uppermost workarea.  The default C<$incr> is 1.
-The default C<$wrap> is false.
-
-This uses _NET_DESKTOP_VIEWPORT or _WIN_AREA, whichever is available.
-
-=item $ewmh->B<WorkareaDown>($time,$incr,$wrap)
-
-Move the viewport to the area C<$incr> steps below the current area
-(if such an area exists).  When C<$wrap> is true, wrap to the top upon
-passing the bottommost workarea.  The default C<$incr> is 1.
-The default C<$wrap> is false.
-
-This uses _NET_DESKTOP_VIEWPORT or _WIN_AREA, whichever is available.
-
-=item $ewmh->B<DesktopLast>($time)
-
-Move the desktop to the last viewed desktop if defined.
-
-=item $ewmh->B<DesktopNext>(I<$time>,I<$incr>,I<$wrap>)
-
-Move the desktop to the next desktop, wrapping from the last desktop to
-the first desktop.
-
-=item $ewmh->B<DesktopPrev>(I<$time>,I<$incr>,I<$wrap>)
-
-Move the desktop to the previous desktop, wrapping from the first
-desktop to the last desktop.
-
-=item $ewmh->B<DesktopUp>(I<$time>,I<$incr>,$<$wrap>)
-
-Move the desktop to the desktop above the current desktop, if such a
-desktop exists.
-
-=item $ewmh->B<DesktopDown>(I<$time>,I<$incr>,$<$wrap>)
-
-Move the desktop to the desktop below the current desktop, if such a
-desktop exists.
-
-=item $ewmh->B<DesktopLeft>(I<$time>,I<$incr>,$<$wrap>)
-
-Move the desktop to the desktop to the left of the current desktop, if
-such a desktop exists.
-
-=item $ewmh->B<DesktopRight>(I<$time>,I<$incr>,$<$wrap>)
-
-Move the desktop to the desktop to the right of the current desktop, if
-such a desktop exists.
 
 =back
 
@@ -829,7 +1028,3 @@ L<XDE::Context(3pm)>, L<XDE::X11(3pm)>
 =cut
 
 # vim: sw=4 tw=72
-
-
-
-

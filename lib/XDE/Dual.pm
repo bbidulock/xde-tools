@@ -157,8 +157,8 @@ sub main {
 
 Internal event handler used to demultiplex C<PropertyNotify> events.
 This method, when not overridden by the derived class, will call the
-B<event_handler_PropertyNotify$atom> method of the derived class when
-a notification for property C<$atom> arrives.
+B<event_handler_PropertyNotify>I<$atom> method of the derived class when
+a notification for property I<$atom> arrives.
 
 =cut
 
@@ -180,12 +180,12 @@ sub event_handler_PropertyNotify {
     print STDERR "Discarding PropertyNotify event...\n" if $v;
 }
 
-=item $xde->B<event_handler>(I<$e>,I<$X>,I<$v>)
+=item $xde->B<event_handler_ClientMessage>(I<$e>,I<$X>,I<$v>)
 
 Internal event handler use to demultiplex C<ClientMessage> events.  This
 method, when not overridden by the derived class, will call the
-B<event_handler_ClientMessage$type> method of the derived class when a
-client message C<$type> arrives.
+B<event_handler_ClientMessage>I<$type> method of the derived class when a
+client message I<$type> arrives.
 
 =cut
 
@@ -276,6 +276,30 @@ sub error_handler {
 __END__
 
 =back
+
+=head1 USAGE
+
+This package is intended on being used as a base for derived packages.
+Instead of callbacks, this base package delivers events by testing
+whether the implementation class has an appropriate handler method.
+
+The default event handler concatenates C<event_handler_> with the name
+of the event (e.g. C<PropertyNotify>, C<ClientMessage>) and calls the
+corresponding method of the implementation class, if one exists, with
+the arguments C<$e>, C<$X> and C<$v>.  C<$e> is a reference to the event
+hash provided by L<X11::Protocol(3pm)>, C<$X> is a reference to the
+L<X11::Protocol::Connection(3pm)> object, and C<$v> is true when verbose
+messages should be provided; false, otherwise.
+
+A default C<event_handler_PropertyNotify> and
+C<event_handler_ClientMessage> method are provided in the base class.
+These methods deliver to the B<event_handler_PropertyNotify>I<$atom>
+method, and B<event_handler_ClientMessage>I<$type> methods respectively.
+
+So, for example, an implementation package using this package as a base
+may provide a C<event_handler_PropertyNotifyWM_CLASS> method that will
+be called whenever there is a property notification for atom
+C<WM_CLASS>.
 
 =head1 AUTHOR
 

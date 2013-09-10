@@ -121,6 +121,8 @@ use constant {
 
 =head1 METHODS
 
+The following methods are provided:
+
 =over
 
 =item $xde = XDE::Context->B<new>(I<%OVERRIDES>,ops=>\I<%ops>) => blessed HASHREF

@@ -62,6 +62,8 @@ WriteMakefile(
 						# perl-x11-protocol-more
 		'XML::SAX::ParserFactory' => 0,	# perl-xml-sax
 	},
+	# basically strip the pod out of the .pm file and squeeze blank lines
+	PM_FILTER => qq{(sed '/^=[^c]/,/^=cut/d'|cat -s)},
 );
 
 sub MY::postamble {

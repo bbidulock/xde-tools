@@ -9,7 +9,11 @@ use warnings;
 
 XDE::Gtk2 -- a Gtk2 implementation object for an XDE context
 
-=cut
+=head1 DESCRIPTION
+
+Provides a package based on L<XDE::Glib(3pm)> that provides a Gtk2
+implementation object for the XDE context.  This package integrates the
+GTK2 main event loop into an XDE context.
 
 =head1 METHODS
 
@@ -17,10 +21,11 @@ XDE::Gtk2 -- a Gtk2 implementation object for an XDE context
 
 =cut
 
-=item $xde = XDE::Gtk2->new(%OVERRIDES) => blessed HASHREF
+=item $xde = B<new> XDE::Gtk2 I<%OVERRIDES> => blessed HASHREF
 
 Obtains a new B<XDE::Gtk2> object.  For the use of I<%OVERRIDES> see
-L<XDE::Context(3pm)>.
+L<XDE::Context(3pm)>.  This package is based on the L<XDE::Glib(3pm)>
+package and simply calls its C<new> method with all arguments intact.
 
 =cut
 
@@ -28,11 +33,11 @@ sub new {
     return XDE::Glib::new(@_);
 }
 
-=item $xde->init()
+=item $xde->B<init>()
 
-Use this function instead of C<Gtk2->init> to initialize the Gtk2
+Use this function instead of C<Gtk2-E<gt>init> to initialize the Gtk2
 toolkit using the environment from the L<XDE::Context(3pm)> object.
-The client must call C<$xde->setenv()> before calling this method.
+The client must call C<$xde-E<gt>setenv()> before calling this method.
 
 =cut
 
@@ -64,22 +69,9 @@ sub init {
     $theme->signal_connect_swapped(changed=>sub{shift->icon_theme_changed(@_)},$self);
 }
 
-sub get_icon {
-    my ($self,$size,$stock,@choices) = @_;
-    my $theme = Gtk2::IconTheme->get_default;
-    foreach (@choices) {
-	if ($theme->has_icon($_)) {
-	    print STDERR "Found icon $_\n" if $self->{ops}{verbose};
-	    return Gtk2::Image->new_from_icon_name($_,$size);
-	}
-    }
-    print STDERR "Using stock $stock\n" if $self->{ops}{verbose};
-    return Gtk2::Image->new_from_stock($stock,$size);
-}
+=item $xde->B<main>()
 
-=item $xde->main()
-
-Use this function instead of C<Gtk2->main> to run the event loop.
+Use this function instead of C<Gtk2-E<gt>main> to run the event loop.
 
 =cut
 
@@ -91,9 +83,9 @@ sub main {
     return shift @{$self->{retval}};
 }
 
-=item $xde->main_quit($retval)
+=item $xde->B<main_quit>(I<$retval>)
 
-Use this function instead of C<Gtk2->main_quit>.
+Use this function instead of C<Gtk2-E<gt>main_quit>.
 
 =cut
 
@@ -103,21 +95,6 @@ sub main_quit {
     Gtk2->main_quit;
 }
 
-=item $xde->B<icon_theme_changed>(I<$theme>) = Glib event flag
-
-Processes C<changed> signals on the Gtk2::IconTheme.  Not meant to be
-called directly.  The derived module can override this method if it is
-interested in receiving notification of theme changes.
-L<XDE::MenuGen(3pm)> or L<XDE::TrayMenu(3pm)> might want to regenerate
-the menu when the icon theme changes.
-
-=cut
-
-sub icon_theme_changed {
-    my ($self,$theme) = @_;
-    return Gtk2::EVENT_PROPAGATE;
-}
-
 =item $xde->B<get_gtk2rcs>() => HASHREF or (HASHREF, HASHREF)
 
 Search out all Gtk2 themes directories and collect Gtk2 themes into a
@@ -125,10 +102,11 @@ hash reference.  The keys of the hash are the names of the names of the
 theme subdirectory in which the gtk2rc file resided.  Themes follow XDG
 precedence rules for XDG data directories.
 
-Also establishes a hash reference in $xde->{dirs}{gtkrc} that contains
-all of the directories search (whether they existed or not) for use in
-conjunction with L<Linux::Inotify2(3pm)>.  In a list context, both the
-file hash and directory hash are returned.
+Also establishes a hash reference in $xde-E<gt>{dirs}{gtkrc} that contains
+all of the directories searched (whether they existed or not) for use in
+conjunction with L<Linux::Inotify2(3pm)>, (see L<XDE::Notify(3pm)>).  In
+a list context, both the file hash and directory hash references are
+returned.
 
 =cut
 
@@ -154,10 +132,66 @@ sub get_gtk2rcs {
     return \%gtk2rcs;
 }
 
+=item $xde->B<icon_theme_changed>(I<$theme>) = Glib event flag
+
+Processes C<changed> signals on the Gtk2::IconTheme.  Not meant to be
+called directly.  The derived module can override this method if it is
+interested in receiving notification of theme changes.
+L<XDE::MenuGen(3pm)> or L<XDE::TrayMenu(3pm)> might want to regenerate
+the menu when the icon theme changes.
+
+=cut
+
+sub icon_theme_changed {
+    my ($self,$theme) = @_;
+    return Gtk2::EVENT_PROPAGATE;
+}
+
+=item $xde->B<get_icon>(I<$size>,I<$stock>,I<@choices>) => Gtk2::Image
+
+Retrieve a L<Gtk2::Image(3pm)> for a specified icon with size, C<$size>,
+possible names (in order of preference), C<@choices>, and fallback stock
+icon name, C<$stock>.  Returns a L<Gtk2::Image(3pm)> or c<undef> if
+neither an image in C<@choices> nor the C<$stock> icon could be found in
+the icon theme.
+
+=cut
+
+sub get_icon {
+    my ($self,$size,$stock,@choices) = @_;
+    my $theme = Gtk2::IconTheme->get_default;
+    foreach (@choices) {
+	if ($theme->has_icon($_)) {
+	    print STDERR "Found icon $_\n" if $self->{ops}{verbose};
+	    return Gtk2::Image->new_from_icon_name($_,$size);
+	}
+    }
+    print STDERR "Using stock $stock\n" if $self->{ops}{verbose};
+    return Gtk2::Image->new_from_stock($stock,$size);
+}
+
 =back
 
 =cut
 
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
+
+L<XDE::Context(3pm)>,
+L<XDE::Glib(3pm)>,
+L<Linux::Inotify2(3pm)>,
+L<XDE::Notify(3pm)>,
+L<XDE::MenuGen(3pm)>,
+L<XDE::TrayMenu(3pm)>,
+L<Gtk2::Image(3pm)>.
+
+=cut
 
 # vim: sw=4 tw=72 nocin

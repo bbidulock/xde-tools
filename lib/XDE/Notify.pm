@@ -14,7 +14,7 @@ my $X = XDE::Notify->new;
 =head1 DESCRIPTION
 
 XDE::Notify provides a wrapper class for integrating Linux::Inotify2
-operations in an XDE::Context derived class.
+operations in an L<XDE::Context(3pm)> derived class.
 
 =head1 METHODS
 
@@ -33,14 +33,16 @@ sub new {
 =item $N->B<init>($xde) => $N
 
 Initializes the XDE::Notify object.  This sets handlers and initializes
-the Glib::Mainloop watchers for event-loop operation.  Initialization is
-no done automatically, because the owner of this instance might want to
-set other things up before initializing the mainloop.
+the L<Glib::Mainloop(3pm)> watchers for event-loop operation.
+Initialization is no done automatically, because the owner of this
+instance might want to set other things up before initializing the
+mainloop.
 
-C<$xde> is typically an L<XDE::Context> derived object, but can be any
+C<$xde> is typically an L<XDE::Context(3pm)> derived object, but can be any
 object that implements (or not) B<notify_handler> methods.  These
-methods will be called during normal operation of the Linux::Inotify2
-connection and when invoked by Glib::Mainloop.
+methods will be called during normal operation of the
+L<Linux::Inotify2(3pm)> connection and when invoked by
+L<Glib::Mainloop(3pm)>.
 
 =cut
 
@@ -85,7 +87,21 @@ directories.  All of XDG can normally be monitored my monitoring
 F<$HOME/.config>, F<$HOME/.local/share>, F</etc/xdg>, and
 F</usr/share>.
 
+=cut
 
+1;
+
+__END__
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
+
+L<XDE::Context(3pm)>,
+L<Glib::Mainloop(3pm)>,
+L<Linux::Inotify2(3pm)>.
 
 =cut
 
