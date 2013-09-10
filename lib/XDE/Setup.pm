@@ -312,7 +312,7 @@ menus normally place styles in F</usr/share/blackbox/styles> and
 F<$HOME/.blackbox/styles> directories.
 
 B<XDE::Setup> pushes all of this configuration into the user's
-L<$XDG_CONFIG_HOME/blackbox> directory, creating it and populating it
+F<$XDG_CONFIG_HOME/blackbox> directory, creating it and populating it
 when necessary.  Files to populate when creating the directory can be
 found in F<@XDG_DATA_DIRS/blackbox>.
 

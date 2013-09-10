@@ -111,7 +111,7 @@ invoked to provide this function.
 
 The following options are only interrogated and available to L<xde-session(1)>
 when running under L<systemd(8)>.  This is because the program was design to run
-under L<Arch Linux>.  Because it uses stable interfaces, it should also run fine
+under I<Arch Linux>.  Because it uses stable interfaces, it should also run fine
 under Fedora, SuSE and any other systems using L<systemd(8)>.  Power management
 services are provided by the F<org.freedesktop.login1> D-BUS system
 services.

@@ -686,7 +686,9 @@ The window_group field lets the client specify that this window belongs
 to a group of windows. An example is a single client manipulating
 multiple children of the root window.
 
-=head4 Conventions
+=over
+
+=item Conventions
 
 =over
 
@@ -727,7 +729,7 @@ UrgencyHint flag to be set to zero or the window to be withdrawn. The
 user's action can either mitigate the actual condition that made the
 window urgent, or it can merely shut off the alarm.
 
-=head4 Rationale
+=item Rationale
 
 This mechanism is useful for alarm dialog boxes or reminder windows, in
 cases where mapping the window is not enough (e.g., in the presence of
@@ -738,7 +740,7 @@ to its title bar or its icon. Window managers may also take additional
 action for a window that is newly urgent, such as by flashing its icon
 (if the window is iconic) or by raising it to the top of the stack.
 
-=head3
+=back
 
 =over
 
@@ -1178,7 +1180,9 @@ WM_STATE icon may be a window that the window manager has supplied and
 that contains the client's icon pixmap, or it may be an ancestor of the
 client's icon window.
 
-=head4 Changing Window State
+=over
+
+=item Changing Window State
 
 From the client's point of view, the window manager will regard each of
 the client's top-level windows as being in one of three states, whose
@@ -1258,7 +1262,7 @@ Conversely, if a reparenting window manager renders the client's window
 unviewable by unmapping an ancestor, the client's window is by
 definition in the Iconic state and must also be unmapped.
 
-=head4 Advice to implementors
+=item Advice to implementors
 
 Clients can select for StructureNotify on their top-level windows to
 track transitions between Normal and Iconic state.  Receipt of a
@@ -1266,7 +1270,7 @@ MapNotify event will indicate a transition to the Normal state, and
 receipt of an UnmapNotify event will indicate a transition to the Iconic
 state.
 
-=head3
+=back
 
 When changing state of the window to Withdrawn, the client must (in
 addition to unmapping the window), send a synthetic UnmapNotify event by
@@ -1280,14 +1284,16 @@ using a SendEvent request with the following arguments:
  window = the window itself
  from-configure = false
 
-=head4 Rationale
+=over
+
+=item Rationale
 
 The reason for requiring the client to send a synthetic UnmapNotify
 event is to ensure that the window manager gets some notification
 of the client's desire to change state, even though the window may
 already be unmapped when the desire is expressed.
 
-=head4 Advice to implementors
+=item Advice to implementors
 
 For compatibility with obsolete clients, window managers should trigger
 the transition to the Withdrawn state on the real UnmapNotify rather
@@ -1295,7 +1301,7 @@ than waiting for the synthetic one. They should also trigger the
 transition if they receive a synthetic UnmapNotify on a window for which
 they have not yet received a real UnmapNotify.
 
-=head3
+=back
 
 When a client withdraws a window, the window manager will then update or
 remove the WM_STATE property as described in WM_STATE Property. Clients
@@ -1322,14 +1328,16 @@ Other values of data[0] are reserved for future extensions to these
 conventions.  The parameters of the SendEvent requires should be those
 described for the synthetic UnmapNotify event.
 
-=head4 Rationale
+=over
+
+=item Rationale
 
 The format of this ClientMessage event does not match the format of
 ClientMessages in ClientMessage Events. This is because they are sent by
 the window manager to clients, and this message is sent by clients to
 the window manager.
 
-=head4 Advice to implementors
+=item Advice to implementors
 
 Clients can also select for VisibilityChange events on their top-level
 or icon windows. They will then receive a VisibilityNotify
@@ -1344,6 +1352,8 @@ manager may make transients for this window inaccessible.  Clients
 should not rely on transient windows being available to the user when
 the transient owner window is not in the Normal state.  When withdrawing
 a window, clients are advised to withdraw transients for the window.
+
+=back
 
 =over
 
@@ -1800,7 +1810,9 @@ required.
 The general rule is that coordinates in real ConfigureNotify events are
 in the parent's space; in synthetic events, they are in the root space.
 
-=head4 Advice to implementors
+=over
+
+=item Advice to implementors
 
 Clients cannot distinguish between the case where a top-level window is
 resized and moved from the case where the window is resized but not
@@ -1819,7 +1831,7 @@ deduce the top-level window's position from the difference between the
 Only when the position is unknown does the client need to use the
 TranslateCoordinates request to find the position of a top-level window.
 
-=head2
+=back
 
 Clients should be aware that their borders may not be visible. Window
 managers are free to use reparenting techniques to decorate client's
@@ -1831,24 +1843,28 @@ window's border being visible or use it to display any critical
 information.  Other window managers will allow the top-level windows
 border to be visible.
 
-=head4 Convention
+=over
+
+=item Convention
 
 Clients should set the desired value of the border-width attribute on
 all ConfiureWindow requests to avoid a race condition.
 
-=head2
+=back
 
 Clients that change their position in the stack must be aware that they
 may have been reparented, which means that windows that used to be
 siblings no longer are.  Using a nonsibling as the sibling parameter on
 a ConfigureWindow request will cause an error.
 
-=head4 Convention
+=over
+
+=item Convention
 
 Clients that use a ConfigureWindow request to request a change in their
 position in the stack should do so using None in the sibling field.
 
-=head2
+=back
 
 Clients that must position themselves in the stack relative to some
 window that was originally a sibling must do the ConfigureWindow request

@@ -535,7 +535,7 @@ Search out all window manager style directories and collect WM styles
 into a hash reference.  The keys of the hash are the names of the style
 subdirectory (or file) in which the WM-specific file resides.  Styles do
 not fully follow XDG precedence rules, but follow WM-specific rules.
-L</set_session> should be called before this function if it is to be
+B<set_session> should be called before this function if it is to be
 called at all.
 
 Also establishes a hash refernece in $xdg->{dirs}{style} that contains

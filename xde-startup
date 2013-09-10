@@ -298,6 +298,8 @@ the appropriate autostart files.
 
 =back
 
+=head1 ENVIRONMENT
+
 =head1 HISTORY
 
 I wrote B<xde-startup> because of deficiencies in L<fbautostart(1)> and

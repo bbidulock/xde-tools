@@ -293,6 +293,7 @@ PTitleBack).  I'm not sure how useful this is.
 # specials
 
 =item $keys->B<get_WINDOWMAKER_WM_PROTOCOLS>()
+
 =item $keys->B<event_handler_PropertyNotify_WINDOWMAKER_WM_PROTOCOLS>
 
 These include _WINDOWMAKER_MENU, _WINDOWMAKER_WM_FUNCTION, and
@@ -305,54 +306,70 @@ There is also _GNUSTEP_TITLEBAR_STATE, _GNUSTEP_WM_ATTR,
 _GNUSTEP_WM_FUNCTION, and _GNUSTEP_WM_MINIATURIZE_WINDOW.
 
 =item $keys->B<get_WIN_AREA>()
+
 =item $keys->B<event_handler_PropertyNotify_WIN_AREA>
 
 =item $keys->B<get_WIN_AREA_COUNT>()
+
 =item $keys->B<event_handler_PropertyNotify_WIN_AREA_COUNT>
 
 =item $keys->B<get_WIN_CLIENT_LIST>()
+
 =item $keys->B<event_handler_PropertyNotify_WIN_CLIENT_LIST>
 
 =item $keys->B<get_WIN_DESKTOP_BUTTON_PROXY>()
+
 =item $keys->B<event_handler_PropertyNotify_WIN_DESKTOP_BUTTON_PROXY>
 
 There are two window managers that provide a desktop button proxy: IceWM
 and FVWM.
 
 =item $keys->B<get_WIN_PROTOCOLS>()
+
 =item $keys->B<event_handler_PropertyNotify_WIN_PROTOCOLS>
 
 =item $keys->B<get_WIN_SUPPORTING_WM_CHECK>()
+
 =item $keys->B<event_handler_PropertyNotify_WIN_SUPPORTING_WM_CHECK>
 
 =item $keys->B<get_WIN_WORKAREA>()
+
 =item $keys->B<event_handler_PropertyNotify_WIN_WORKAREA>
 
 =item $keys->B<get_WIN_WORKSPACE>()
+
 =item $keys->B<event_handler_PropertyNotify_WIN_WORKSPACE>
 
 =item $keys->B<get_WIN_WORKSPACE_COUNT>()
+
 =item $keys->B<event_handler_PropertyNotify_WIN_WORKSPACE_COUNT>
 
 =item $keys->B<get_WIN_WORKSPACE_NAMES>()
+
 =item $keys->B<event_handler_PropertyNotify_WIN_WORKSPACE_NAMES>
 
 =item $keys->B<get_NET_ACTIVE_WINDOW>()
+
 =item $keys->B<event_handler_PropertyNotify_NET_ACTIVE_WINDOW>
 
 =item $keys->B<get_NET_CLIENT_LIST>()
+
 =item $keys->B<event_handler_PropertyNotify_NET_CLIENT_LIST>
 
 =item $keys->B<get_NET_CLIENT_LIST_STACKING>()
+
 =item $keys->B<event_handler_PropertyNotify_NET_CLIENT_LIST_STACKING>
 
 =item $keys->B<get_NET_CURRENT_DESKTOP>()
+
 =item $keys->B<event_handler_PropertyNotify_NET_CURRENT_DESKTOP>
 
 =item $keys->B<get_NET_DESKTOP_GEOMETRY>()
+
 =item $keys->B<event_handler_PropertyNotify_NET_DESKTOP_GEOMETRY>
 
 =item $keys->B<get_NET_DESKTOP_LAYOUT>()
+
 =item $keys->B<event_handler_PropertyNotify_NET_DESKTOP_LAYOUT>
 
 _NET_DESKTOP_LAYOUT is 3 or 4 integers: C<orientation>, C<rows>,
@@ -366,36 +383,45 @@ bottomright(1) or bottomleft(3).
 Supported by OpenBox, PeK,
 
 =item $keys->B<get_NET_DESKTOP_NAMES>()
+
 =item $keys->B<event_handler_PropertyNotify_NET_DESKTOP_NAMES>
 
 =item $keys->B<get_NET_DESKTOP_PIXMAPS>()
+
 =item $keys->B<event_handler_PropertyNotify_NET_DESKTOP_PIXMAPS>
 
 =item $keys->B<get_NET_DESKTOP_VIEWPORT>()
+
 =item $keys->B<event_handler_PropertyNotify_NET_DESKTOP_VIEWPORT>
 
 =item $keys->B<get_NET_NUMBER_OF_DESKTOPS>()
+
 =item $keys->B<event_handler_PropertyNotify_NET_NUMBER_OF_DESKTOPS>
 
 =item $keys->B<get_NET_SHOWING_DESKTOP>()
+
 =item $keys->B<event_handler_PropertyNotify_NET_SHOWING_DESKTOP>
 
 Note supported by all XDE window managers.  The following support it:
 WindowMaker, OpenBox, JWM.
 
 =item $keys->B<get_NET_SUPPORTED>()
+
 =item $keys->B<event_handler_PropertyNotify_NET_SUPPORTED>
 
 =item $keys->B<get_NET_SUPPORTING_WM_CHECK>()
+
 =item $keys->B<event_handler_PropertyNotify_NET_SUPPORTING_WM_CHECK>
 
 =item $keys->B<get_NET_WM_PID>()
+
 =item $keys->B<event_handler_PropertyNotify_NET_WM_PID>
 
 Note that PeK sets _NET_WM_PID on the root window while most others set
 it on the check window.
 
 =item $keys->B<get_NET_WORKAREA>()
+
 =item $keys->B<event_handler_PropertyNotify_NET_WORKAREA>
 
 =back

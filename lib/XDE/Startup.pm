@@ -304,7 +304,7 @@ the next step.
 When the C<autostart> option is false, this entire section is skipped.
 
 The XDE::Startup module will search out all of the F<.desktop> files in
-XDG autostart directories according to the L<XDG Autostart
+XDG autostart directories according to the I<XDG Autostart
 Specification>.
 
 When the C<pause> option is specified and non-zero, the module waits for

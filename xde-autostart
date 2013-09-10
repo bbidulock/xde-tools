@@ -227,7 +227,7 @@ xde-autostart - autostart applications for an XDE session
 
 B<Xde-autostart> starts performs the startup functions for a new XDE
 session, launches a window manager, and optionally starts any additional
-applications or XDG autostart applications as specified by the L<XDG
+applications or XDG autostart applications as specified by the I<XDG
 Desktop Specification>.
 
 See the L</USAGE> section for usage examples.
@@ -291,7 +291,7 @@ restarted when it exits abnormally.
 =item B<--autostart>, B<--noautostart>, B<-a>
 
 Specifies whether (or not) to autostart XDG applications in accordance
-with the L<Desktop Application Autostart Specification>.  The inverted
+with the I<Desktop Application Autostart Specification>.  The inverted
 sense of the B<-a> flag is for compatablity with L<lxsession(1)>.
 
 =item B<--wait>, B<-w>, B<--nowait>

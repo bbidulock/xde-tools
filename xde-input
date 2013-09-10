@@ -329,7 +329,9 @@ so when editting by hand, avoid syntax errors.
 The configuration file is F<.ini> format and has several sections
 containing the following information as follows:
 
-=head2 DPMS
+=over
+
+=item DPMS
 
  [DPMS]
  OffTimeout=600
@@ -338,7 +340,7 @@ containing the following information as follows:
  State=1
  SuspendTimeout=660
 
-=head2 Keyboard
+=item Keyboard
 
  [Keyboard]
  AutoRepeats=00FFFFFFDFFFFBBFFADFFFEFFFEDFFFF9FFFFFFFFFFFFFFFFFF7FFFFFFFFFFFF
@@ -349,14 +351,14 @@ containing the following information as follows:
  KeyClickPercent=0
  LEDMask=8192
 
-=head2 Pointer
+=item Pointer
 
  [Pointer]
  AccelerationDenominator=10
  AccelerationNumerator=24
  Threshold=10
 
-=head2 ScreenSaver
+=item ScreenSaver
 
  [ScreenSaver]
  AllowExposures=Yes
@@ -364,7 +366,7 @@ containing the following information as follows:
  PreferBlanking=Yes
  Timeout=600
 
-=head2 XKeyboard
+=item XKeyboard
 
  [XKeyboard]
  AccessXFeedbackMaskEnabled=true
@@ -404,7 +406,7 @@ containing the following information as follows:
  SlowKeysEnabled=false
  StickyKeysEnabled=false
 
-=head1
+=back
 
 The package also installs by default an autostart F<.desktop> file to
 autostart this program when any of the lightweight window managers

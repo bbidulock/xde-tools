@@ -60,7 +60,7 @@ SVGs should just ignore any F<.svg> files.  In addition to this there
 may be an additional file with extra icon-data for each file.  It should
 have the same base name as the image file, with the extension F<.icon>.
 
-=cut
+=back
 
 =head1 METHODS
 
@@ -159,7 +159,7 @@ C<$ext>.  The filename is returned or undef when no suitable icon file
 could be found.  When no icon file can be found with the specified size,
 an icon of a suitably close size will be sought.  This method falls back
 to fall-back directories (e.g. F</usr/share/pixmaps>) if a matching name
-is not found, to search a list of alternate names, see L</FindBestIcon>.
+is not found, to search a list of alternate names, see B<FindBestIcon>.
 
 =cut
 
@@ -231,7 +231,7 @@ sub _LookupFallbackIcon {
 
 =item B<FindBestIcon>($iconlist,$size,[$ext]) => $filename
 
-Like L</FindIcon>, but searches for icons with the names provided in the
+Like B<FindIcon>, but searches for icons with the names provided in the
 entire array referenced by C<$iconlist> before falling back to fall-back
 directories (e.g. /usr/share/pixmaps).
 

@@ -470,6 +470,14 @@ its own theme accordingly.
 
 =back
 
+=head1 ENVIRONMENT
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
+
 =cut
 
 __END__

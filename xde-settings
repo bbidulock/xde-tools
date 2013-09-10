@@ -225,7 +225,7 @@ the daemon takes ownership of the C<_XSETTINGS_S[n]> selection for
 each screen on the display and manages settings according to the
 XSETTINGS protocol.
 
-When the program cannot obtain ownership of the C<_XSETTINGS_S[n]"
+When the program cannot obtain ownership of the C<_XSETTINGS_S[n]>
 selection, it monitors for ownership changes and assumes ownership once
 it is reliquished.  An option can be specified that will cause the
 program to kill the current owner of the selection if it cannot obtain

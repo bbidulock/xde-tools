@@ -7,7 +7,6 @@ WriteMakefile(
 		xde-chooser
 		xde-clock
 		xde-desktop
-		xde-desktop2
 		xde-dock
 		xde-fluxbox
 		xde-icon
