@@ -1,8 +1,7 @@
 package XDE::Desktop::Icon::Shortcut;
 use base qw(XDE::Desktop::Icon);
-use X11::Protocol;
-use Glib qw(TRUE FALSE);
-use Gtk2;
+use XDE::Desktop::Icon::Application;
+use XDE::Desktop::Icon::Link;
 use strict;
 use warnings;
 
@@ -38,103 +37,48 @@ XDE::Desktop::Icon::File instance instead.
 =cut
 
 sub new {
-    my ($type,$desktop,$filename,$x,$y) = @_;
+    my ($type,$desktop,$filename) = @_;
     return undef unless -f $filename;
-    open (my $fh, "<", $filename) or warn $!;
-    return undef unless $fh;
-    my $parsing = 0;
-    my $id = $filename;
-    $id =~ s{^.*\/}{}; $id =~ s{\.desktop$}{};
-    my %e = (file=>$filename,id=>$id);
-    my %xl = ();
-    while (<$fh>) {
-	if (/^\[([^]]*)\]/) {
-	    my $section = $1;
-	    if ($section eq 'Desktop Entry') {
-		$parsing = 1;
-	    } else {
-		$parsing = 0;
-	    }
-	}
-	elsif ($parsing and /^([^=\[]+)\[([^=\]]+)\]=([^[:cntrl:]]*)/) {
-	    $xl{$1}{$2} = $3;
-	}
-	elsif ($parsing and /^([^=]*)=([^[:cntrl:]]*)/) {
-	    $e{$1} = $2 unless exists $e{$1};
-	}
-    }
-    close($fh);
-    $desktop->{ops}{lang} =~ m{^(..)}; my $short = $1;
-    foreach (keys %xl) {
-	if (exists $xl{$_}{$desktop->{ops}{lang}}) {
-	    $e{$_} = $xl{$_}{$desktop->{ops}{lang}};
-	}
-	elsif (exists $xl{$_}{$short}) {
-	    $e{$_} = $xl{$_}{$short};
-	}
-    }
+    my $d = $filename; $d =~ s{/[^/]*$}{};
+    my $f = $filename; $f =~ s{.*/}{};
+    return undef unless -f "$d/$f" and $f =~ /\.desktop$/;
+    my %e = $desktop->get_entry($d,$f,'Desktop Entry');
+    return undef unless %e;
+    my $id = $f; $id =~ s{\.desktop$}{};
     $e{Name} = $id unless $e{Name};
     $e{Exec} = '' unless $e{Exec};
     $e{Comment} = $e{Name} unless $e{Comment};
     $e{Icon} = $id unless $e{Icon};
     $e{Icon} =~ s{\.(png|jpg|xpm|svg|jpeg)$}{};
-    my $self = XDE::Desktop::Icon::new($type,$desktop,$e{Icon},$e{Name},$id);
-    $self->{entry} = \%e;
-    return $self;
+    $e{Type} = 'Application' unless $e{Type} or $e{Type} eq 'XSession';
+    if ($e{Type} eq 'Application') {
+	return XDE::Desktop::Icon::Application->new_from_entry($filename,\%e);
+    }
+    if ($e{Type} eq 'Link') {
+	return XDE::Desktop::Icon::Link->new_from_entry($filename,\%e);
+    }
+    warn "Wrong desktop entry type $e{Type}: falling back to file.";
+    return XDE::Desktop::Icon::File->new($desktop,$filename);
 }
 
-=item $shortcut->B<open>()
+=item $shortcut->B<launch>()
 
-This method performs the default open action associated with the
+This method performs the default click action associated with the
 shortcut.
 
 =cut
 
-sub open {
+sub launch {
+    my $self = shift;
+    my $command = $self->{entry}{Exec};
+    $command = 'false' unless $command;
+    $command =~ s{%[dDnNickvmfFuU]}{}g;
+    print STDERR "START $command\n";
+    system "$command &";
 }
 
-=item $shortcut->B<popup>(I<$event>)
-
-This method pops up a menu associated with the shortcut.
-
-=cut
-
-sub popup {
-    my $self = shift;
-    my ($e,$X,$v) = @_;
-    print STDERR "Popping up ", ref($self), " menu, time $e->{time}.\n";
-    my $menu = $self->{menu};
-    unless ($menu) {
-	$menu = Gtk2::Menu->new;
-	$menu->signal_connect(map=>sub{
-		my $menu = shift;
-		my $window = $menu->get_toplevel;
-		$window->set_opacity(0.92) if $window;
-		return Gtk2::EVENT_PROPAGATE;
-	});
-	my $item = Gtk2::TearoffMenuItem->new;
-	$item->show_all;
-	$menu->append($item);
-
-	$item = Gtk2::ImageMenuItem->new;
-	$item->set_label('Launch');
-	my $image = Gtk2::Image->new_from_icon_name('gtk-execute','menu');
-	$item->set_image($image) if $image;
-	my $command = $self->{entry}{Exec};
-	$command = 'false' unless $command;
-	$item->signal_connect(activate=>sub{
-		system "$command &";
-	});
-	$item->show_all;
-	$menu->append($item);
-
-	$item = Gtk2::SeparatorMenuItem->new;
-	$item->show_all;
-	$menu->append($item);
-	$menu->visible(Glib::TRUE);
-	$self->{menu} = $menu;
-    }
-    $menu->popup(undef,undef,undef,undef,$e->{detail},$e->{time});
+sub click {
+    return shift->launch(@_);
 }
 
 1;

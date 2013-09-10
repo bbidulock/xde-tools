@@ -1,5 +1,5 @@
 package XDE::Desktop::Icon::Application;
-use base qw(XDE::Desktop::Icon::Shortcut2);
+use base qw(XDE::Desktop::Icon::Shortcut);
 use strict;
 use warnings;
 
@@ -93,7 +93,7 @@ sub new {
     $e{Comment} = $e{Name} unless $e{Comment};
     $e{Icon} = $id unless $e{Icon};
     $e{Icon} =~ s{\.(png|jpg|xpm|svg|jpeg)$}{};
-    return XDE::Desktop::Icon2::new_from_entry($filename,\%e);
+    return XDE::Desktop::Icon::new_from_entry($filename,\%e);
 }
 
 1;

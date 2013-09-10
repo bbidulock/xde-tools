@@ -84,6 +84,7 @@ my $syntax = GetOptions(
 $xde->default; # reset defaults
 
 $xde->init;
+$xde->read_primary_data;
 $xde->update_desktop;
 $xde->main;
 $xde->term;
@@ -102,3 +103,4 @@ USAGE_EOF
 
 __END__
 
+# vim: set sw=4 tw=72:

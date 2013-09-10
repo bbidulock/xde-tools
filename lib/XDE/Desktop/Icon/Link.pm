@@ -1,5 +1,5 @@
 package XDE::Desktop::Icon::Link;
-use base qw(XDE::Desktop::Icon::Shortcut2);
+use base qw(XDE::Desktop::Icon::Shortcut);
 use strict;
 use warnings;
 
@@ -50,12 +50,12 @@ For applications, this field must have a value of C<Link>.
 
 Creates an instance of an XDE::Desktop::Icon::Link object.  A link
 corresponds to a freedesktop.org F<.desktop> file.  C<$desktop> is an
-instance of an L<XDE::Desktop2(3pm)> object, and C<$filename> is the
+instance of an L<XDE::Desktop(3pm)> object, and C<$filename> is the
 full path and file name of the F<.desktop> file to which the link
 corresponds.
 
 This method identifies the icon and label associated with the link
-and then calls XDE::Desktop::Icon2->new_from_entry() to create the
+and then calls XDE::Desktop::Icon->new_from_entry() to create the
 desktop icon.  The icon is determined from the C<Icon> entry in the
 F<.desktop> file and the label is determined from the C<Name> entry.
 
@@ -77,7 +77,7 @@ sub new {
     $e{Comment} = $e{Name} unless $e{Comment};
     $e{Icon} = $id unless $e{Icon};
     $e{Icon} =~ s{\.(png|jpg|xpm|svg|jpeg)$}{};
-    return XDE::Desktop::Icon2::new_from_entry($filename,\%e);
+    return XDE::Desktop::Icon::new_from_entry($filename,\%e);
 }
 
 1;

@@ -14,10 +14,65 @@ XDE::Desktop::Icon::Directory -- desktop directory
 
 =head1 DESCRIPTION
 
-A desktop icon object for a directory.  Directories are represented by
-folder icons and have a label of the same name as the subdirectory.  The
-action associated with desktop icon directories is opening the directory
-using a file manager.
+A desktop icon object for a directory.  Directories are, by default,
+represented by folder icons and have a label of the same name as the
+subdirectory.  The action associated with desktop icon directories is
+opening the directory using a file manager.  Per the desktop entry
+specification, a directory can contain a desktop entry file of type
+C<Directory> named simply F<.directory>.  This file can specify how to
+display the directory on the desktop.  Such an entry will have the
+following key fields:
+
+=over
+
+=item C<Type>:
+
+Always C<Directory>.  This is a required field.
+
+=item C<Version>:
+
+Always C<1.0>.  Not required.
+
+=item C<Name>:
+
+The specific visible name of the directory to be displayed in the label
+text under the directory icon.  This is a required field.
+
+=item C<GenericName>:
+
+A generic name for the directory.  Not normally displayed.
+
+=item C<NoDisplay>:
+
+Meas this application exists but do not display it in the menus.  By
+menus, application launcher menus is meant.  This would not normally
+appear in a F<Desktop> directory entry and can largely be ignored.
+
+=item C<Comment>:
+
+Tooltip for the directory.
+
+=item C<Icon>:
+
+Indicates the icon to display.  When this field is not specified or the
+corresponding icon cannot be found, a F<folder> icon is shown by
+default.
+
+=item C<Hidden>:
+
+When true, it means that the DE should treat the directory as though it
+does not exist.  We may have an option to show them anyway.
+
+=item C<OnlyShowIn>, C<NotShowIn>:
+
+A list of strings identifying the environments that should display/not
+display a given desktop entry.  Only one of these keys, either
+C<OnlyShowIn> or C<NotShowIn>, may appear in a group.  This is basically
+compared against the DE name as it appears in C<$XDG_CURRENT_DESKTOP>;
+however, we might provide a I<Show All> option to shown them anyways.
+
+=back
+
 
 Note that this is an implementation class that is not expected to be
 used directly, but is to be called from XDE::Desktop.
@@ -44,67 +99,20 @@ label is simply the directory name.
 
 sub new {
     my ($type,$desktop,$directory) = @_;
-    my $label = $directory;
-    $label =~ s{^.*/}{};
-    my $mime = $desktop->get_mime($directory);
-    my $icons = $desktop->get_icons($mime);
-    push @$icons, 'folder';
-    my $self = XDE::Desktop::Icon::new($type,$desktop,$icons,$label,$mime);
-    $self->{directory} = $directory;
-    return $self;
-}
-
-=item $directory->B<open>()
-
-This method performs the default open action associated with the
-directory.
-
-=cut
-
-sub open {
-}
-
-=item $directory->B<popup>(I<$event>)
-
-This method pops up a menu associated with the directory.
-
-=cut
-
-sub popup {
-    my $self = shift;
-    my ($e,$X,$v) = @_;
-    print STDERR "Popping up ", ref($self), " menu, time $e->{time}.\n";
-    my $menu = $self->{menu};
-    unless ($menu) {
-	$menu = Gtk2::Menu->new;
-	$menu->signal_connect(map=>sub{
-		my $menu = shift;
-		my $window = $menu->get_toplevel;
-		$window->set_opacity(0.92) if $window;
-		return Gtk2::EVENT_PROPAGATE;
-	});
-	my $item = Gtk2::TearoffMenuItem->new;
-	$item->show_all;
-	$menu->append($item);
-
-	$item = Gtk2::ImageMenuItem->new;
-	$item->set_label('Open');
-	my $image = Gtk2::Image->new_from_icon_name('folder','menu');
-	$item->set_image($image) if $image;
-	my $command = "pcmanfm $self->{directory}";
-	$item->signal_connect(activate=>sub{
-		system "$command &";
-	});
-	$item->show_all;
-	$menu->append($item);
-
-	$item = Gtk2::SeparatorMenuItem->new;
-	$item->show_all;
-	$menu->append($item);
-	$menu->visible(Glib::TRUE);
-	$self->{menu} = $menu;
-    }
-    $menu->popup(undef,undef,undef,undef,$e->{detail},$e->{time});
+    return undef unless -d $directory;
+    my $d = $directory; $d =~s{/+$}{};
+    my $f = '.directory';
+    my %e = $desktop->get_entry($d,$f,'Desktop Entry');
+    my $id = $d; $id =~ s{^.*/}{};
+    $e{Type} = 'Directory' unless $e{Type};
+    $e{Name} = $id unless $e{Name};
+    $e{Comment} = "Open subdirectory $e{Name}" unless $e{Comment};
+    $e{MimeType} = $desktop->get_mime_type($directory);
+    $e{id} = $e{file} if $e{file};
+    $e{id} = $e{MimeType} unless $e{id};
+    $e{file} = "$d/$f" unless $e{file};
+    $e{Icon} = 'folder' unless $e{Icon};
+    return XDE::Desktop::Icon::new_from_entry($type,$directory,\%e);
 }
 
 1;

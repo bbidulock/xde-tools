@@ -1,5 +1,5 @@
 package XDE::Desktop;
-use base qw(XDE::Dual);
+use base qw(XDE::Dual XDE::Actions);
 use Linux::Inotify2;
 use Glib qw(TRUE FALSE);
 use Gnome2::VFS;
@@ -20,13 +20,29 @@ XDE::Desktop -- XDE Desktop Environment
 
 =head1 METHODS
 
+This module provides the following methods:
+
 =over
 
-=item $desk = XDE::Desktop->B<new>(I<%OVERRIDES>)
+=cut
 
-Creates an instance of an XDE::Desktop object.  The XDE::Desktop module
-uses the L<XDE::Context(3pm)> modules as a base, so the C<%OVERRIDES>
-are simply passed to the L<XDE::Context(3pm)> module.
+my %MIME_APPLICATIONS;
+my %MIME_SUBCLASSES;
+my %MIME_ALIASES;
+my %MIME_GENERIC_ICONS;
+my %XDG_DESKTOPS;
+my %XDG_CATEGORIES;
+
+use constant {
+    ICON_WIDE=>80,
+    ICON_HIGH=>80,
+};
+
+=item $desktop = XDE::Desktop->B<new>(I<%OVERRIDES>)
+
+Creates an instance of an XDE::Desktop object.  The XDE::Desktop
+module uses the L<XDE::Context(3pm)> modules as a base, so the
+C<%OVERRIDES> are simply passed to the L<XDE::Context(3pm)> module.
 
 =cut
 
@@ -34,111 +50,49 @@ sub new {
     return XDE::Context::new(@_);
 }
 
-sub get_visual {
-    my $self = shift;
-    my $X = $self->{X};
-    for my $id (keys %{$X->{visuals}}) {
-	my $v = $X->{visuals}{$id};
-	return $id if
-	    $v->{depth} == 32 and
-	    $v->{red_mask} == 0x00ff0000 and
-	    $v->{green_mask} == 0x0000ff00 and
-	    $v->{blue_mask} == 0x000000ff;
-    }
-    die "Cannot find 32 bit visual!";
-}
-
-sub get_argb32 {
-    my $self = shift;
-    my $X = $self->{X};
-    my ($formats,$screens) = $X->RenderQueryPictFormats();
-    for my $f (@$formats) {
-	return $f->[0] if
-	    $f->[2] == 32 and # depth
-	    $f->[3] == 16 and # red shift
-	    $f->[5] ==  8 and # grn shift
-	    $f->[7] ==  0 and # blu shift
-	    $f->[9] == 24;    # alp shift
-    }
-    die "Cannot find ARGB32 format!";
-}
-
-sub get_bitmap {
-    my $self = shift;
-    my $X = $self->{X};
-    my ($formats,$screens) = $X->RenderQueryPictFormats();
-    for my $f (@$formats) {
-	return $f->[0] if $f->[2] == 1;
-    }
-    die "Cannot find BITMAP format!";
-}
-
-sub get_format {
-    my $self = shift;
-    my $X = $self->{X};
-    my ($formats,$screens) = $X->RenderQueryPictFormats();
-    for my $s (@$screens) {
-	my @s = @$s;
-	shift @s; # discard fallback
-	for my $d (@s) {
-	    my @d = @$d;
-	    next unless shift(@d) == $X->root_depth;
-	    for my $v (@d) {
-		if ($v->[0] == $X->root_visual) {
-		    return $v->[1];
-		}
-	    }
-	}
-    }
-    die "Cannot find root visual format!";
-}
-
 sub get_image {
-    my ($self,$names,$id) = @_;
+    my ($self,$names,$id,$mime) = @_;
     unless ($self->{images}{$id}) {
 	$self->{images}{$id} =
-	    XDE::Desktop::Image->new($self,$names);
+	    XDE::Desktop::Image->new($self,$names,$mime);
     }
     return $self->{images}{$id};
 }
 
-sub read_icons {
-    my $self = shift;
-    my $file;
-    foreach my $dir ($self->XDG_DATA_DIRS) {
-	if (-f "$dir/theme/generic-icons") {
-	    $file = "$dir/theme/generic-icons";
-	}
-    }
-    $self->{generic_icons} = {};
-    return unless $file;
-    if (open(my $fh,"<",$file)) {
-	while (<$fh>) { chomp;
-	    if (m{^([^:]*):(.*)$}) {
-		$self->{generic_icons}{$1} = $2;
-	    }
-	}
-	close($fh);
-    }
-}
-
-sub get_mime {
-    my ($self,$file) = @_;
+sub get_mime_type {
+    my ($selfortype,$file) = @_;
     my ($mime,$result,$info);
-    if (1) {
-	my $uri = Gnome2::VFS::URI->new($file);
-	($result,$info) = 
-	    $uri->get_file_info(['default','get-mime-type','force-fast-mime-type']);
-	if ($info) {
-	    $mime = $info->get_mime_type;
-	}
-	unless ($mime) {
-	    ($result,$info) = 
-		$uri->get_file_info(['default','get-mime-type','force-slow-mime-type']);
-	    if ($info) {
-		$mime = $info->get_mime_type;
+    unless ($mime) {
+	if (my $uri = Gnome2::VFS::URI->new($file)) {
+	    if (0) {
+		($result,$info) = 
+		    $uri->get_file_info(['default','get-mime-type','force-fast-mime-type']);
+		if ($info) {
+		    $mime = $info->get_mime_type;
+		}
+		unless ($mime) {
+		    ($result,$info) = 
+			$uri->get_file_info(['default','get-mime-type','force-slow-mime-type']);
+		    if ($info) {
+			$mime = $info->get_mime_type;
+		    }
+		}
+	    } else {
+		($result,$info) = 
+		    $uri->get_file_info(['default','get-mime-type','force-slow-mime-type']);
+		if ($info) {
+		    $mime = $info->get_mime_type;
+		    if (0) {
+		    foreach (keys %$info) {
+			printf STDERR "%-20s:%-50s\n",$_,$info->{$_};
+		    }
+		    }
+		}
 	    }
 	}
+    }
+    unless ($mime) {
+	chomp($mime = `file -b --mime-type "$file"`);
     }
     unless ($mime) {
 	$mime = Gnome2::VFS->get_mime_type_for_name($file);
@@ -147,24 +101,300 @@ sub get_mime {
 }
 
 sub get_icons {
-    my ($self,$mime) = @_;
+    my ($selfortype,$mime) = @_;
     my @icons = ();
     return \@icons unless $mime;
-    my $icon1 = $mime; $icon1 =~ s{/}{-}g;
-    push @icons, $icon1, "gnome-mime-$icon1" if $icon1;
-    my $icon3 = $self->{generic_icons}{$mime};
-    push @icons, $icon3 if $icon3;
-    my $icon2 = $mime; $icon2 =~ s{/.*}{};
-    push @icons, $icon2, "gnome-mime-$icon2" if $icon2;
+    my @mimes = ($mime);
+    if ($MIME_ALIASES{$mime}) {
+	push @mimes, @{$MIME_ALIASES{$mime}};
+    }
+    if ($MIME_SUBCLASSES{$mime}) {
+	push @mimes, @{$MIME_SUBCLASSES{$mime}};
+    }
+    foreach $mime (@mimes) {
+	my $icon1 = $mime; $icon1 =~ s{/}{-}g;
+	push @icons, $icon1, "gnome-mime-$icon1" if $icon1;
+	my $icon3 = $MIME_GENERIC_ICONS{$mime};
+	push @icons, $icon3 if $icon3;
+	my $icon2 = $mime; $icon2 =~ s{/.*}{};
+	push @icons, $icon2, "gnome-mime-$icon2" if $icon2;
+    }
     return \@icons;
 }
 
+sub get_apps_and_subs {
+    my ($selfortype,$mime) = @_;
+    my @apps = ();
+    my @subs = ();
+    if ($MIME_APPLICATIONS{$mime}) {
+	@apps = sort {$a->{Name} cmp $b->{Name}}
+	    @{$MIME_APPLICATIONS{$mime}};
+    }
+    if ($MIME_SUBCLASSES{$mime}) {
+	foreach (@{$MIME_SUBCLASSES{$mime}}) {
+	    if ($MIME_APPLICATIONS{$_}) {
+		push @subs, @{$MIME_APPLICATIONS{$_}};
+	    }
+	}
+	@subs = sort {$a->{Name} cmp $b->{Name}} @subs;
+    }
+    return \@apps, \@subs;
+}
+
+sub get_desktops {
+    my $selfortype = shift;
+    my @des = reverse sort{$XDG_DESKTOPS{$a} <=> $XDG_DESKTOPS{$b}} keys %XDG_DESKTOPS;
+    foreach (@des) {
+	printf STDERR "Desktop %-20s -> %d\n", $_, $XDG_DESKTOPS{$_};
+    }
+    return \@des;
+}
+
+sub get_categories {
+    my $selfortype = shift;
+    my @cats = reverse sort{$XDG_CATEGORIES{$a} <=> $XDG_CATEGORIES{$b}} keys %XDG_CATEGORIES;
+    foreach (@cats) {
+	printf STDERR "Category %-20s -> %d\n", $_, $XDG_CATEGORIES{$_};
+    }
+    return \@cats;
+}
+
+=item $desktop->B<_init>() => $desktop
+
+Internal method to intiialize the module.  This is called by the
+XDE::Context::new() method during initialization.
+
+=cut
+
+sub read_icons {
+    my $self = shift;
+    my $file;
+    %MIME_GENERIC_ICONS = ();
+    foreach my $dir (reverse $self->XDG_DATA_ARRAY) {
+	 #print STDERR "Checking: $dir/mime/generic-icons\n";
+	if (-f "$dir/mime/generic-icons") {
+	    $file = "$dir/mime/generic-icons";
+	     #print STDERR "Found: $file\n";
+	    if (open(my $fh,"<",$file)) {
+		while (<$fh>) { chomp;
+		    if (m{^([^:]*):(.*)$}) {
+			$MIME_GENERIC_ICONS{$1} = $2;
+		    }
+		}
+		close($fh);
+	    }
+	}
+    }
+}
+
+sub read_aliases {
+    my $self = shift;
+    my $file;
+    %MIME_ALIASES = ();
+    foreach my $dir (reverse $self->XDG_DATA_ARRAY) {
+	 #print STDERR "Checking: $dir/mime/aliases\n";
+	if (-f "$dir/mime/aliases") {
+	    $file = "$dir/mime/aliases";
+	     #print STDERR "Found: $file\n";
+	    if (open(my $fh,"<",$file)) {
+		while (<$fh>) { chomp;
+		    my ($one,$two) = split(/\s+/,$_);
+		    push @{$MIME_ALIASES{$one}}, $two;
+		    push @{$MIME_ALIASES{$two}}, $one;
+		     #printf STDERR "<=> %-30s: %-30s alias\n", $one,$two;
+		}
+		close($fh);
+	    }
+	}
+    }
+}
+
+sub read_subclasses {
+    my $self = shift;
+    my $file;
+    %MIME_SUBCLASSES = ();
+    foreach my $dir (reverse $self->XDG_DATA_ARRAY) {
+	 #print STDERR "Checking: $dir/mime/subclasses\n";
+	if (-f "$dir/mime/subclasses") {
+	    $file = "$dir/mime/subclasses";
+	     #print STDERR "Found: $file\n";
+	    if (open(my $fh,"<",$file)) {
+		while (<$fh>) { chomp;
+		    my ($one,$two) = split(/\s+/,$_);
+		    push @{$MIME_SUBCLASSES{$one}}, $two;
+		}
+		close($fh);
+	    }
+	}
+    }
+}
+
+sub read_gvfsapps {
+    my $self = shift;
+    my %files = ();
+    my @PATH = split(/:/,$ENV{PATH});
+    my (@apps) = Gnome2::VFS::ApplicationRegistry->get_applications();
+    foreach my $app_id (@apps) {
+	my %a = (id=>$app_id);
+	$self->{gvfs_keys}{id} += 1;
+	 #printf STDERR "\t\t%-40s: %40s\n",'id',$app_id;
+	my $app = Gnome2::VFS::ApplicationRegistry->new($app_id);
+	foreach my $key (sort $app->get_keys) {
+	    my $val = $app->peek_value($key);
+	     #printf STDERR "\t\t%-40s: %40s\n",$key,$val;
+	    $a{$key} = $val;
+	    $self->{gvfs_keys}{$key} += 1;
+	}
+	my %e = ();
+	$e{id} = $a{id}.'.desktop';
+	$e{Type} = 'Application';
+	$e{Name} = $a{name} if $a{name};
+	$e{Name} = $a{id} unless $e{Name};
+	$e{Terminal} = $a{requires_terminal} if $a{requires_terminal};
+	$e{StartupNotify} = $a{startup_notify} if $a{startup_notify};
+	$e{MimeType} = join(';',split(/,/,$a{mime_types})).';' if $a{mime_types};
+	my $code = '';
+	if ($a{expect_uris}) {
+	    if ($a{expect_uris} eq 'true') {
+		if ($a{can_open_multiple_files} and $a{can_open_multiple_files} eq 'true'){ 
+		    $code = ' %U';
+		} else {
+		    $code = ' %u';
+		}
+	    } else {
+		if ($a{can_open_multiple_files} and $a{can_open_multiple_files} eq 'true'){ 
+		    $code = ' %F';
+		} else {
+		    $code = ' %f';
+		}
+	    }
+	}
+	$e{Exec} = $a{command}.$code if $a{command};
+	$e{'X-SupportedURISchemes'} = $a{supported_uri_schemes}
+	    if $a{supported_uri_schemes};
+	$e{'X-UsesGnomeVFS'} = $a{uses_gnomevfs}
+	    if $a{uses_gnomevfs};
+
+	my $desktop = $self->{XDG_CURRENT_DESKTOP};
+	unless ($e{Name}) {
+	    $e{'X-Disable'} = 'true';
+	    $e{'X-Disable-Reason'} = 'No Name';
+	}
+	unless ($e{Exec}) {
+	    $e{'X-Disable'} = 'true';
+	    $e{'X-Disable-Reason'} = 'No Exec';
+	}
+	if ($e{Hidden} and $e{Hidden} =~ m{true|yes}i) {
+	    $e{'X-Disable'} = 'true';
+	    $e{'X-Disable-Reason'} = 'Hidden';
+	}
+	if ($e{OnlyShowIn} and ";$e{OnlyShowIn};" !~ /;$desktop;/) {
+	    $e{'X-Disable'} = 'true';
+	    $e{'X-Disable-Reason'} = "Only shown in $e{OnlyShowIn}";
+	}
+	if ($e{NotShowIn} and ";$e{NotShowIn};" =~ /;$desktop;/) {
+	    $e{'X-Disable'} = 'true';
+	    $e{'X-Disable-Reason'} = "Not shown in $e{NotShowIn}";
+	}
+	unless ($e{TryExec}) {
+	    ($e{TryExec}) = split(/\s+/,$e{Exec},2) if $e{Exec};
+	}
+	if (my $x = $e{TryExec}) {
+            if ($x =~ m{/}) {
+                unless (-x "$x") {
+		    $e{'X-Disable'} = 'true';
+		    $e{'X-Disable-Reason'} = "$x is not executable";
+                     #next;
+                }
+            }
+            else {
+                my $found = 0;
+                foreach (@PATH) {
+                    if (-x "$_/$x") {
+                        $found = 1;
+                        last;
+                    }
+                }
+                unless ($found) {
+		    $e{'X-Disable'} = 'true';
+		    $e{'X-Disable-Reason'} = "$x is not executable";
+                     #next;
+                }
+            }
+	}
+	if (0) {
+	foreach (sort keys %e) {
+	    printf STDERR "%-20s: %-40s\n", $_, $e{$_};
+	}
+	}
+#	$e{'X-Disable'} = 'false';
+	$files{$e{id}} = \%e;
+    }
+    return \%files;
+}
+
+sub read_mimeapps {
+    my $self = shift;
+    my $apps = $self->read_gvfsapps;
+    foreach (keys %$apps) {
+	$self->{applications}{$_} = $apps->{$_};
+    }
+    $apps = $self->get_applications;
+    foreach (keys %$apps) {
+	$self->{applications}{$_} = $apps->{$_};
+    }
+    undef $apps;
+    %MIME_APPLICATIONS = ();
+    %XDG_DESKTOPS = ();
+    %XDG_CATEGORIES = ();
+    foreach my $app (values %{$self->{applications}}) {
+	if (my $show = $app->{OnlyShowIn}) {
+	    foreach (split(/;/,$show)) {
+		if ($_) { $XDG_DESKTOPS{$_} += 1; }
+	    }
+	}
+	if (my $show = $app->{NotShowIn}) {
+	    foreach (split(/;/,$show)) {
+		if ($_) { $XDG_DESKTOPS{$_} += 1; }
+	    }
+	}
+	if (my $cat = $app->{Categories}) {
+	    foreach (split(/;/,$cat)) {
+		if ($_) { $XDG_CATEGORIES{$_} += 1; }
+	    }
+	}
+	if (my $mime = $app->{MimeType}) {
+	    my %types = ();
+	    foreach my $type (split(/;/,$mime)) {
+		if ($type) {
+		    $types{$type} = 1;
+		    if ($MIME_ALIASES{$type}) {
+			 #printf STDERR "!!! %-30s: mime aliases:\n", $type;
+			foreach my $two (@{$MIME_ALIASES{$type}}) {
+			    $types{$two} = 1 if $two;
+			     #printf STDERR "--> %-30s: %-30s\n", $type, $two;
+			}
+		    } else {
+			 #printf STDERR "xxx %-30s: no mime aliases:\n", $type;
+		    }
+		}
+	    }
+	    foreach my $type (keys %types) {
+		push @{$MIME_APPLICATIONS{$type}}, $app;
+		 #printf STDERR "==> %-30s: %-30s\n", $app->{id}, $type;
+	    }
+	}
+    }
+    $self->get_desktops;
+    $self->get_categories;
+    $self->{mimeapps} = $self->get_mimeapps;
+}
+
+
 sub _init {
     my $self = shift;
-    print STDERR "-> Creating desktop...\n";
-    my $v = $self->{ops}{verbose};
-
-    $self->{images} = {};
+     #print STDERR "-> Creating desktop...\n";
+    my $verbose = $self->{ops}{verbose};
 
     # set up an Inotify2 connection
     unless ($self->{N}) {
@@ -173,9 +403,9 @@ sub _init {
     }
 
     # initialize VFS
-    $self->read_icons;
     Gnome2::VFS->init;
 
+    # initialize icon search path
     my $icons = $self->{icontheme} =
 	Gtk2::IconTheme->get_default;
     $icons->append_search_path("$ENV{HOME}/.icons");
@@ -186,83 +416,369 @@ sub _init {
     my $X = $self->{X};
     $X->init_extensions;
 
-    # get render formats
-    $self->{format} = $self->get_format;
-    $self->{argb32} = $self->get_argb32;
-    $self->{bitmap} = $self->get_bitmap;
-    $self->{visual} = $self->get_visual;
-
-    # register for root events
-    $X->ChangeWindowAttributes($X->root,
-	    event_mask=>$X->pack_event_mask(
-		'PropertyChange',
-		'StructureNotify'));
-
-    # set up colormap
-    $self->{root} = Gtk2::Gdk->get_default_root_window;
-    $self->{cmap} = Gtk2::Gdk::Colormap->new($self->{root}->get_visual,TRUE);
+    # set up the EWMH/WMH environment
+    $self->XDE::Actions::setup;
 
     # get the root pixmap
-    $self->get_pixmap;
+    $self->get_XROOTPMAP_ID;
 
-    # set up a top level window for tooltip queries
-    my $win = $self->{ttipwin} = Gtk2::Window->new('toplevel');
-    $win->set_has_tooltip(TRUE);
-    $win->set_tooltip_text('A tool tip.');
-    $win->signal_connect_swapped(query_tooltip=>sub{
-	    print STDERR "Tooltip query: ", join(',',@_), "\n";
-	    my ($self,$x,$y,$bool,$tooltip,$win) = @_;
-	    if ($self->{showtip}) {
-		$tooltip->set_text($self->{showtip});
-		return TRUE;
-	    }
-	    return FALSE;
-    },$self);
+    # set up the desktop window
+    $self->create_desktop;
 
-    # set up event handler for buttons
-    Gtk2::Gdk::Event->handler_set(sub{
-	    my ($event,$self) = @_;
-	    if (my $win = $event->window) {
-		if (my $xid = $win->XID) {
-		    if (my $icon = $self->{icons}{winds}{$xid}) {
-			my $e = {
-			    event=>$xid,
-			    root_x=>$event->x_root,
-			    root_y=>$event->y_root,
-			    time=>$event->time,
-			};
-			$e->{time} = 0 unless $e->{time};
-			if ($event->type eq 'motion-notify') {
-			    $icon->motion($e,$self->{X},$self->{ops}{verbose});
-			}
-			elsif ($event->type eq 'button-press') {
-			    $e->{detail} = $event->button;
-			    $icon->press($e,$self->{X},$self->{ops}{verbose});
-			}
-			elsif ($event->type eq 'button-release') {
-			    $e->{detail} = $event->button;
-			    $icon->release($e,$self->{X},$self->{ops}{verbose});
-			}
-		    }
-		}
-	    }
-	    Gtk2->main_do_event($event);
-    },$self);
     return $self;
 }
 
-sub _term {
+=item $desktop->B<create_desktop>() => $desktop
+
+Internal method to create the window used for the desktop.  There are
+two approaches to backgrounds:
+
+=over
+
+=item 1.
+
+set the background pixmap to (and synchronize it with) the _XROOTPMAP_ID
+property on the root window; and,
+
+=item 2.
+
+set the window to have a C<ParentRelative> background.
+
+=back
+
+In either case, because this is a Gtk2::Window, we must adjust the style
+of the window to match the approach; otherwise, Gtk2 will set the
+background corresponding to the style for the window.
+
+=cut
+
+use constant {
+    TARGET_URI_LIST	=>1,
+    TARGET_MOZ_URL	=>2,
+    TARGET_XDS		=>3,
+    TARGET_RAW		=>4,
+};
+
+sub create_desktop {
     my $self = shift;
-    # remove Inotify2 connection.
-    my $N = delete $self->{N};
-    Glib::Source->remove(delete $self->{notify}{watcher})
-	if $self->{notify}{watcher};
-    foreach (keys %{$self->{notify}}) {
-	if (my $w = delete $self->{notify}{$_}) {
-	    $w->cancel;
-	}
+    my $X = $self->{X};
+    my $win = $self->{desktop} = Gtk2::Window->new('toplevel');
+    $win->set_accept_focus(FALSE);
+    $win->set_auto_startup_notification(TRUE);
+    $win->set_decorated(FALSE);
+    $win->set_default_size($X->width_in_pixels,$X->height_in_pixels);
+    $win->set_deletable(FALSE);
+    $win->set_focus_on_map(FALSE);
+#   $win->set_frame_dimensions(0,0,0,0);
+    $win->fullscreen;
+    $win->set_gravity('static');
+    $win->set_has_frame(FALSE);
+    $win->set_keep_below(TRUE);
+    $win->move(0,0);
+    $win->set_opacity(1.0);
+    $win->set_position('center-always');
+    $win->set_resizable(FALSE);
+    $win->resize($X->width_in_pixels,$X->height_in_pixels);
+    $win->set_skip_pager_hint(TRUE);
+    $win->set_skip_taskbar_hint(TRUE);
+    $win->stick;
+    $win->set_type_hint('desktop');
+
+#   $win->set_app_paintable(TRUE);
+    unless ($win->get_double_buffered) {
+	warn "Setting double buffering!";
+	$win->set_double_buffered(TRUE);
+    } else {
+	warn "Double buffering already set!";
     }
-    undef $N;
+#   $win->drag_dest_set(['drop'],[qw(copy ask move link private)],
+#	    {target=>'text/uri-list',flags=>[],info=>&TARGET_URI_LIST},
+##	    {target=>'text/x-moz-url',flags=>[],info=>&TARGET_MOZ_URL},
+##	    {target=>'XdndDirectSave0',flags=>[],info=>&TARGET_XDS},
+##	    {target=>'application/octet-stream',flags=>[],info=>&TARGET_RAW},
+#	    );
+#   $win->drag_dest_add_image_targets;
+#   $win->drag_dest_add_text_targets;
+#   $win->drag_dest_add_uri_targets;
+    $win->set_size_request($X->width_in_pixels,$X->height_in_pixels);
+    $win->parse_geometry($X->width_in_pixels."x".$X->height_in_pixels);
+
+#		exposure-mask
+    $win->add_events([qw(
+		button-press-mask
+		button-release-mask
+		button1-motion-mask
+		button2-motion-mask
+		button3-motion-mask
+		)]);
+
+    $win->realize;
+    $win->window->set_override_redirect(TRUE);
+    $win->window->set_back_pixmap(undef,TRUE);
+if (0) {
+    my $gdk = $win->window;
+    $gdk->set_accept_focus(FALSE);
+    $gdk->set_back_pixmap(undef,TRUE);
+    $gdk->set_composited(FALSE);
+    $gdk->set_decorations([]);
+    $gdk->set_focus_on_map(FALSE);
+    $gdk->fullscreen;
+    $gdk->set_functions([]);
+    my $geom = Gtk2::Gdk::Geometry->new;
+    $geom->base_width($X->width_in_pixels);
+    $geom->base_height($X->height_in_pixels);
+    $geom->gravity('static');
+    $geom->max_width($X->width_in_pixels);
+    $geom->max_height($X->height_in_pixels);
+    $geom->min_width($X->width_in_pixels);
+    $geom->min_height($X->height_in_pixels);
+    $geom->win_gravity('static');
+    $gdk->set_geometry_hints({
+	    min_width=>$X->width_in_pixels,
+	    min_height=>$X->height_in_pixels,
+	    max_width=>$X->width_in_pixels,
+	    max_height=>$X->height_in_pixels,
+	    base_width=>$X->width_in_pixels,
+	    base_height=>$X->height_in_pixels,
+	    width_inc=>0,
+	    height_inc=>0,
+	    win_gravity=>'static',
+	},['pos','user-pos','user-size']);
+    $gdk->set_keep_below(TRUE);
+    $gdk->move(0,0);
+    $gdk->move_resize(0,0,$X->width_in_pixels,$X->height_in_pixels);
+    $gdk->set_opacity(1.0);
+    $gdk->set_override_redirect(TRUE);
+    $gdk->register_dnd;
+    $gdk->remove_redirection;
+    $gdk->resize($X->width_in_pixels,$X->height_in_pixels);
+    $gdk->restack(undef,FALSE);
+    $gdk->set_skip_pager_hint(TRUE);
+    $gdk->set_skip_taskbar_hint(TRUE);
+    $gdk->set_static_gravities(TRUE);
+    $gdk->stick;
+    $gdk->set_type_hint('desktop');
+    $gdk->set_urgency_hint(TRUE);
+#   $gdk->clear;
+    $gdk->process_all_updates;
+    $gdk->show_unraised;
+    $gdk->lower;
+    $X->ConfigureWindow($gdk->XID,stack_mode=>'Below');
+}
+
+    $win->signal_connect_swapped(button_press_event=>\&button_press_event,$self);
+    $win->signal_connect_swapped(button_release_event=>\&button_release_event,$self);
+#   $win->signal_connect_swapped(motion_notify_event=>\&motion_notify_event,$self);
+#   $win->signal_connect_swapped(expose_event=>\&expose_event,$self);
+    $win->signal_connect_swapped(scroll_event=>\&scroll_event,$self);
+
+#   $win->signal_connect_swapped(drag_drop=>&drag_drop,$self);
+#   $win->signal_connect_swapped(drag_data_received=>\&drag_data_received,$self);
+#   $win->signal_connect_swapped(drag_motion=>\&drag_motion,$self);
+#   $win->signal_connect_swapped(drag_leave=>\&drag_leave,$self);
+
+    my $aln = $self->{align} = Gtk2::Alignment->new(0.5,0.5,1.0,1.0);
+#   my $fix = $self->{fixed} = Gtk2::Fixed->new;
+#   $fix->set_size_request($X->width_in_pixels,$X->height_in_pixels);
+
+    $win->set_border_width(0);
+#   $win->add($fix);
+    $win->add($aln);
+
+    my $tab = $self->{table} = Gtk2::Table->new(1,1,TRUE);
+    $tab->set_col_spacings(0);
+    $tab->set_row_spacings(0);
+    $tab->set_homogeneous(TRUE);
+    $tab->set_size_request(ICON_WIDE,ICON_HIGH);
+#   $tab->set_tooltip_text('Click Me!');
+
+#   $fix->put($tab,0,0);
+    $aln->add($tab);
+
+    if (0) {
+    my $rows = int(($X->height_in_pixels+ICON_HIGH-1)/ICON_HIGH)-2;
+    my $cols = int(($X->width_in_pixels +ICON_WIDE-1)/ICON_WIDE)-2;
+    warn "rows = $rows, cols = $cols";
+    my $tab = $self->{table} = Gtk2::Table->new($rows,$cols,TRUE);
+    $tab->set_col_spacings(0);
+    $tab->set_row_spacings(0);
+    $tab->set_homogeneous(TRUE);
+    $tab->set_size_request($X->width_in_pixels-144,$X->height_in_pixels-144);
+    $tab->signal_connect(expose_event=>sub{
+	    my ($tab,$event) = @_;
+	    my $area = $event->area;
+	    if (0) {
+	    printf STDERR "Exposure area: x=%d, y=%d, w=%d, h=%d\n",
+		$area->x, $area->y, $area->width, $area->height;
+	    }
+	    return  Gtk2::EVENT_PROPAGATE;
+    });
+
+#   $fix->put($tab,ICON_WIDE,ICON_HIGH);
+
+    my ($icon,$but,$v,$h,$a,$b,$pixbuf,$l);
+
+    $icon = Gtk2::Image->new_from_icon_name('gtk-missing-image','dialog');
+    $icon->set_alignment(0.5,0.5);
+    $icon->set_padding(0,0);
+    $but = Gtk2::Button->new;
+    $but->set_size_request(ICON_WIDE,ICON_HIGH);
+    $but->set_alignment(0.5,0.0);
+    $but->set_border_width(0);
+    $but->set_relief('none');
+    $but->set_image_position('top');
+    $but->set_image($icon);
+    $but->set_label('An icon');
+    $but->set_tooltip_text('A tooltip');
+    $tab->attach($but,0,1,0,1,['fill'],['fill'],0,0);
+    $but->show_all;
+
+    $icon = Gtk2::Image->new_from_icon_name('gtk-missing-image','dialog');
+    $icon->set_alignment(0.5,0.5);
+    $icon->set_padding(0,0);
+    $but = Gtk2::Button->new;
+    $but->set_size_request(ICON_WIDE,ICON_HIGH);
+    $but->set_alignment(0.5,0.0);
+    $but->set_border_width(0);
+    $but->set_relief('none');
+    $but->set_image_position('top');
+    $but->set_image($icon);
+    $but->set_label('Another icon');
+    $but->set_tooltip_text('Another tooltip');
+    $tab->attach($but,0,1,1,2,['fill'],['fill'],0,0);
+    $but->show_all;
+
+    $icon = Gtk2::Image->new_from_icon_name('gtk-missing-image','dialog');
+    $icon->set_alignment(0.5,0.5);
+    $icon->set_padding(0,0);
+    $but = Gtk2::Button->new;
+    $but->set_size_request(ICON_WIDE,ICON_HIGH);
+    $but->set_alignment(0.5,0.0);
+    $but->set_border_width(0);
+    $but->set_relief('none');
+    $but->set_image_position('top');
+    $but->set_image($icon);
+    $but->set_label('Another icon');
+    $but->set_tooltip_text('Another tooltip');
+    $tab->attach($but,4,5,4,5,['fill'],['fill'],0,0);
+    $but->show_all;
+
+    $icon = Gtk2::Image->new_from_icon_name('gtk-missing-image','dialog');
+    $icon->set_alignment(0.5,0.5);
+    $icon->set_padding(0,0);
+    $pixbuf = $icon->render_icon('gtk-missing-image','dialog');
+    $but = Gtk2::Button->new;
+    $but->set_size_request(ICON_WIDE,ICON_HIGH);
+    $but->set_alignment(0.5,0.0);
+    $but->set_border_width(0);
+    $but->set_relief('none');
+    $but->set_tooltip_text('Even more tooltips');
+    $v = Gtk2::VBox->new(FALSE,0);
+    $but->add($v);
+#   $a = Gtk2::Alignment->new(0.5,0.0,1.0,1.0);
+    $h = Gtk2::HBox->new(FALSE,0);
+    $h->set_size_request(48,48);
+#   $a->add($h);
+    $h->signal_connect(expose_event=>sub{
+	    my ($hbox,$event,$pixbuf) = @_;
+	    my $gc = $hbox->style->black_gc;
+	    $gc->set_clip_region($event->region);
+	    $hbox->window->draw_pixbuf($gc,$pixbuf,0,0,
+		$hbox->allocation->x,$hbox->allocation->y,
+		-1,-1,'normal',0,0);
+	    $gc->set_clip_region(undef);
+	    return Gtk2::EVENT_STOP;
+    },$pixbuf);
+    $v->pack_start($h,FALSE,FALSE,0);
+    $l = Gtk2::Label->new;
+    $l->set_size_request(-1,-1);
+    $l->set_padding(0,0);
+    $l->set_alignment(0.5,0.5);
+    $l->set_line_wrap_mode('word-char');
+    $l->set_line_wrap(TRUE);
+    $l->set_justify('center');
+    $l->set_markup('<span font="Liberation Sans Bold 8">A really long label</span>');
+#   $b = Gtk2::Alignment->new(0.5,1.0,1.0,1.0);
+#   $b->add($l);
+    $v->pack_end($l,FALSE,FALSE,0);
+    $tab->attach($but,7,8,7,8,['fill'],['fill'],0,0);
+    $but->show_all;
+
+    $icon = Gtk2::Image->new_from_icon_name('gtk-missing-image','dialog');
+    $icon->set_alignment(0.5,0.5);
+    $icon->set_padding(0,0);
+    $icon->set_size_request(48,48);
+    $but = Gtk2::Button->new;
+    $but->set_size_request(ICON_WIDE,ICON_HIGH);
+    $but->set_alignment(0.5,0.5);
+    $but->set_border_width(0);
+    $but->set_relief('none');
+    $but->set_tooltip_text('Even more tooltips');
+    $v = Gtk2::VBox->new(FALSE,0);
+    $but->add($v);
+    $v->pack_start($icon,TRUE,FALSE,0);
+    $h = Gtk2::HBox->new(TRUE,0);
+    $v->pack_start($h,TRUE,FALSE,0);
+    $l = Gtk2::Label->new;
+    $l->set_size_request(-1,-1);
+    $l->set_padding(0,0);
+    $l->set_line_wrap_mode('word-char');
+    $l->set_line_wrap(TRUE);
+#   $l->set_max_width_chars(10);
+    $l->set_width_chars(10);
+    $l->set_justify('center');
+    $l->set_markup('<span font="Liberation Sans Bold 8">this_is_a_very_long_filename.pdf</span>');
+    $l->set_alignment(0.5,0.5);
+#   $b = Gtk2::Alignment->new(0.5,0.2,1.0,1.0);
+#   $b->add($l);
+    $h->pack_start($l,FALSE,FALSE,0);
+    $tab->attach($but,8,9,8,9,[],[],0,0);
+    $but->show_all;
+    }
+
+    $self->set_style;
+
+    $tab->show;
+#   $fix->show;
+    $aln->show;
+    $win->show;
+    $win->window->lower;
+#   $gdk->lower;
+#   $X->ConfigureWindow($gdk->XID,stack_mode=>'Below');
+
+    return $self;
+}
+
+sub set_style {
+    my $self = shift;
+    unless ($self->{_XROOTPMAP_ID}) {
+	warn "No pixmap for _XROOTPMAP_ID!";
+	return;
+    }
+    unless ($self->{old_XROOTPMAP_ID} and $self->{old_XROOTPMAP_ID} == $self->{_XROOTPMAP_ID}) {
+	my $pixmap = Gtk2::Gdk::Pixmap->foreign_new($self->{_XROOTPMAP_ID});
+	unless ($pixmap) {
+	    warn "Cannot get pixmap for $self->{_XROOTPMAP_ID}!";
+	    return;
+	}
+	$pixmap->set_colormap(Gtk2::Gdk::Screen->get_default->get_default_colormap);
+
+	my $style = $self->{desktop}->get_default_style->copy;
+	foreach (qw(normal prelight)) {
+	    $style->bg_pixmap($_,$pixmap);
+	}
+	$self->{desktop}->set_style($style);
+#	$self->{desktop}->window->clear;
+	$self->{old_XROOTPMAP_ID} = $self->{_XROOTPMAP_ID};
+    }
+}
+
+sub read_primary_data {
+    my $self = shift;
+    $self->read_icons;
+    $self->read_aliases;
+    $self->read_subclasses;
+    $self->read_mimeapps;
 }
 
 =item $desktop->B<update_desktop>()
@@ -288,7 +804,7 @@ sub update_desktop {
 
 =item $desktop->B<calculate_cells>()
 
-Creates an array of 72x72 cells on the desktop in columns and rows.
+Creates an array of ICON_WIDEx72 cells on the desktop in columns and rows.
 This uses the available area of the desktop as indicated by the
 C<_NET_WORKAREA> or C<_WIN_WORKAREA> properties on the root window.
 
@@ -298,32 +814,54 @@ sub calculate_cells {
     my $self = shift;
     my $X = $self->{X};
     my ($x,$y,$w,$h);
-    my ($val,$type) = $X->GetProperty($X->root,
-	    $X->atom('_NET_WORKAREA'),
-	    0,0,4,0);
-    if ($type and $val) {
-	($x,$y,$w,$h) = unpack('LLLL',$val);
-    } else {
-	($val,$type) = $X->GetProperty($X->root,
-		$X->atom('_WIN_WORKAREA'),
-		0,0,4,0);
-	if ($type and $val) {
-	    ($x,$y,$w,$h) = unpack('LLLL',$val);
-	} else {
-	    # just WindowMaker and AfterStep do not set either
-	    ($x,$y,$w,$h) = ((64,64),
-		    $X->width_in_pixels-128,
-		    $X->height_in_pixels-128);
-	    # leave room for clip and dock (or wharf)
+    if ($self->{_NET_WORKAREA}) {
+	 #print STDERR "Have _NET_WORKAREA\n";
+	($x,$y,$w,$h) = @{$self->{_NET_WORKAREA}};
+	if ($self->{wmname} eq 'jwm') {
+	     # JWM does not report its panel, normally at the
+	     # bottom, reduce height by 1/2 ICON_HIGH
+	    $h -= ICON_HIGH/2;
 	}
     }
-    # leave at least 1/2 a cell (36 pixels) around the desktop area to
+    elsif ($self->{_WIN_WORKAREA}) {
+	 #print STDERR "Have _WIN_WORKAREA\n";
+	($x,$y,$w,$h) = @{$self->{_WIN_WORKAREA}};
+    }
+    else {
+	 #print STDERR "No _NET_WORKAREA or _WIN_WORKAREA\n";
+	# just WindowMaker and AfterStep do not set either
+	# leave room for clip and dock (or wharf)
+	($x,$y,$w,$h) =
+	    ((64,64),($X->width_in_pixels-128,$X->height_in_pixels-128));
+    }
+    # leave at least 1/2 a cell ((36,42) pixels) around the desktop area to
     # accomodate window managers that do not account for panels.
-    $self->{cols} = int($w/72)-1;
-    $self->{rows} = int($h/72)-1;
-    $self->{xoff} = int(($w-$self->{cols}*72)/2);
-    $self->{yoff} = int(($h-$self->{rows}*72)/2);
-    return ($self->{xoff}, $self->{yoff}, $self->{cols}, $self->{rows});
+    my $cols = $self->{cols} = int($w/ICON_WIDE);
+    my $rows = $self->{rows} = int($h/ICON_HIGH);
+    my $xoff = $self->{xoff} = int(($w-$cols*ICON_WIDE)/2);
+    my $yoff = $self->{yoff} = int(($h-$rows*ICON_HIGH)/2);
+     #print STDERR "Table: cols=$cols,rows=$rows,xoff=$xoff,yoff=$yoff\n";
+    my $table = $self->{table};
+#   $self->{fixed}->move($table,$xoff,$yoff);
+     #print STDERR "Warea: x=$x,y=$y,w=$w,h=$h\n";
+    my ($T,$B,$L,$R) = (
+	    $y,($X->height_in_pixels-$y-$h),
+	    $x,($X->width_in_pixels-$x-$w),
+	    );
+    $self->{align}->set_padding($T,$B,$L,$R);
+     #print STDERR "Align: t=$T,b=$B,l=$L,r=$R\n";
+    my ($r,$c) = $table->get_size;
+    if ($r != $rows or $c != $cols) {
+	if ($r < $rows or $c < $cols) {
+	    # icons might be out of place
+	    $self->remove_icons;
+	} else {
+	    # leave icons where they are for now
+	}
+	$table->set_size_request(ICON_WIDE*$cols,ICON_HIGH*$rows);
+	$table->resize($rows,$cols);
+    }
+    return ($xoff, $yoff, $cols, $rows);
 }
 
 =item $desktop->B<watch_directory>(I<$label>,I<$directory>)
@@ -367,13 +905,16 @@ sub read_desktop {
     my @links = ();
     my @dires = ();
     my @files = ();
-    print STDERR "-> Directory is '$dir'\n";
+     #print STDERR "-> Directory is '$dir'\n";
     opendir(my $dh, $dir) or return;
-    print STDERR "-> Opening directory\n";
+     #print STDERR "-> Opening directory\n";
     foreach my $f (readdir($dh)) {
+	if (0) {
 	print STDERR "-> Got entry: $f\n"
 	    if $self->{ops}{verbose};
+	}
 	next if $f eq '.' or $f eq '..';
+	next if $f =~ m{^\.};  # TODO: option for hidden files.
 	if (-d "$dir/$f") {
 	    push @dires, "$dir/$f";
 	    push @paths, "$dir/$f";
@@ -486,7 +1027,7 @@ each icon hide itself.
 =cut
 
 sub hide_icons {
-    foreach (@{$_[0]->{icons}{detop}}) { $_->hide_noflush }
+    foreach (@{shift->{icons}{detop}}) { $_->hide }
 }
 
 =item $desktop->B<show_icons>()
@@ -497,8 +1038,22 @@ icon show itself.
 =cut
 
 sub show_icons {
-    foreach (@{$_[0]->{icons}{detop}}) { $_->show_noflush($_[1]) }
+    foreach (@{shift->{icons}{detop}}) { $_->show }
 }
+
+=item $desktop->B<remove_icons>()
+
+Remove all of the desktop icons.  This does not deallocate the icons.
+
+=cut
+
+sub remove_icons {
+    my $self = shift;
+    my $table = $self->{table};
+    foreach (@{$self->{icons}{detop}}) { $_->remove($table) }
+}
+
+
 
 =item $desktop->B<next_cell>(I<$col>,I<$row>,I<$x>,I<$y>) => $col,$row,$x,$y
 
@@ -512,10 +1067,10 @@ Used internally by C<arrange_icons()>.
 
 sub next_cell {
     my ($self,$col,$row,$x,$y) = @_;
-    $row += 1; $y += 72;
+    $row += 1; $y += ICON_HIGH;
     unless ($row < $self->{rows}) {
 	$row = 0; $y = $self->{yoff};
-	$col += 1; $x += 72;
+	$col += 1; $x += ICON_WIDE;
     }
     return ($col,$row,$x,$y);
 }
@@ -534,11 +1089,10 @@ sub next_column {
     my ($self,$col,$row,$x,$y) = @_;
     if ($row != 0) {
 	$row = 0; $y = $self->{yoff};
-	$col += 1; $x += 72;
+	$col += 1; $x += ICON_WIDE;
     }
     return ($col,$row,$x,$y);
 }
-
 
 =item $desktop->B<arrange_icons>()
 
@@ -552,9 +1106,10 @@ sub arrange_icons {
     my ($self) = @_;
     my $col = 0; my $x = $self->{xoff};
     my $row = 0; my $y = $self->{yoff};
+    my $table = $self->{table};
     if (@{$self->{icons}{links}} and $col < $self->{cols}) {
 	foreach (@{$self->{icons}{links}}) {
-	    $_->place($x,$y);
+	    $_->place($table,$col,$row);
 	    push @{$self->{icons}{detop}}, $_;
 	    ($col,$row,$x,$y) = $self->next_cell($col,$row,$x,$y);
 	    last unless $col < $self->{cols};
@@ -563,7 +1118,7 @@ sub arrange_icons {
     }
     if (@{$self->{icons}{dires}} and $col < $self->{cols}) {
 	foreach (@{$self->{icons}{dires}}) {
-	    $_->place($x,$y);
+	    $_->place($table,$col,$row);
 	    push @{$self->{icons}{detop}}, $_;
 	    ($col,$row,$x,$y) = $self->next_cell($col,$row,$x,$y);
 	    last unless $col < $self->{cols};
@@ -572,25 +1127,11 @@ sub arrange_icons {
     }
     if (@{$self->{icons}{files}} and $col < $self->{cols}) {
 	foreach (@{$self->{icons}{files}}) {
-	    $_->place($x,$y);
+	    $_->place($table,$col,$row);
 	    push @{$self->{icons}{detop}}, $_;
 	    ($col,$row,$x,$y) = $self->next_cell($col,$row,$x,$y);
 	    last unless $col < $self->{cols};
 	}
-    }
-}
-
-=item $desktop->B<update_icons>()
-
-Updates the contents of all of the desktop icons.  This method simply
-asks each icon to update itself.
-
-=cut
-
-sub update_icons {
-    my ($self) = @_;
-    foreach (@{$self->{icons}{detop}}) {
-	$_->update_noflush;
     }
 }
 
@@ -608,86 +1149,429 @@ sub rearrange_icons {
     $self->arrange_icons;
 }
 
-sub get_pixmap {
+use constant {
+    KEYBUTMASK_SHIFT_MASK	=>(1<< 0),
+    KEYBUTMASK_LOCK_MASK	=>(1<< 1),
+    KEYBUTMASK_CONTROL_MASK	=>(1<< 2),
+    KEYBUTMASK_MOD1_MASK	=>(1<< 3),
+    KEYBUTMASK_MOD2_MASK	=>(1<< 4),
+    KEYBUTMASK_MOD3_MASK	=>(1<< 5),
+    KEYBUTMASK_MOD4_MASK	=>(1<< 6),
+    KEYBUTMASK_MOD5_MASK	=>(1<< 7),
+    KEYBUTMASK_BUTTON1_MASK	=>(1<< 8),
+    KEYBUTMASK_BUTTON2_MASK	=>(1<< 9),
+    KEYBUTMASK_BUTTON3_MASK	=>(1<<10),
+    KEYBUTMASK_BUTTON4_MASK	=>(1<<11),
+    KEYBUTMASK_BUTTON5_MASK	=>(1<<12),
+
+    KEYBUTMASK_SUPER_MASK	=>(1<<13),
+    KEYBUTMASK_HYPER_MASK	=>(1<<14),
+    KEYBUTMASK_META_MASK	=>(1<<15),
+    KEYBUTMASK_RELEASE_MASK	=>(1<<16),
+    KEYBUTMASK_MODIFIER_MASK	=>(1<<17),
+};
+use constant {
+    GTKSTATE_XLATE=>{
+	'shift-mask'	=>&KEYBUTMASK_SHIFT_MASK,
+	'lock-mask'	=>&KEYBUTMASK_LOCK_MASK,
+	'control-mask'	=>&KEYBUTMASK_CONTROL_MASK,
+	'mod1-mask'	=>&KEYBUTMASK_MOD1_MASK,
+	'mod2-mask'	=>&KEYBUTMASK_MOD2_MASK,
+	'mod3-mask'	=>&KEYBUTMASK_MOD3_MASK,
+	'mod4-mask'	=>&KEYBUTMASK_MOD4_MASK,
+	'mod5-mask'	=>&KEYBUTMASK_MOD5_MASK,
+	'button1-mask'	=>&KEYBUTMASK_BUTTON1_MASK,
+	'button2-mask'	=>&KEYBUTMASK_BUTTON2_MASK,
+	'button3-mask'	=>&KEYBUTMASK_BUTTON3_MASK,
+	'button4-mask'	=>&KEYBUTMASK_BUTTON4_MASK,
+	'button5-mask'	=>&KEYBUTMASK_BUTTON5_MASK,
+
+	'super-mask'	=>&KEYBUTMASK_SUPER_MASK,
+	'hyper-mask'	=>&KEYBUTMASK_HYPER_MASK,
+	'meta-mask'	=>&KEYBUTMASK_META_MASK,
+	'release-mask'	=>&KEYBUTMASK_RELEASE_MASK,
+	'modifier-mask'	=>&KEYBUTMASK_MODIFIER_MASK,
+    },
+};
+
+sub xlate_state {
+    my ($self,$states) = @_;
+    my $state = 0;
+    foreach (split(/\s+/,$states)) {
+	next if $_ eq '[' or $_ eq ']';
+	if (exists &GTKSTATE_XLATE->{$_}) {
+	    $state |= &GTKSTATE_XLATE->{$_};
+	} else {
+	    warn "Unknown KEYBUTMASK $_";
+	}
+    }
+    return $state;
+}
+
+=item $desktop->B<button_press_event>(I<$event>,I<$win>) => $boolean
+
+Gtk2::Gdk::Event handler to process button press events.  Note that this
+does not include buttons 4 or 5 (these are handled in scroll_event).
+Basically we want to pass this event to the root window so that the
+window manager can respond to it.  We might use button 1 (normally
+unused by the window manager), or another button with a modifier, to
+launch the desktop root menu.
+
+=cut
+
+sub button_press_event {
     my $self = shift;
+    my ($event,$win) = @_;
+    if (0) {
+    if ($event->button == 1 or $event->button == 3) {
+	my ($x,$y) = $event->get_coords;
+	foreach my $icon (@{$self->{icons}{detop}}) {
+	    my $alloc = $icon->{gtk}{icon}->allocation;
+	    my $region = Gtk2::Gdk::Region->rectangle($alloc);
+	    if ($region->point_in($x,$y)) {
+		printf STDERR "Allocation: x=%d,y=%d,w=%d,h=%d\n",
+		       $alloc->x,$alloc->y,$alloc->width,$alloc->height;
+		printf STDERR "Event: x=%d,y=%d\n",$x,$y;
+		if ($event->button == 3) {
+		    $icon->popup($event);
+		    return Gtk2::EVENT_STOP;
+		}
+		else {
+		    $icon->click($event);
+		    return Gtk2::EVENT_STOP;
+		}
+
+	    }
+	}
+    }
+    }
+    return Gtk2::EVENT_PROPAGATE if $event->button == 1;
+    $win->window->lower;
     my $X = $self->{X};
-    my ($val,$type) = $X->GetProperty($X->root,
-	    $X->atom('_XROOTPMAP_ID'),
-	    $X->atom('PIXMAP'),
-	    0,1,0);
-    $self->{pixmap} = unpack('L',substr($val,0,4)) if $type and $val;
-    return $self->{pixmap};
+    $X->ConfigureWindow($win->window->XID,stack_mode=>'Below');
+    my %e = (
+	name=>'ButtonPress',
+	detail=>$event->button,
+	time=>$event->time,
+	root=>$X->root,
+	event=>$X->root,
+	child=>'None',
+	root_x=>$event->x_root,
+	root_y=>$event->y_root,
+	event_x=>$event->x_root,
+	event_y=>$event->y_root,
+	state=>$self->xlate_state($event->state),
+	same_screen=>1,
+    );
+    Gtk2::Gdk->pointer_ungrab($event->time);
+    $X->SendEvent($X->root, 0,
+	    $X->pack_event_mask(qw(ButtonPress)),
+	    $X->pack_event(%e));
+    $X->flush;
+    return Gtk2::EVENT_STOP;
 }
 
-sub event_handler_ButtonPress {
+=item $desktop->B<button_release_event>(I<$event>,I<$win>) => $boolean
+
+Gtk2::Gdk::Event handler to process button release events.  Note that
+this does not include buttons 4 or 5 (these are handled in
+scroll_event).  Bsically we want to pass this event to the root window
+so that the window manager can respond to it.  We might use button 1
+(normally unused by the window manager), or another button with a
+modifier, to launch the desktop root menu.
+
+=cut
+
+sub button_release_event {
     my $self = shift;
-    my ($e,$X,$v) = @_;
-    my $win = $e->{event};
-    my $icon = $self->{icons}{winds}{$win};
-    return unless $icon;
-    $icon->press(@_);
+    my ($event,$win) = @_;
+    return Gtk2::EVENT_PROPAGATE if $event->button == 1;
+    $win->window->lower;
+    my $X = $self->{X};
+    $X->ConfigureWindow($win->window->XID,stack_mode=>'Below');
+    my %e = (
+	name=>'ButtonRelease',
+	detail=>$event->button,
+	time=>$event->time,
+	root=>$X->root,
+	event=>$X->root,
+	child=>'None',
+	root_x=>$event->x_root,
+	root_y=>$event->y_root,
+	event_x=>$event->x_root,
+	event_y=>$event->y_root,
+	state=>$self->xlate_state($event->state),
+	same_screen=>1,
+    );
+    $X->SendEvent($X->root,0,
+	    $X->pack_event_mask(qw(ButtonRelease)),
+	    $X->pack_event(%e));
+    $X->flush;
+    # TODO: handle button release event internally
+    return Gtk2::EVENT_STOP;
 }
 
-sub event_handler_ButtonRelease {
+=item $desktop->B<scroll_event_passalong>(I<$event>,I<$win>) => $boolean
+
+Gtk2::Gdk::Event handler for Gtk2::Gdk::Event::Scroll events.  This
+method simply passes the scroll wheel events to the root window.  Note
+that this includes scroll events on desktop icons.
+
+=cut
+
+sub scroll_event_passalong {
     my $self = shift;
-    my ($e,$X,$v) = @_;
-    my $win = $e->{event};
-    my $icon = $self->{icons}{winds}{$win};
-    return unless $icon;
-    $icon->release(@_);
+    my ($event,$win) = @_;
+    $win->window->lower;
+    my $X = $self->{X};
+    $X->ConfigureWindow($win->window->XID,stack_mode=>'Below');
+    my %e = (
+	name=>'ButtonPress',
+	time=>$event->time,
+	root=>$X->root,
+	event=>$X->root,
+	child=>'None',
+	root_x=>$event->x_root,
+	root_y=>$event->y_root,
+	event_x=>$event->x_root,
+	event_y=>$event->y_root,
+	state=>$self->xlate_state($event->state),
+	same_screen=>1,
+    );
+    my $dir = $event->direction;
+    if ($dir eq 'up' or $dir eq 'right') {
+	$e{detail} = 4;
+    }
+    elsif ($dir eq 'down' or $dir eq 'left') {
+	$e{detail} = 5;
+    }
+    Gtk2::Gdk->pointer_ungrab($event->time);
+    $X->SendEvent($X->root,0,
+	    $X->pack_event_mask(qw(ButtonPress)),
+	    $X->pack_event(%e));
+    $e{name} = 'ButtonRelease';
+    $e{state} |= (1<<($e{detail}+7));
+#   $e{time} = $e{time}+1;
+    $X->SendEvent($X->root,0,
+	    $X->pack_event_mask(qw(ButtonRelease)),
+	    $X->pack_event(%e));
+    $X->flush;
+    return Gtk2::EVENT_STOP;
 }
 
-sub event_handler_MotionNotify {
+=item $desktop->B<scroll_event_override>(I<$event>,I<$win>) => $boolean
+
+Gtk2::Gdk::Event handler for Gtk2::Gdk::Event::Scroll events.  This
+method overrides the behaviour of the window manager's response to
+scroll wheel events on the desktop; however, if any unused modifiers are
+present, the event is passed along to the root window.
+
+=cut
+
+sub scroll_event_override {
     my $self = shift;
-    my ($e,$X,$v) = @_;
-    my $win = $e->{event};
-    my $icon = $self->{icons}{winds}{$win};
-    return unless $icon;
-    $icon->motion(@_);
+    my ($event,$win) = @_;
+    $win->window->lower;
+    my $X = $self->{X};
+    $X->ConfigureWindow($win->window->XID,stack_mode=>'Below');
+    my $dir = $event->direction;
+    my $time = $event->time;
+    my $mods = $self->xlate_state($event->state) & 0xfd;
+     #warn sprintf "Modifiers is 0x%x", $mods;
+    if ($mods == 0) {
+	# Scroll moves next or prev with wrap
+	if ($dir eq 'up' or $dir eq 'right') {
+	    $self->DesktopNext($time,1,1);
+	} elsif ($dir eq 'down' or $dir eq 'left') {
+	    $self->DesktopPrev($time,1,1);
+	}
+    }
+    elsif ($mods == &KEYBUTMASK_CONTROL_MASK) {
+	# Ctrl+Scroll moves right or left without wrap
+	if ($dir eq 'up' or $dir eq 'right') {
+	    $self->DesktopRight($time,1,0);
+	} elsif ($dir eq 'down' or $dir eq 'left') {
+	    $self->DesktopLeft($time,1,0);
+	}
+    }
+    elsif ($mods == &KEYBUTMASK_SHIFT_MASK) {
+	# Shift+Scroll moves up or down without wrap
+	if ($dir eq 'up' or $dir eq 'right') {
+	    $self->DesktopUp($time,1,0);
+	} elsif ($dir eq 'down' or $dir eq 'left') {
+	    $self->DesktopDown($time,1,0);
+	}
+    }
+    else {
+	return $self->scroll_event_passalong(@_);
+    }
+    return Gtk2::EVENT_STOP;
 }
 
-sub event_handler_EnterNotify {
+sub scroll_event_openbox {
     my $self = shift;
-    my ($e,$X,$v) = @_;
-    my $win = $e->{event};
-    my $icon = $self->{icons}{winds}{$win};
-    return unless $icon;
-    $icon->enter(@_,$self);
+    return $self->scroll_event_override(@_);
 }
 
-sub event_handler_LeaveNotify {
+sub scroll_event_pekwm {
     my $self = shift;
-    my ($e,$X,$v) = @_;
-    my $win = $e->{event};
-    my $icon = $self->{icons}{winds}{$win};
-    return unless $icon;
-    $icon->leave(@_,$self);
+    return $self->scroll_event_override(@_);
 }
 
-sub event_handler_VisibilityNotify {
+=item $desktop->B<scroll_event_jwm>(I<$event>,I<$win>) => $boolean
+
+Gtk2::Gdk::Event handler for Gtk2::Gdk::Event::Scroll events for the
+L<jwm(1)> window manager.  The JWM panel reverses the direction of the
+scroll wheel: we do C<up> is I<DesktopNext> and C<down> is
+I<DesktopPrev>, whereas JWM does C<up> is I<DesktopLeft> with wrap,
+C<down> is I<DesktopRight> with wrap.  There are no scroll wheel
+definitions for I<DesktopNext>, I<DesktopPrev>, I<DesktopUp> or
+I<DesktopDown> (see L<XDE::Actions(3pm)>).
+
+=cut
+
+sub scroll_event_jwm {
     my $self = shift;
-    my ($e,$X,$v) = @_;
-    my $win = $e->{window};
-    my $icon = $self->{icons}{winds}{$win};
-    return unless $icon;
-    $icon->visible_noflush($e->{state});
+    return $self->scroll_event_override(@_);
 }
 
-sub event_handler_Expose {
+=item $desktop->B<scroll_event_icewm>(I<$event>,I<$win>) => $boolean
+
+Gtk2::Gdk::Event handler for Gtk2::Gdk::Event::Scroll events.  We
+basically provide for the basic desktop events here, particularly
+because L<icewm(1)> cannot handle scroll events and forwarding them
+accomplishes nothing when L<icewm(1)> is running.
+
+=cut
+
+sub scroll_event_icewm {
     my $self = shift;
-    my ($e,$X,$v) = @_;
-    my $win = $e->{window};
-    my $icon = $self->{icons}{winds}{$win};
-    return unless $icon;
-    $icon->expose_noflush($e);
+    return $self->scroll_event_override(@_);
+}
+
+=item $desktop->B<scroll_event>(I<$event>,I<$window>) => $boolean
+
+Gtk2::Gdk::Event handler for Gtk2::Gdk::Event::Scroll events.  Decides
+which behaviour to use based on the window manager.  The default
+currently is to pass along scroll events.
+
+=cut
+
+sub scroll_event {
+    my $self = shift;
+    if ($self->{wmname} and
+	    (my $sub = $self->can("scroll_event_$self->{wmname}"))) {
+	return &$sub($self,@_);
+    }
+    return $self->scroll_event_passalong(@_);
+}
+
+sub draw_lasso {
+    my $self = shift;
+    return unless $self->{lasso};
+    my $area = Gtk2::Gdk::Rectangle->new(0,0,0,0);
+    if ($self->{lasso}{x1} < $self->{lasso}{x2}) {
+	$area->x($self->{lasso}{x1});
+	$area->width($self->{lasso}{x2} - $self->{lasso}{x1});
+    } else {
+	$area->x($self->{lasso}{x2});
+	$area->width($self->{lasso}{x1} - $self->{lasso}{x2});
+    }
+    if ($self->{lasso}{y1} < $self->{lasso}{y2}) {
+	$area->y($self->{lasso}{y1});
+	$area->height($self->{lasso}{y2} - $self->{lasso}{y1});
+    } else {
+	$area->y($self->{lasso}{y2});
+	$area->height($self->{lasso}{y1} - $self->{lasso}{y2});
+    }
+    my $win = $self->{desktop}->window;
+    my $edge = Gtk2::Gdk::Rectangle->new($area->values);
+    $edge->height(2);
+    $win->invalidate_rect($edge,TRUE);
+
+    $edge->y($edge->y + $area->height - 2);
+    $win->invalidate_rect($edge,TRUE);
+
+    $edge->y($area->y);
+    $edge->height($area->height);
+    $edge->width(2);
+    $win->invalidate_rect($edge,TRUE);
+
+    $edge->x($edge->x + $area->width - 2);
+    $win->invalidate_rect($edge,TRUE);
+}
+
+sub motion_notify_event {
+    my $self = shift;
+    my ($event,$win) = @_;
+    $win->window->lower;
+    my $X = $self->{X};
+    $X->ConfigureWindow($win->window->XID,stack_mode=>'Below');
+    return Gtk2::EVENT_PROPAGATE unless $self->{lasso};
+    my ($x,$y) = $event->get_coords;
+    if ($self->{lasso}{x2} != $x or $self->{lasso}{y2} != $y) {
+	$self->draw_lasso;
+	$self->{lasso}{x2} = $x;
+	$self->{lasso}{y2} = $y;
+	$self->draw_lasso;
+    }
+}
+sub expose_event {
+    warn "expose-event: ",join(',',@_);
+    my $self = shift;
+    my ($event,$win) = @_;
+    my $region1 = $event->region;
+    my $rect = $region1->get_clipbox;
+    my ($x,$y,$w,$h) = ($rect->x,$rect->y,$rect->width,$rect->height);
+     #printf STDERR "Exposure area: x=%d, y=%d, w=%d, h=%d\n", $x, $y, $w, $h;
+#   $win->window->invalidate_rect($rect,TRUE);
+#   return Gtk2::EVENT_STOP;
+    $win->window->clear_area($x,$y,$w,$h);
+    return Gtk2::EVENT_PROPAGATE;
+    my $region2 = Gtk2::Gdk::Region->rectangle($rect);
+    $region2->subtract($region1);
+    unless ($region2->empty) {
+	foreach ($region2->get_rectangles) {
+	    $win->window->invalidate_rect($_,TRUE);
+	}
+    }
+    return Gtk2::EVENT_PROPAGATE;
+}
+
+sub drag_data_received {
+    warn "drag-data-received: ",join(',',@_);
+    my $self = shift;
+    my ($drag,$select,$win) = @_;
+    return Gtk2::EVENT_PROPAGATE;
+}
+sub drag_motion {
+    warn "drag-motion: ",join(',',@_);
+    my $self = shift;
+    my ($drag,$x,$y,$id,$win) = @_;
+    return Gtk2::EVENT_PROPAGATE;
+}
+sub drag_leave {
+    warn "drag-leave: ",join(',',@_);
+    my $self = shift;
+    my ($drag,$id,$win) = @_;
+    return Gtk2::EVENT_PROPAGATE;
+}
+
+
+=item $desktop->B<get_XROOTPMAP_ID>() => $value
+
+Get the C<_XROOTPMAP_ID> property from the root window.
+
+=cut
+
+sub get_XROOTPMAP_ID {
+    return shift->getWMRootPropertyInt('_XROOTPMAP_ID');
 }
 
 =item $desktop->B<event_handler_PropertyNotify_XROOTPMAP_ID>(I<$e>,I<$X>,I<$v>)
 
-Event handler for changes to the C<_XROOTPMAP_ID> property on the root
-window.  When this changes we need to update the backgrounds for all of
-the desktop icons.
-This is an internal method called from the X11::Protocol event loop.
+XDE::X11 event handler for changes to the C<_XROOTPMAP_ID> property on
+the root window.
 
 =cut
 
@@ -695,17 +1579,16 @@ sub event_handler_PropertyNotify_XROOTPMAP_ID {
     my $self = shift;
     my ($e,$X,$v) = @_;
     return unless $e->{window} == $X->root;
-    $self->get_pixmap;
-    $self->update_icons;
-    $X->flush;
+    $self->get_XROOTPMAP_ID;
+    $self->set_style;
+#   $self->{desktop}->window->clear;
 }
 
 =item $desktop->B<event_handler_PropertyNotify_NET_WORKAREA>(I<$e>,I<$X>,I<$v>)
 
-Event handler for changes to the C<_NET_WORKAREA> property on the root
-window.  When this changes we need to potentially adjust the position of
-all of the destkop icons.
-This is an internal method called from the X11::Protocol event loop.
+XDE::X11 event handler for changes to the C<_NET_WORKAREA> property on
+the root window.  When this property changes we may need to adjust the
+area occupied by desktop icons.
 
 =cut
 
@@ -718,10 +1601,9 @@ sub event_handler_PropertyNotify_NET_WORKAREA {
 
 =item $desktop->B<event_handler_PropertyNotify_WIN_WORKAREA>(I<$e>,I<$X>,I<$v>)
 
-Event handler for changes to the C<_WIN_WORKAREA> property on the root
-window.  When this changes we need to potentially adjust the position of
-all of the destkop icons.
-This is an internal method called from the X11::Protocol event loop.
+XDE::X11 event handler for changes to the C<_WIN_WORKAREA> property on
+the root window.  When this property changes we may need to adjust the
+area occupied by desktop icons.
 
 =cut
 
@@ -748,4 +1630,4 @@ L<XDE::Desktop(3pm)>, L<XDE::Desktop::Icon(3pm)>
 
 __END__
 
-# vim: sw=4 tw=72
+# vim: set sw=4 tw=72:
