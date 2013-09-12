@@ -130,13 +130,13 @@ PeKWM:
 	PeKWM is only EWMH compliant and is not WMH compliant.  It properly sets
 	_NET_SUPPORTING_WM_CHECK(WINDOW) on both the root and the check window.
 	It sets _NET_WM_NAME(STRING) on the check window.  Note that
-	_NET_WM_NAME should be (UTF8_STRING) instead of (STRING).  It does not
-	set WM_CLIENT_MACHINE(STRING) on the check window as required by EWMH,
-	but sets it on the root window.  It does not, however, set it to the
-	fully qualified domain name as required by EWMH.  Also, it sets
-	_NET_WM_PID(CARDINAL) on the check window, but mistakenly sets it on the
-	root window.  It sets WM_CLASS(STRING) to a null string on the check
-	window and does not set WM_NAME(STRING).
+	_NET_WM_NAME should be (UTF8_STRING) instead of (STRING) (corrected in
+	'git' version).  It does not set WM_CLIENT_MACHINE(STRING) on the check
+	window as required by EWMH, but sets it on the root window.  It does
+	not, however, set it to the fully qualified domain name as required by
+	EWMH.  Also, it sets _NET_WM_PID(CARDINAL) on the check window, but
+	mistakenly sets it on the root window.  It sets WM_CLASS(STRING) to a
+	null string on the check window and does not set WM_NAME(STRING).
 
 JWM:
 	JWM is only EWMH compliant and is not WMH compliant.  It properly sets

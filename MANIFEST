@@ -27,6 +27,7 @@ lib/XDE/Input.pm
 lib/XDE/Keys.pm
 lib/XDE/Logout.pm
 lib/XDE/Notify.pm
+lib/XDE.pod
 lib/XDE/Session.pm
 lib/XDE/Setbg.pm
 lib/XDE/Setroot.pm

@@ -54,11 +54,15 @@ specify arguments to the launch command.
 
 This module provides the following methods:
 
+=head2 Initialization Methods
+
+This module has the following initialization methods:
+
 =over
 
 =cut
 
-=item XDE::Dock->new(I<%OVERRIDES>) => $dock
+=item B<new> XDE::Dock I<%OVERRIDES> => $dock
 
 Creates an instance of an XDE::Dock object.  The XDE::Dock module uses
 the L<XDE::Context(3pm)> module as a base, so the C<%OVERRIDES> are
@@ -73,7 +77,43 @@ sub new {
 =item $dock->B<_init>() => $dock
 
 Performs initialization for just this module.  Called after
-L<XDE::Dual(3pm)> is fully initialized.
+L<XDE::Dual(3pm)> is fully initialized.  The actions performed are as
+follows:
+
+=over
+
+=item 1.
+
+The L<Linux::Inotify2(3pm)> connection is established and initiated.
+
+=item 2.
+
+The icon search path is initialized.
+
+=item 3.
+
+L<X11::Protocol(3pm)> extensions are initialized.
+
+=item 4.
+
+The EWMH/WMH/ICCCM environment is initialized.
+
+=item 5.
+
+Registration is perform on the root window to receive C<PropertyChange>
+and C<SubstructureNotify> events.
+
+=item 6.
+
+A window is created to act as the parent for toplevel windows that are
+reparented that do not correspond to the dock app window itself.
+
+=item 7.
+
+The dock window itself is created and dock apps searched and reparented
+by calling the B<create_dock> method.
+
+=back
 
 =cut
 
@@ -125,18 +165,67 @@ sub _init {
 =item $dock->B<_term>() => $dock
 
 Performs termination just for this module.  Called before
-L<XDE::Dual(3pm)> terminates.
+L<XDE::Dual(3pm)> terminates.  The proper action to take here is to
+reparent any windows that we have swallowed back to the root window so
+that the window manager can take control of them or at least so that the
+dock apps do not terminate when we don't want them to.
+
+We change the save set of any windows that we reparent to the
+L<X11::Protocol> window, so they should be reparented back to root on
+their own; however, any windows that we have added to a L<Gtk2::Socket>
+needs to be reparented away from the socket and back to root.
 
 =cut
 
 sub _term {
     my $self = shift;
+    my $X = $self->{X};
+    $self->{saveset} = {} unless $self->{saveset};
+    $self->{reparent} = {} unless $self->{reparent};
+
+    {
+	my @windows = (keys %{$self->{saveset}});
+	foreach my $xid (@windows) {
+	    printf STDERR "==> SAVESET: includes window 0x%x (%d)\n",
+		   $xid,$xid;
+	    if ($self->{reparent}{$xid}) {
+		printf STDERR "==> SOCKETS: includes window 0x%x (%d)\n",
+		       $xid,$xid;
+	    }
+	}
+    }
+    {
+	my @windows = (keys %{$self->{reparent}});
+	foreach my $xid (@windows) {
+	    printf STDERR "==> SOCKETS: includes window 0x%x (%d)\n",
+		   $xid,$xid;
+	}
+    }
+    $self->{shuttingdown} = 1;
+    {
+	my @windows = (keys %{$self->{reparent}});
+	foreach my $xid (@windows) {
+	    printf STDERR "==> REPARENTING: window 0x%x (%d) to root\n", $xid,$xid;
+	    $X->ReparentWindow($xid,$X->root,0,0);
+	    $X->MapWindow($xid);
+	}
+	$X->GetScreenSaver;
+	Gtk2->main_iteration while Gtk2->events_pending;
+    }
     return $self;
 }
 
+=back
+
+=head2 General Methods
+
+This modules has the following general methods:
+
+=over
+
 =item $dock->B<create_dock>() => $dock
 
-Creates the windows for the dock and embeds the dock aps that it can
+Creates the window for the dock and then embeds the dock aps that it can
 find.
 
 =cut
@@ -166,6 +255,19 @@ sub create_dock {
     $self->{dock}{apps} = 0;
     $self->find_dockapps;
 }
+
+=item $dock->B<withdraw_window>(I<$X>,I<$win>) => $result
+
+This method uses the X11::Protocol::Connection, C<$X>, to withdraw the
+window, C<$win>.  The purpose here is to withdraw the window so that the
+window manager will cease managing the window (as is required by the
+ICCCM), in preparation for reparenting the window to the dock.
+
+This method relies on ICCCM compliance.  Window managers are supposed to
+reparent back to root any toplevel window that was previously mapped and
+reparented when they are unmapped by the client.
+
+=cut
 
 sub withdraw_window {
     my ($self,$X,$win) = @_;
@@ -219,8 +321,55 @@ sub withdraw_window {
     return $return;
 }
 
+=item $dock->B<test_window>(I<$X>,I<$xid>) => $result
+
+Using the X11::Protocol::Connection, C<$X>, test the window, C<$win>, to
+see whether it is a dock app and whether it should be repartented to the
+dock.  This method returns true (1) when the window is a dock app and
+false (0) when it is not.
+
+This is an internal methods meant to be called from an event handler or
+when initially searching the window stack for currently running dock
+apps.
+
+Some variations handled:
+
+=over
+
+=item 1.
+
+Some dockapps use their toplevel window as the C<icon_window> as well.
+
+=item 2.
+
+Some dockapps use only their toplevel window and have no C<icon_window>.
+
+=item 3.
+
+Some dockapps have a toplevel window with an C<icon_window> that points
+to itself!
+
+=item 4.
+
+Some dockapps use a separate toplevel window as the C<icon_window>.
+
+=item 5.
+
+Some dockapps make the C<icon_window> a child of their toplevel window,
+presumably so that WM's will map the child with the toplevel if it
+doesn't understand windows being mapped in the withdrawn state.  When
+the C<icon_window> is a child of the toplevel, we do not want to steal
+it away from its parent because it will be reparented to root on the way
+out.  Therefore, when the C<icon_window> is a child of the toplevel, we
+do not want to withdraw it and we want to reparent only the toplevel.
+
+=back
+
+=cut
+
 sub test_window {
     my ($self,$X,$xid) = @_;
+    return 0 if $self->{shuttingdown};
     printf STDERR "--> TESTING WINDOW: window = 0x%x (%d)\n",$xid,$xid;
     if (my $win = $self->getWM_HINTS($xid)) {
 	return unless $win->{initial_state} and
@@ -271,10 +420,30 @@ sub test_window {
     return 0;
 }
 
+=item $dock->B<search_window>(I<$X>,I<$win>)
+
+Uses the X11::Protocol::Connection, C<$X>, to search for dock app
+windows in the subtree rooted at the window, C<$win>.  The search stops
+when a dock app is found in the subtree.
+
+This is an internal method intended on being called at startup.
+
+=cut
+
 sub search_window {
     my($self,$X,$win) = @_;
     $self->search_kids($X,$win) if not $self->test_window($X,$win);
 }
+
+=item $dock->B<search_kids>(I<$X>,I<$win>)
+
+Uses the X11::Protocol::Connection, C<$X>, to search for dock app
+windows in the children of the window, C<$win>.  The search is exectuted
+for each child regardless of whether dock app was found in a sibling.
+
+This is an internal method intended on being called at startup.
+
+=cut
 
 sub search_kids {
     my ($self,$X,$win) = @_;
@@ -285,11 +454,31 @@ sub search_kids {
     }
 }
 
+=item $dock->B<find_dockapps>(I<$X>)
+
+Uses the X11::Protocol::Connection, C<$X>, to search for dock apps below
+the root window.
+
+This is an internal method intended on being called at startup: it is
+called at the end of the B<create_dock> method.
+
+=cut
+
 sub find_dockapps {
     my $self = shift;
     my $X = $self->{X};
     $self->search_kids($X,$X->root);
 }
+
+=item $dock->B<dock_rearrange>()
+
+Requests that the dock rearrange itself and correct its position and the
+position of its children.
+
+This is an internal method intended on being called whenever a dock app
+is added to or removed from the dock.
+
+=cut
 
 sub dock_rearrange {
     my $self = shift;
@@ -446,6 +635,41 @@ sub dock_rearrange {
 	    $bottom_start_x,$bottom_end_x);
 }
 
+=item $dock->B<swallow>(I<$win>)
+
+Swallows the window, C<$win>, by reparenting it into the dock.
+
+Wrinkles:
+
+=over
+
+=item 1.
+
+When the C<icon_window> is a child of its toplevel window, we want to
+reparent the toplevel and not the child.
+
+=item 2.
+
+When the C<icon_window> is its own toplevel, we might have been
+withdrawing it and we just haven't received the event at this point...
+
+=item 3.
+
+If the C<icon_window> is its own toplevel window, independent of the
+toplevel for which it is the C<icon_window>, we will need to wait for
+it to appear on its own before reparenting can be done.
+
+=item 4.
+
+In the complex case where the C<icon_window> has a different toplevel
+window that the withdrawn dockapp window, just reparent the icon window.
+
+=back
+
+Reparenting is performed using the L<Gtk2::Socket(3pm)> mechanism.
+
+=cut
+
 sub swallow {
     my ($self,$win) = @_;
     my $xid = $win->{window};
@@ -563,6 +787,7 @@ sub swallow {
 		$self->{dock}{vbox}->remove($b);
 		$self->{dock}{apps} -= 1;
 		$self->dock_rearrange;
+		delete $self->{reparent}{$win->{window}};
 		delete $self->{dockapps}{$win->{window}};
 		delete $self->{iconwins}{$win->{icon_window}} if $win->{icon_window};
 		});
@@ -576,12 +801,28 @@ sub swallow {
 	$s->show_all;
 	$self->{dock}{win}->show_all;
 	printf STDERR "--> ADDING window 0x%x (%d) into socket\n",$sid,$sid;
-	$s->add_id($sid);
+	# We might also use $s->steal($sid) here.  I don't quite know
+	# what the difference is as both appear to behave the same;
+	# however, there is no way to add the window Gtk2's save set, so
+	# we need to figure out how to do that.  Perhaps stealing has
+	# this effect.
+	$self->{reparent}{$sid} = 1;
+	if (0) {
+	    $s->steal($sid);
+	} else {
+	    $s->add_id($sid);
+	}
 	$win->{swallowed} = 1;
     } else {
 	warn sprintf("Window 0x%x (%d) already swallowed!",$xid,$xid);
     }
 }
+
+=item $dock->B<unswallow>(I<$win>)
+
+Unswallows the window, C<$win>, by reparenting it back to root.
+
+=cut
 
 sub unswallow {
     my ($self,$win) = @_;
@@ -591,12 +832,13 @@ sub unswallow {
     }
 }
 
-=item $dock->B<event_handler_CreateNotify>(I<$e>,I<$X>,I<$v>)
+=item $dock->B<test_for_dockapp>(I<$win>)
 
-Event handler for when toplevel windows are created.  Whenever a
-toplevel window is created we want to subscribe to property changes so
-that we can determine when to check WM_HINTS for the tell-tale indicator
-of a windowmaker dockapp: initial_state of WithdrawnState.
+Tests the window, C<$win>, to determine whether it is a dock app.  If
+the window, C<$win>, is a dock app, the window swallowing procedure is
+initiated; otherwise, the window unswallowing procedure is initiated.
+
+This is an internal function that is not currently used.
 
 =cut
 
@@ -622,6 +864,25 @@ sub test_for_dockapp {
     return;
 }
 
+=back
+
+=head2 Event Handlers
+
+The XDE::Dock module has the following default event handlers:
+
+=over
+
+=item $dock->B<event_handler_CreateNotify>(I<$e>,I<$X>,I<$v>)
+
+Event handler for when toplevel windows are created.  Whenever a
+toplevel window is created we want to subscribe to property changes so
+that we can determine when to check WM_HINTS for the tell-tale indicator
+of a windowmaker dockapp: initial_state of WithdrawnState.
+
+This handler currently does nothing!
+
+=cut
+
 sub event_handler_CreateNotify {
     my $self = shift;
     my ($e,$X,$v) = @_;
@@ -630,6 +891,10 @@ sub event_handler_CreateNotify {
 }
 
 =item $dock->B<event_handler_DestroyNotify>(I<$e>,I<$X>,I<$v>)
+
+Event handler for when windows are destroyed.
+
+This handler currently does nothing!
 
 =cut
 
@@ -693,6 +958,7 @@ sub event_handler_ReparentNotify {
 	    printf STDERR "==> REPARENTING: window 0x%x (%d) to internal 0x%x (%d)\n",
 		   $win->{window},$win->{window},$self->{dock}{parent},$self->{dock}{parent};
 	    $X->ChangeSaveSet('Insert',$win->{window});
+	    $self->{saveset}{$win->{window}} = 1;
 	    $X->ReparentWindow($win->{window},$self->{dock}{parent},0,0);
 	    $X->GetScreenSaver;
 	    $self->swallow($win);
@@ -726,6 +992,9 @@ sub event_handler_ReparentNotify {
 		}
 		$X->GetScreenSaver;
 	    }
+	    # remap the window under the new parent so that it will
+	    # map itself when reparented to root
+	    $X->MapWindow($win->{window});
 	}
     } else {
 	 # window was parented away from the root window
@@ -737,12 +1006,29 @@ sub event_handler_ReparentNotify {
     }
 }
 
+=item $dock->B<event_handler_UnmapNotify>(I<$e>,I<$X>,I<$v>)
+
+Event handlers for when windows are unmapped.
+
+This handler currently does nothing!
+
+=cut
+
 sub event_handler_UnmapNotify {
     my $self = shift;
     my ($e,$X,$v) = @_;
     printf STDERR "::: UnmapNotify: event=0x%x (%d) window=0x%x (%d) from_configure=%s\n",
 	   $e->{event},$e->{event},$e->{window},$e->{window},$e->{from_configure};
 }
+
+=item $dock->B<event_handler_MapNotify>(I<$e>,I<$X>,I<$v>)
+
+Event handler for when windows are mapped.
+
+This handler tests when windows are mapped whether they have the
+signatures of dock apps.  L<pekwm(1)> needs this.
+
+=cut
 
 sub event_handler_MapNotify {
     my $self = shift;
@@ -758,10 +1044,16 @@ sub event_handler_MapNotify {
 
 =item $dock->B<event_handler_PropertyNotifyWM_HINTS>(I<$e>,I<$X>,I<$v>)
 
+Event handler for changes to the C<WM_HINTS> property on windows so that
+we can discover the tell-tale signs of a windowmaker dock app: being
+mapped in the withdrawn state.
+
 We register for property notification on newly created windows to check
 for changes to the WM_HINTS property.  We recheck the window status when
 this property changes.  It can change any time between CreateNotify and
 this PropertyNotify.
+
+This action is currently commented out!
 
 =cut
 
@@ -775,6 +1067,29 @@ sub event_handler_PropertyNotifyWM_HINTS {
 }
 
 1;
+
+=back
+
+=head1 BUGS
+
+Currently B<xde-dock> is not reparenting the dock apps back to root when
+the program terminates:
+
+=over
+
+=item 1.
+
+When the program terminates with C<SIGTERM>, we should catch the signal
+and repartent all of the dock apps back to the root and request of the
+window manager that they be mapped.
+
+=item 2.
+
+When the program terminates with C<SIGKILL>, the only way to reparent
+the windows back to root and map them is by adding them to our
+save-list.  Unfortunately, we are using Gdk/Gtk2 for the reparenting, so
+we have to figure a way to get Gdk/Gtk2 to add the windows to its save
+list.
 
 =back
 

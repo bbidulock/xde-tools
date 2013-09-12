@@ -266,7 +266,7 @@ F<xde-input-edit>.
 
 Specify the file to use as the configuration file instead of the
 default.  The default is F<$XDG_CONFIG_HOME/xde/input.ini>.  This option
-does no recognize C<-> as standard input: use F</dev/stdin> instead.
+does not recognize C<-> as standard input: use F</dev/stdin> instead.
 
 =back
 

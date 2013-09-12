@@ -18,7 +18,13 @@ XDE::Desktop -- XDE Desktop Environment
 
 =head1 DESCRIPTION
 
+B<XDE::Desktop> provides a module that manages the desktop environment
+for the L<XDE(3pm)> suite.
+
 =head1 METHODS
+
+Most of the methods provided by this module are internal and used for
+implementation only.
 
 This module provides the following methods:
 
@@ -50,6 +56,16 @@ sub new {
     return XDE::Context::new(@_);
 }
 
+=item $desktop->B<get_image>(I<$names>,I<$id>,I<$mime>) => XDE::Desktop::Image
+
+Returns the XDE::Desktop::Image object that corresponds to an
+identifier, C<$id>, mime type, C<$mime>, and uses icons from an array
+reference to a list of preferred icon names, C<$names>.  The result is
+cached against I<$id> so that only one pixmap is installed on the X
+display for multiple occurrences of the same id.
+
+=cut
+
 sub get_image {
     my ($self,$names,$id,$mime) = @_;
     unless ($self->{images}{$id}) {
@@ -58,6 +74,22 @@ sub get_image {
     }
     return $self->{images}{$id};
 }
+
+=item XDE::Desktop->B<get_mime_type>(I<$file>) => $mimetype
+
+Gets the mime type for the specified file, C<$file>.   This method uses
+L<Gnome2::VFS::URI(3pm)> to obtain information about the mime type of
+the file.  The XDG shared-mime specification could be used directly
+using just L<perl(1)> to do so, however, L<Gnome2::VFS(3pm)> gives good
+results for the most part.  As a fall back when L<Gnome2::VFS::URI(3pm)>
+cannot determine the mime type, the L<file(1)> program is queried.
+L<file(1)> gives less consistent results than L<Gnome2::VFS(3pm)>.  The
+previous two approaches examine the file but do not consider the name.
+As a final fall back, L<Gnome2::VFS(3pm)> is used to query for a mime
+type based solely on the file name.  Heuristically, this approach gives
+good results for determining the mime type of any file.
+
+=cut
 
 sub get_mime_type {
     my ($selfortype,$file) = @_;
@@ -100,6 +132,18 @@ sub get_mime_type {
     return $mime;
 }
 
+=item XDE::Desktop->B<get_icons>(I<$mime>) = \@icons
+
+Given a mime type, C<$mime>, returns an array reference to a list of
+icon names, or C<undef> when unsuccessful.  The icon names are in order
+of preference, starting with the mime type supplied, any aliases of
+that mime type, and any subclasses of that mime type.  The purpose of
+this method is to always find a reasonable icon representation of the
+mime type.  Use when displaying an icon for a given desktop object.
+
+=cut
+
+
 sub get_icons {
     my ($selfortype,$mime) = @_;
     my @icons = ();
@@ -122,6 +166,19 @@ sub get_icons {
     return \@icons;
 }
 
+=item XDE::Desktop->B<get_apps_and_subs>(I<$mime>) => \@apps, \@subs
+
+Given a mime type, C<$mime>, returns a list of array references for the
+primary application ids and the subclass application ids associated
+with the mime type.  This is used for determining which applications
+should be used to open a given desktop file, and which subclass
+applications can be used as a fall back or for opening a desktop file
+using a subclass mime type.  For example, a browser (C<firefox>) could
+be returned in the C<\@apps> list for C<text/html> and a text editor
+(C<vim>) in the C<\@subs> list.
+
+=cut
+
 sub get_apps_and_subs {
     my ($selfortype,$mime) = @_;
     my @apps = ();
@@ -141,6 +198,14 @@ sub get_apps_and_subs {
     return \@apps, \@subs;
 }
 
+=item XDE::Desktop->B<get_desktops> => \@desktops
+
+Returns a list of the desktops that appeared in the C<OnlyShowIn> and
+C<NotShowIn> key fields of XDG desktop applications files.  This will be
+used to present the user a choice when adding custom applications.
+
+=cut
+
 sub get_desktops {
     my $selfortype = shift;
     my @des = reverse sort{$XDG_DESKTOPS{$a} <=> $XDG_DESKTOPS{$b}} keys %XDG_DESKTOPS;
@@ -149,6 +214,14 @@ sub get_desktops {
     }
     return \@des;
 }
+
+=item XDE::Desktop->B<get_categories> => \@categories
+
+Returns a list of the categories that appeared in the C<Categories> key
+fields of XDG desktop applications files.  This will be used to present
+the user a choice when adding custom applications.
+
+=cut
 
 sub get_categories {
     my $selfortype = shift;
@@ -159,10 +232,16 @@ sub get_categories {
     return \@cats;
 }
 
-=item $desktop->B<_init>() => $desktop
+=item $desktop->B<read_icons>()
 
-Internal method to intiialize the module.  This is called by the
-XDE::Context::new() method during initialization.
+Initialization method that
+reads the XDG shared-mime specification compliant generic icons from the
+files in F<@XDG_DATA_DIRS/mime/generic-icons> and places the icons into
+a package global hash C<%XDE::Desktop::MIME_GENERIC_ICONS> keyed by mime
+type.  This hash is later used by get_icons() to find icons for various
+mime types.
+
+This method is idempotent and can be called at any time to update the hash.
 
 =cut
 
@@ -187,6 +266,19 @@ sub read_icons {
     }
 }
 
+=item $desktop->B<read_aliases>()
+
+Initialization method that
+reads the XDG shared-mime specification compliant aliases  from the
+files in F<@XDG_DATA_DIRS/mime/aliases> and places the aliases into a
+package global hash C<%XDE::Desktop::MIME_ALIASES> keyed by mime type.
+This is later used by get_icons() and read_mimeapps() to find icons and
+applications for various mime types.
+
+This method is idempotent and can be called at any time to update the hash.
+
+=cut
+
 sub read_aliases {
     my $self = shift;
     my $file;
@@ -209,6 +301,17 @@ sub read_aliases {
     }
 }
 
+=item $desktop->B<read_subclasses>()
+
+Initialization method that
+reads the XDG shared-mime specification compliant subclasses from the
+files in F<@XDG_DATA_DIRS/mime/subclasses> and places the subclasses
+into a package global hash C<%XDE::Desktop::MIME_SUBCLASSES> keyed by
+mime type.  This is later used by get_icons() and read_mimeapps() to
+find icons and applications for various mime types.
+
+=cut
+
 sub read_subclasses {
     my $self = shift;
     my $file;
@@ -228,6 +331,18 @@ sub read_subclasses {
 	}
     }
 }
+
+=item $desktop->B<read_gvfsapps>()
+
+L<Gnome2::VFS(3pm)> has its own idea of the mapping of mime types to
+applications outside of the XDG desktop specification.  This method uses
+the L<Gnome2::VFS::ApplicationRegistry(3pm)> to retrieve those
+applications.  This provides a somewhat richer mapping verses using the
+XDG desktop specification applications files alone.  This method is used
+by read_mimeapps() to get a fuller set of mime type to application
+mappings.
+
+=cut
 
 sub read_gvfsapps {
     my $self = shift;
@@ -333,6 +448,21 @@ sub read_gvfsapps {
     return \%files;
 }
 
+=item $desktop->B<read_mimeapps>()
+
+Initialization method that uses XDE::Desktop::read_gvfsapps() and
+XDG::Context::get_applications() to get all of the applications known to
+L<Gnome2::VFS(3pm)> and those specified according to the XDG desktop
+specification.  These applications are placed into the package global
+hash C<%XDE::Desktop::MIME_APPLICATIONS> keyed by application id.  This
+is later used by get_apps_and_subs() to retrieve applications and
+subclass applications associated with a mime type.
+
+This method is idempotent and can be called at any time to update the
+hash.
+
+=cut
+
 sub read_mimeapps {
     my $self = shift;
     my $apps = $self->read_gvfsapps;
@@ -389,6 +519,31 @@ sub read_mimeapps {
     $self->get_categories;
     $self->{mimeapps} = $self->get_mimeapps;
 }
+
+=item $desktop->B<read_primary_data>()
+
+Simply calls read_icons(), read_aliases(), read_subclasses() and
+read_mimeapps() in order.
+
+This method is idempotent and can be called at any time to update
+primary data.
+
+=cut
+
+sub read_primary_data {
+    my $self = shift;
+    $self->read_icons;
+    $self->read_aliases;
+    $self->read_subclasses;
+    $self->read_mimeapps;
+}
+
+=item $desktop->B<_init>() => $desktop
+
+Internal method to initialize the module.  This is called by the
+XDE::Context::new() method during initialization.
+
+=cut
 
 
 sub _init {
@@ -749,6 +904,15 @@ if (0) {
     return $self;
 }
 
+=item $desktop->B<set_style>()
+
+Adjusts the style of the desktop window to use the pixmap specified by
+C<_XROOTPMAP_ID> as the background.  Uses L<Gtk2(3pm)> styles to do
+this.  You must call get_XROOTPMAP_ID() before calling this method for
+it to work correctly.
+
+=cut
+
 sub set_style {
     my $self = shift;
     unless ($self->{_XROOTPMAP_ID}) {
@@ -771,14 +935,6 @@ sub set_style {
 #	$self->{desktop}->window->clear;
 	$self->{old_XROOTPMAP_ID} = $self->{_XROOTPMAP_ID};
     }
-}
-
-sub read_primary_data {
-    my $self = shift;
-    $self->read_icons;
-    $self->read_aliases;
-    $self->read_subclasses;
-    $self->read_mimeapps;
 }
 
 =item $desktop->B<update_desktop>()
@@ -1194,6 +1350,16 @@ use constant {
     },
 };
 
+=item XDE::Desktop->B<xlate_state>(I<$states>) => $state
+
+L<Gtk2(3pm)> specifies the state associated with an event using a
+textual description.  L<X11::Protocol(3pm)> uses a bit mask.  This
+method simply translates the former to the later.  It is used for
+passing events from L<Gtk2(3pm)> to L<X11::Protocol(3pm)> and should
+probably by part of the L<XDE::Dual(3pm)> module instead of here.
+
+=cut
+
 sub xlate_state {
     my ($self,$states) = @_;
     my $state = 0;
@@ -1408,10 +1574,35 @@ sub scroll_event_override {
     return Gtk2::EVENT_STOP;
 }
 
+=item $desktop->B<scroll_event_openbox>(I<$event>,I<$win>) => $boolean
+
+Gtk2::Gdk::Event handler for Gtk2::Gdk::Event::Scroll events for the
+L<openbox(1)> window manager.
+L<openbox(1)> has a strange idea for changing desktops using scroll
+events.  Scroll events only change desktops within a row of the desktop
+layout, but much can be changed using the L<openbox(1)> configuration
+file.  B<XDE::Desktop> intercepts scroll events on the desktop and makes
+the experience consistent with other window managers by calling
+scroll_event_override().
+
+=cut
+
 sub scroll_event_openbox {
     my $self = shift;
     return $self->scroll_event_override(@_);
 }
+
+=item $desktop->B<scroll_event_pekwm>(I<$event>,I<$win>) => $boolean
+
+Gtk2::Gdk::Event handler for Gtk2::Gdk::Event::Scroll events for the
+L<pekwm(1)> window manager.
+L<pekwm(1)> has a strange idea for changing desktops using scroll
+events.  Scroll events only change desktops within a row of the desktop
+layout.  B<XDE::Desktop> intercepts scroll events on the desktop and
+makes the experience consistent with other window managers by calling
+scroll_event_override().
+
+=cut
 
 sub scroll_event_pekwm {
     my $self = shift;
@@ -1439,7 +1630,8 @@ sub scroll_event_jwm {
 
 Gtk2::Gdk::Event handler for Gtk2::Gdk::Event::Scroll events.  We
 basically provide for the basic desktop events here, particularly
-because L<icewm(1)> cannot handle scroll events and forwarding them
+because L<icewm(1)> cannot handle scroll events unless specially
+specified in the F<preferences> file and forwarding them usually
 accomplishes nothing when L<icewm(1)> is running.
 
 =cut
@@ -1465,6 +1657,12 @@ sub scroll_event {
     }
     return $self->scroll_event_passalong(@_);
 }
+
+=item $desktop->B<draw_lasso>()
+
+Unused method taken from L<rox(1)>.
+
+=cut
 
 sub draw_lasso {
     my $self = shift;
@@ -1501,6 +1699,12 @@ sub draw_lasso {
     $win->invalidate_rect($edge,TRUE);
 }
 
+=item $desktop->B<motion_notify_event>(I<$event>,I<$win>)
+
+Unused method taken from L<rox(1)>.
+
+=cut
+
 sub motion_notify_event {
     my $self = shift;
     my ($event,$win) = @_;
@@ -1516,6 +1720,13 @@ sub motion_notify_event {
 	$self->draw_lasso;
     }
 }
+
+=item $desktop->B<expose_event>(I<$event>,I<$win>)
+
+Unused method taken from L<rox(1)>.
+
+=cut
+
 sub expose_event {
     warn "expose-event: ",join(',',@_);
     my $self = shift;
@@ -1538,18 +1749,38 @@ sub expose_event {
     return Gtk2::EVENT_PROPAGATE;
 }
 
+=item $desktop->B<drag_data_received>(I<$drag>,I<$select>,I<$win>) => $propagate
+
+Unused method taken from L<rox(1)>.
+
+=cut
+
 sub drag_data_received {
     warn "drag-data-received: ",join(',',@_);
     my $self = shift;
     my ($drag,$select,$win) = @_;
     return Gtk2::EVENT_PROPAGATE;
 }
+
+=item $desktop->B<drag_motion>(I<$drag>,I<$x>,I<$y>,I<$id>,I<$win>) => $propagate
+
+Unused method taken from L<rox(1)>.
+
+=cut
+
 sub drag_motion {
     warn "drag-motion: ",join(',',@_);
     my $self = shift;
     my ($drag,$x,$y,$id,$win) = @_;
     return Gtk2::EVENT_PROPAGATE;
 }
+
+=item $desktop->B<drag_leave>(I<$drag>,I<$id>,I<$win>) => $propagate
+
+Unused method taken from L<rox(1)>.
+
+=cut
+
 sub drag_leave {
     warn "drag-leave: ",join(',',@_);
     my $self = shift;
@@ -1560,7 +1791,8 @@ sub drag_leave {
 
 =item $desktop->B<get_XROOTPMAP_ID>() => $value
 
-Get the C<_XROOTPMAP_ID> property from the root window.
+Return the C<_XROOTPMAP_ID> property from the root window and store it
+in C<$self-E<gt>{_XROOTPMAP_ID}>.
 
 =cut
 
@@ -1570,8 +1802,12 @@ sub get_XROOTPMAP_ID {
 
 =item $desktop->B<event_handler_PropertyNotify_XROOTPMAP_ID>(I<$e>,I<$X>,I<$v>)
 
-XDE::X11 event handler for changes to the C<_XROOTPMAP_ID> property on
-the root window.
+L<XDE::X11(3pm)> event handler for changes to the C<_XROOTPMAP_ID>
+property on the root window.  The default response is to obtain the new
+value of the property and set the style accordingly by calling
+set_style().  This is the way that XDE::Desktop plays nice with any
+background setter: it simply makes its background equal to whatever
+C<_XROOTPMAP_ID> says it should be.
 
 =cut
 
@@ -1586,9 +1822,9 @@ sub event_handler_PropertyNotify_XROOTPMAP_ID {
 
 =item $desktop->B<event_handler_PropertyNotify_NET_WORKAREA>(I<$e>,I<$X>,I<$v>)
 
-XDE::X11 event handler for changes to the C<_NET_WORKAREA> property on
-the root window.  When this property changes we may need to adjust the
-area occupied by desktop icons.
+L<XDE::X11(3pm)> event handler for changes to the C<_NET_WORKAREA>
+property on the root window.  When this property changes we may need to
+adjust the area occupied by desktop icons by calling rearrange_icons().
 
 =cut
 
@@ -1601,9 +1837,9 @@ sub event_handler_PropertyNotify_NET_WORKAREA {
 
 =item $desktop->B<event_handler_PropertyNotify_WIN_WORKAREA>(I<$e>,I<$X>,I<$v>)
 
-XDE::X11 event handler for changes to the C<_WIN_WORKAREA> property on
-the root window.  When this property changes we may need to adjust the
-area occupied by desktop icons.
+L<XDE::X11(3pm)> event handler for changes to the C<_WIN_WORKAREA>
+property on the root window.  When this property changes we may need to
+adjust the area occupied by desktop icons by calling rearrange_icons().
 
 =cut
 

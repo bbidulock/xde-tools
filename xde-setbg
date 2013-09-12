@@ -369,6 +369,36 @@ Basically, one need not even run B<icewmbg> when using B<xde-setbg>.  An
 XDE session will not invoke B<icewmbg> and, therefore, can set the
 B<--delay> option to zero (0).
 
+=item L<jwm(1)>
+
+L<jwm(1)> supports setting per-desktop backgrounds as part of its
+configuration file (and thus through the sytle mechanism that I added to
+the L<jwm(1)> configuration).  The built-in background setter works just
+find and it is not necessary to run B<xde-setbg> on this window manager.
+Nevertheless, B<xde-setbg> works fine when L<jwm(1)> is configured to
+not use its internal background setter.
+
+=item L<pekwm(1)>
+
+=item L<wmaker(1)>
+
+L<wmaker(1)> supports setting per-desktop backgrounds as part of its
+theme mechanism.  This built-in background setter works just fine and
+it is not necessary to run B<xde-setbg> on this window manager.
+Nevertheless, B<xde-setbg> works fine when L<wmaker(1)> is configured to
+not use its internal background setter.
+
+=item L<fvwm(1)>
+
+L<fvwm(1)> has a C<FvwmBacker> module that can set the background
+per-workspace and per-workarea; however, it is a pig and transfers the
+entire image to the X server on each desktop switch.  Don't use it: use
+B<xde-setbg> instead.
+
+=item L<metacity(1)>
+
+L<metacity(1)> does not provide any theme-based background setting of
+its own.
 
 =back
 

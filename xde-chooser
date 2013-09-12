@@ -24,6 +24,9 @@ use XDE::Chooser;
 use strict;
 use warnings;
 
+#use Gtk2;
+#Gtk2::Rc->set_default_files("$ENV{HOME}/.gtkrc-2.0.xde");
+
 my %OVERRIDES = ();
 my $here = $0; $here =~ s{/[^/]*$}{};
 if ($here =~ s{^\.}{}) {
@@ -227,7 +230,7 @@ B<xde-chooser> is a gtk2-perl application that can be launched from
 F<~/.xinitrc> to choose the X session that will be launched, or can be
 launched from a window manager or session logout script to switch the
 sessions.  The menu can also provide the choice for the user to perform
-actions on the box such as powering of the computer, restarting the
+actions on the box such as powering off the computer, restarting the
 computer, etc.
 
 When a selection is made or logout/disconnect is selected,
@@ -333,14 +336,26 @@ session.
 
 =back
 
-When unspecified, the default is C<choose>.
+When unspecified, the default is C<default>.
+
+A session name is the name of the F<*.desktop> file (without the
+F<.desktop> suffix) that exists in a F<@XDG_DATA_DIRS/xsessions/>
+directory describing the window manager session.
+Some commonly recognized session names are as follows: C<fluxbox>,
+C<blackbox>, C<openbox>, C<icewm>, C<pekwm>, C<jwm>, C<metacity>,
+C<fvwm>, C<wmaker> and C<afterstep>.
 
 =back
 
 =head1 WINDOW MANAGERS
 
 The I<XDE> suite ships with a number of session files that are contained
-in the F</usr/share/xde/xsessions> directory.
+in the F</usr/share/xde/xsessions> directory.  Currently these are:
+
+=over
+
+
+=back
 
 =head1 FILES
 
@@ -418,6 +433,11 @@ configuration directories to search.
 
 =back
 
+=head1 USAGE
+
+B<xde-chooser> is meant to be called directly from an F<~/.xinitrc>
+file, or from a display manager such as L<slim(1)>.
+
 =head1 BUGS
 
 B<xde-chooser> should really output the path to the F<XSessions> file
@@ -427,6 +447,8 @@ instead of the lowercase session name.
 
 I wrote B<xde-chooser> to provide a mechanism for selecting availabile
 window managers in an XDG compliant way for the I<unexicon> desktop.
+With L<gdm(1)> going to GTK3, the I<unexicon> desktop uses L<xdm(1)>,
+L<slim(1)> and L<xde-chooser(1p)> instead.
 
 =head1 AUTHOR
 

@@ -1,0 +1,559 @@
+=head1 NAME
+
+XDE - XDE Desktop Environment
+
+=head1 SYNOPSIS
+
+=head1 DESCRIPTION
+
+I<XDE> is an X Desktop Environment for Linux written entirely in
+L<perl(1)>.  It relies heavily on L<Gtk2(3pm)> and
+L<X11::Protocol(3pm)>.
+
+=head1 TOOLS
+
+The following tools are provided in the I<XDE> suite:
+
+=over
+
+=item L<xde-chooser(1p)>
+
+L<xde-chooser(1p)> is an application that can be run from F<~/.xinitrc>
+to select the X session to be run when X starts up.  It provides an XDG
+compliant list of window manager sessions and remembers the user's
+default selection.
+See L<xde-chooser(1p)/HISTORY> for the motivation behind recreating this
+tool.
+
+=item L<xde-clock(1p)>
+
+L<xde-clock(1p)> is an example of the use of L<X11::Protocol> and the
+RENDER X extension to provide a cool analog clock ala L<xclock(1)>.  It
+is meant as an example program only.
+
+=item L<xde-desktop(1p)>
+
+L<xde-desktop(1p)> provides an extremely light-weight desktop
+environment.  It creates a desktop window that is used to overlay the
+root window and arranges desktop icons on the window.  This is a typical
+desktop environment such as that provided by L<rox(1)> or L<ede(1)> but
+it is XDG compliant, provides for some additional features and
+integrates nicely with the rest of the I<XDE> suite.
+See L<xde-desktop(1p)/HISTORY> for the motivation behind recreating this
+tool.
+
+=item L<xde-dock(1p)>
+
+L<xde-dock(1p)> provides a WindowMaker-like dock that automatically
+swallows wmaker dock apps.  It is primarily for supporting docks on
+window managers that do not support them (L<metacity(1)>, L<jwm(1)>,
+L<icewm(1)>), but also provides some additional features only supported
+directly by Window Maker.  See L<xde-dock(1p)/WINDOW MANAGERS> for a
+discussion.
+See L<xde-dock(1p)/HISTORY> for the motivation behind recreating this
+tool.
+See L<XDE::Dock(3pm)> for the supporting module.
+
+=item L<xde-fluxbox(1p)>
+
+=item L<xde-icon(1p)>
+
+=item L<xde-init(1p)>
+
+=item L<xde-input(1p)>
+
+L<xde-input(1p)> provides an application similar to L<lxinput(1)>, with
+the exception that L<xde-input(1p)> works!  It runs in the background
+and manages L<xset(1)> settings from a configuration file.  It monitors
+changes to settings and updates the configuration file accordingly.  The
+program works with all window managers.
+See L<xde-input(1p)/HISTORY> for the motivation behind recreating this
+tool.
+See L<XDE::Input(3pm)> for the supporting module.
+
+=item L<xde-logout(1p)>
+
+L<xde-logout(1p)> provides a desktop environment logout program for use
+with I<XDE>.  It is similar to L<lxde-logout(1)> and
+L<lxsession-logout(1)>, and will actually perform their functions (it
+can be used with L<lxde(1)>).  It provides a list of selections for
+restarting, suspending, hibernating the computer, switch the current
+session, and logging out of (disconnecting from) the current session.
+It is compatible with I<Arch Linux> and its use of L<systemd(8)> and
+other facilities.
+See L<xde-logout(1p)/HISTORY> for the motivation behind recreating this
+tool.
+See L<XDE::Logout(3pm)> for the supporting module.
+
+=item L<xde-menu(1p)>
+
+=item L<xde-menugen(1p)>
+
+L<xde-menugen(1p)> provides a tool that provides similar function to
+that of the L<xdg_menu(1)> tool.  It provides an XDG-compliant root menu
+for various window managers, and conforms fully to current XDG
+specifications (L<xdg_menu(1)> does not).  In addition, it provdes
+additional I<XDE> menu entries and generates additional menu entries
+specific to a window managers.
+See L<xde-menugen(1p)/HISTORY> for the motivation behind recreating this
+tool.
+See L<XDG::Menu(3pm)> for the supporting module.
+
+=item L<xde-pager(1p)>
+
+=item L<xde-panel(1p)>
+
+L<xde-panel(1p)> provides a desktop panel (or panels).  It is heavily
+based on L<perlpanel(1)> and not much was done here except to include a
+better XDG-compliant menu applet and provide for better Gtk2 sytle and
+icon handling.
+See L<PerlPanel(3pm)> for the supporting module.
+
+=item L<xde-run(1p)>
+
+L<xde-run(1p)> provides a run command dialog that is consistent across
+window manager experience.  It is provided by the C<Commander> applet
+from L<perlpanel(1)>, and is only adapted for Gtk2 style.
+See L<PerlPanel::Applet::Commander(3pm)> for the supporting module.
+
+=item L<xde-session(1p)>
+
+=item L<xde-setbg(1p)>
+
+L<xde-setbg(1p)> provides a stand-alone tool that understands window
+manager style files and provides a style setting for multiple background
+images (per-desktop backgrounds).  This adds multiple backgrounds to all
+suported window managers.  It works well with background setting tools
+such as L<hsetroot(1)>.
+See L<xde-setbg(1p)/HISTORY> for the motivation behind recreating this
+tool.
+See L<XDE::Setbg(3pm)> for the supporting module.
+
+=item L<xde-settings(1p)>
+
+=item L<xde-setup(1p)>
+
+=item L<xde-startup(1p)>
+
+=item L<xde-theme(1p)>
+
+L<xde-theme(1p)> monitors window manager sytle changes in the same way
+as L<xde-setbg(1p)> and coordinates and manages theme changes to a
+seperate Gtk2 theme that closely corresponds to the window manager
+theme for use by other I<XDE> tools.
+See L<xde-theme(1p)/HISTORY> for the motivation behind creating this
+tool.
+See L<XDE::Theme(3pm)> for the supporting module.
+
+=item L<xde-traymenu(1p)>
+
+L<xde-traymenu(1p)> provides a system-tray menu similar to
+L<menutray(1)>; however, it uses the XDE XDG-compliant menu generator
+core to generate an XDG compliant menu.  Also, it coordinates with
+I<XDE> Gtk2 styles and provide superior icon handling.  This tool can
+easily be used stand-alone and can provide an XDG-compliant applications
+menu for any window manager or desktop environment.
+See L<xde-traymenu(1p)/HISTORY> for the motivation behind recreating this
+tool.
+See L<XDG::Menu(3pm)> for the supporting module.
+
+=item L<xde-xset(1p)>
+
+=back
+
+=head1 MODULES
+
+The I<XDE> suit relies on the following included perl modules:
+
+=head2 General Purpose Modules
+
+=over
+
+=item L<XDE::Actions(3pm)>
+
+Provides a set of methods that can be used to perform actions on an
+EWMH/WMH/ICCCM compliant window manager.
+
+=item L<XDE::Context(3pm)>
+
+Provides an I<XDE> compatible (tailored) XDG context.
+
+=item L<XDE::Dual(3pm)>
+
+Provides event loop and control integration between L<XDE::Gtk2(3pm)>
+and L<XDE::X11(3pm)> modules.
+
+=item L<XDE::EWMH(3pm)>
+
+Provides a set of methods and event handlers that support Enhanced
+Window Manager Hints (EWMH) Version 1.5 compliant window managers.
+
+=item L<XDE::Glib(3pm)>
+
+Provides event loop integration with and initialization of L<Glib(3pm)>.
+
+=item L<XDE::Gtk2(3pm)>
+
+Provides event loop integration with and initialization of L<Gtk2(3pm)>.
+
+=item L<XDE::ICCCM(3pm)>
+
+Provides a set of methods and event handlers that support Inter-Client
+Communication Conventions Manual Version 2.0 compliant window managers.
+
+=item L<XDE::Notify(3pm)>
+
+Provides event loop integration with and initialization of
+L<Linux::Inotify2(3pm)>.
+
+=item L<XDE::WMH(3pm)>
+
+Provides a set of methods and event handlers that support Gnome Window
+Manager Hints (WMH) compliant window managers.
+
+=item L<XDE::X11(3pm)>
+
+Provides event loop integration with and initialization of
+L<X11::Protocol(3pm)>.
+
+=back
+
+=head2 XDG Modules
+
+=over
+
+=item L<XDG::Context(3pm)>
+
+Provides a fundamental XDG compliant context and environment with
+utility methods for collecting information from the XDG system.
+
+=item L<XDG::StartupNotification(3pm)>
+
+Performs XDG compliant startup notification.
+
+=item L<XDG::Xsettings(3pm)>
+
+Proforms XDG compliant settings management.
+
+=item L<XDG::IconData(3pm)>
+
+=item L<XDG::Icons(3pm)>
+
+=item L<XDG::IconTheme(3pm)>
+
+Provides for XDG icon handling.  However, it is often better to use the
+facilities of Gtk2, which is much faster due to its caching implementation.
+
+=back
+
+=head2 Menu Generation Modules
+
+=over
+
+=item L<XDG::Menu(3pm)>
+
+Base XDG-compliant menu support.
+
+=item L<XDG::Menu::Parser(3pm)>
+
+XDG-compliant menu parser.
+
+=item L<XDG::Menu::Blackbox(3pm)>
+
+Root menu generator for the L<blackbox(1)> window manager.
+
+=item L<XDG::Menu::Fluxbox(3pm)>
+
+Root menu generator for the L<fluxbox(1)> window manager.
+
+=item L<XDG::Menu::Fvwm(3pm)>
+
+Root menu generator for the L<fvwm(1)> window manager.
+
+=item L<XDG::Menu::Icewm(3pm)>
+
+Root menu generator for the L<icewm(1)> window manager.
+
+=item L<XDG::Menu::Jwm(3pm)>
+
+Root menu generator for the L<jwm(1)> window manager.
+
+=item L<XDG::Menu::Openbox3(3pm)>
+
+Root menu generator for the L<openbox(1)> window manager.
+
+=item L<XDG::Menu::Openbox(3pm)>
+
+Root menu generator for the L<openbox(1)> window manager.
+
+=item L<XDG::Menu::Pekwm(3pm)>
+
+Root menu generator for the L<pekwm(1)> window manager.
+
+=item L<XDG::Menu::Wmaker(3pm)>
+
+Root menu generator for the L<wmaker(1)> window manager.
+
+=item L<XDG::Menu::Traymenu(3pm)>
+
+Root menu generator for the L<xde-traymenu(1)> tool.
+
+=item L<XDG::Menu::Tray(3pm)>
+
+Base XDG-complient menu applet support.
+
+=item L<XDG::Menu::Tray::Blackbox(3pm)>
+
+Panel menu generator for the L<blackbox(1)> window manager.
+
+=item L<XDG::Menu::Tray::Fluxbox(3pm)>
+
+Panel menu generator for the L<fluxbox(1)> window manager.
+
+=item L<XDG::Menu::Tray::Fvwm(3pm)>
+
+Panel menu generator for the L<fvwm(1)> window manager.
+
+=item L<XDG::Menu::Tray::Icewm(3pm)>
+
+Panel menu generator for the L<icewm(1)> window manager.
+
+=item L<XDG::Menu::Tray::Jwm(3pm)>
+
+Panel menu generator for the L<jwm(1)> window manager.
+
+=item L<XDG::Menu::Tray::Openbox3(3pm)>
+
+Panel menu generator for the L<openbox(1)> window manager.
+
+=item L<XDG::Menu::Tray::Openbox(3pm)>
+
+Panel menu generator for the L<openbox(1)> window manager.
+
+=item L<XDG::Menu::Tray::Pekwm(3pm)>
+
+Panel menu generator for the L<pekwm(1)> window manager.
+
+=item L<XDG::Menu::Tray::Wmaker(3pm)>
+
+Panel menu generator for the L<wmaker(1)> window manager.
+
+=back
+
+=head2 Tool Supporting Modules
+
+=over
+
+=item L<XDE::Autostart(3pm)>
+
+Provides the functionality required to support the L<xde-startup(1p)> tool.
+
+=item L<XDE::Autostart::Command(3pm)>
+
+Support module for L<XDE::Autostart(3pm)>.
+
+=item L<XDE::Autostart::Task(3pm)>
+
+Support module for L<XDE::Autostart(3pm)>.
+
+=item L<XDE::Chooser(3pm)>
+
+Provides the functionality required to support the L<xde-chooser(1p)> tool.
+
+=item L<XDE::Desktop(3pm)>
+
+Provides the functionality required to support the L<xde-desktop(1p)> tool.
+
+=item L<XDE::Desktop::Icon::Application(3pm)>
+
+Support module for L<XDE::Desktop(3pm)>.
+
+=item L<XDE::Desktop::Icon::Directory(3pm)>
+
+Support module for L<XDE::Desktop(3pm)>.
+
+=item L<XDE::Desktop::Icon::File(3pm)>
+
+Support module for L<XDE::Desktop(3pm)>.
+
+=item L<XDE::Desktop::Icon::Link(3pm)>
+
+Support module for L<XDE::Desktop(3pm)>.
+
+=item L<XDE::Desktop::Icon(3pm)>
+
+Support module for L<XDE::Desktop(3pm)>.
+
+=item L<XDE::Desktop::Icon::Shortcut(3pm)>
+
+Support module for L<XDE::Desktop(3pm)>.
+
+=item L<XDE::Desktop::Image(3pm)>
+
+Support module for L<XDE::Desktop(3pm)>.
+
+=item L<XDE::Dock(3pm)>
+
+Provides the functionality required to support the L<xde-dock(1p)> tool.
+
+=item L<XDE::Icons(3pm)>
+
+=item L<XDE::Input(3pm)>
+
+Provides the functionality required to support the L<xde-input(1p)> tool.
+
+=item L<XDE::Keys(3pm)>
+
+Provides the functionality required to support the L<xde-keys(1p)> tool.
+
+=item L<XDE::Logout(3pm)>
+
+Provides the functionality required to support the L<xde-logout(1p)> tool.
+
+=item L<XDE::Session(3pm)>
+
+Provides the functionality required to support the L<xde-session(1p)> tool.
+
+=item L<XDE::Setbg(3pm)>
+
+Provides the functionality required to support the L<xde-setbg(1p)> tool.
+
+=item L<XDE::Setroot(3pm)>
+
+Provides the functionality required to support the L<xde-setroot(1p)> tool.
+
+=item L<XDE::Settings(3pm)>
+
+Provides the functionality required to support the L<xde-settings(1p)> tool.
+
+=item L<XDE::Setup(3pm)>
+
+Provides the functionality required to support the L<xde-setup(1p)> tool.
+
+=item L<XDE::Startup(3pm)>
+
+Provides the functionality required to support the L<xde-startup(1p)> tool.
+
+=back
+
+=head1 WINDOW MANAGERS
+
+XDE is written to support a wide range of light-weight window managers.
+In general, XDE will work with any EWMH/WMH/ICCCM compliant window
+manager: the better the EWMH/ICCCM support, the better the experience.
+XDE is written to support the specific quirks and idiosyncrasies of a
+wide range of popular light-weight stacking window managers as follows:
+(listed in order of EWMH compliance):
+
+=over
+
+=item L<metacity(1)> EWMH(66:5) WMH(1:16)
+
+Metacity was the default window manager for I<Gnome2>.  Its has very broad
+EWMH support and has good theme support.  It lacks support for a panel
+and does not support dockapps, but these functions are provided by
+I<XDE>.
+It is still actively developed.
+It no longer fully supports WMH, but does still support
+C<_WIN_DESKTOP_BUTTON_PROXY>.
+
+=item L<openbox(1)> EWMH(65:5) WMH(0:17)
+
+Openbox is the default window manager for I<LXDE>.  It has very broad
+EWMH support and has adequate theme support.  It lacks support for a
+panel, but supports a I<dock> for dockapps.
+It is actively developed.
+
+=item L<pekwm(1)> EWMH(55:16) WMH(0:17)
+
+Pekwm is the default window manager for I<EDE>.  It has broad EWMH
+support and has adequate theme support.  It lacks support for a panel,
+but has some support for a I<harbour> for dockapps.
+It is actively developed.
+PeKWM does not support WMH.
+
+=item L<fluxbox(1)> EWMH(52:16) WMH(0:17)
+
+Fluxbox is an excellent window manager.  It has good EWMH support and
+has excellent theme support.  It provides a simple panel and supports a
+I<slit> for dockapps.
+It is actively developed.
+Fluxbox no longer supports WMH, but did in earlier releases.
+
+=item L<jwm(1)> EWMH(50:18) WMH(0:17)
+
+JWM is an excellent window manager.  It has good EWMH support but has
+little theme support.  It provides a basic but useful panel, but does
+not support dockapps.
+It is actively developed, but does not have a supporting community.
+JWM does not support WMH.
+
+=item L<fvwm(1)> EWMH(52:20) WMH(12:5)
+
+FVWM is an excellent window manager.  It has good EWMH support and has
+good theme support.  It is one of the last window managers to support
+WMH (IceWM is the other).  It provides a basic but useful panel.  It can
+support dockapps by swallowing them into a I<wharf>.
+It is actively developed.
+
+The limitations of this window manager is far too flexible
+configuration, however, it does make a good stand-alone sessionless
+window manager.  The L<fvwm-themes(1)> package can mitigate some of the
+limitations.
+
+=item L<wmaker(1)> EWMH(49:21) WMH(0:17)
+
+WindowMaker is an excellent window manager.  It has good EWMH support
+but has meager theme support.  It does not provide a panel, but, instead
+supports a I<clip> and a I<dock>.  Along with FVWM, it is probably the
+best stand-alone sessionless window manager.
+It is actively developed.
+
+=item L<blackbox(1)> EWMH(45:22) WMH(0:17)
+
+Blackbox is a good window manager: it is fast an light.  It has good
+EWMH/ICCCM support but has meager theme support.  It provides a
+simplistic panel and supports a I<slit> for dockapps.
+It is no longer developed, but is stable and has few bugs.
+
+=item L<afterstep(1)> EWMH(29:42) WMH(?:17)
+
+AfterStep is a good window manager.  It has some EWMH support and has
+good theme support.  It provides a basic panel.  It can support dockapps
+by swallowing them into a I<wharf>.
+It is no longer developed.
+
+=item L<icewm(1)> EWMH(21:46) WMH(14:2)
+
+IceWM is a good window manager: it is fast and light and feature rich.
+It has basic EWMH/ICCCM support and good theme support.  It is one of
+the last window managers to fully suport WMH. (FVWM is the other.)  It
+provides an integrated panel but does not support dockapps.
+It is no longer developed, but is stable and has few bugs.
+
+=back
+
+All of the window managers listed above are suitable for use with
+I<XDE>.
+
+=head1 HISTORY
+
+I started writing I<XDE> as an enhancement to I<LXDE> to corrrect some
+of the deficiencies of the environment.  It use to heavily rely on some
+of the I<LXDE> tools such as L<lxsession(1)>, L<lxpanel(1)>,
+L<pcmanfm(1)> and L<lxterminal(1)>.  Unfortunately most of the I<LXDE>
+tools are buggy and support for the Gtk2-based tools is likely to
+deteriorate given the I<LXDE> project's departure into Qt.  Therefore, I
+found myself needing replacements for all the I<LXDE> tools.  I tried
+desktop environments such as L<ede(1)> and L<rox(1)>, however, the lack
+of XDG compliance of these environments was a problem.
+
+As a result, the I<XDE> was tuned to not depend on any external tools
+other than L<perl(1)>, L<Gtk2(3pm)> and L<X11::Protocol(3pm)> wherever
+possible.
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
