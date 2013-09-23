@@ -3,6 +3,22 @@ use X11::Protocol;
 use strict;
 use warnings;
 
+=head1 NAME
+
+XDE::Setroot -- set the root window background
+
+=head1 SYNOPSIS
+
+=head1 DESCRIPTION
+
+Provides an L<X11::Protocol(3pm)> based program to set the root window.
+
+=head1 METHODS
+
+=over
+
+=cut
+
 use constant {
     ATOMS => [qw(
 	ESETROOT_PMAP_ID
@@ -23,3 +39,22 @@ sub new {
     return $self;
 }
 
+1;
+
+__END__
+
+=back
+
+=head1 BUGS
+
+This module is not yet implemented.
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
+
+L<X11::Protocol(3pm)>
+
+=cut

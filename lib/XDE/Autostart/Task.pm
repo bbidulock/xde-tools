@@ -32,11 +32,54 @@ XDE::Autostart::Task - an instance of an autostart task
 The B<XDE::Autostart::Task> module provides an object-oriented approach
 to XDG autostart.
 
+Unfortunately, XDG autostart has a number of basic deficiencies:
+
+=over
+
+=item 1.
+
+There is no (standard) way of specifying what needs to be started before
+a window manager and what needs to be started after a window manager.
+
+=item 2.
+
+There is no (standard) way of specifying the order of startup.
+
+=back
+
+Nevertheless, we separate XDG autostart tasks into three classes:
+
+=over
+
+=item 1.
+
+Entries that are started before the window manager.  These are
+entries that do not depend upon the window manager being present.  This
+is the default when it cannot be determined into which class the entry
+belongs.
+
+=item 2.
+
+The window manager itself.
+
+=item 3.
+
+Entries that need to be started after the window manager.  This is
+normally so that the window manager will not mess with these
+applications during its startup.  An example is DockApps, TrayIcon, and
+desktop applications such as L<xde-desktop(1p)>.  XDE determines these
+by looking in the C<Category> field of the entry.  DockApps and
+TrayIcons are started after the window manager.  Any entries with the
+field C<X-After-WM> set to C<true> will be started after the window
+manager has confirmed to be started.
+
+=back
+
 =head1 METHODS
 
 =over
 
-=item $task = XDE::Autostart::Task->B<new>(I<$xde>,I<$entry>)
+=item B<new> XDE::Autostart::Task I<$xde>,I<$entry> => $task
 
 Creates a new autostart task entry using the F<.desktop> C<$entry> hash.
 The C<$entry> is a simple hash that has a key-value pair for each of the
@@ -416,50 +459,9 @@ sub mapnotify {
     $self->{status} = 'mapped window';
 }
 
-=back
+1;
 
-=head1 HISTORY
-
-Unfortunately, XDG autostart has a number of basic deficiencies:
-
-=over
-
-=item 1.
-
-There is no (standard) way of specifying what needs to be started before
-a window manager and what needs to be started after a window manager.
-
-=item 2.
-
-There is no (standard) way of specifying the order of startup.
-
-=back
-
-Nevertheless, we separate XDG autostart tasks into three classes:
-
-=over
-
-=item 1.
-
-Entries that are started before the window manager.  These are
-entries that do not depend upon the window manager being present.  This
-is the default when it cannot be determined into which class the entry
-belongs.
-
-=item 2.
-
-The window manager itself.
-
-=item 3.
-
-Entries that need to be started after the window manager.  This is
-normally so that the window manager will not mess with these
-applications during its startup.  An example is DockApps, TrayIcon, and
-desktop applications such as L<idesk(1)>.  XDE determines these by
-looking in the C<Category> field of the entry.  DockApps and TrayIcons
-are started after the window manager.  Any entries with the field
-C<X-After-WM> set to C<true> will be started after the window manager
-has confirmed to be started.
+__END__
 
 =back
 
@@ -472,7 +474,5 @@ Brian Bidulock <bidulock@cpan.org>
 L<XDE::Context(3pm)>, L<XDE::X11(3pm)>
 
 =cut
-
-1;
 
 # vim: sw=4 tw=72

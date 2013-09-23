@@ -6,7 +6,7 @@ use warnings;
 
 =head1 NAME
 
-XDE::EWMH -- provide methods for controling enhanced window manager hints.
+XDE::EWMH -- provide methods for controlling enhanced window manager hints.
 
 =head1 SYNOPSIS
 
@@ -27,7 +27,7 @@ The follwing methods are provided by this module:
 
 =head2 Root window properties (and related messages)
 
-The folowing are root window properties and related messages of the
+The following are root window properties and related messages of the
 EWMH/NetWM specification 1.5.
 
 =head3 _NET_SUPPORTED, ATOM[]/32
@@ -38,6 +38,18 @@ all supported states e.g. _NET_WM_STATE_MODAL, _NET_WM_STATE_STICKY,
 would be listed. This assumes that backwards incompatible changes will
 not be made to the hints (without being renamed).
 
+This property is handled inconsistently by window managers:
+
+=over
+
+=item 1.
+
+L<jwm(1)>, L<pekwm(1)>, L<icewm(1)>, L<fvwm(1)> and L<afterstep(1)>
+place C<_NET_SUPPORTED> in C<_NET_SUPPORTED>: this is, of course,
+unnecessary.
+
+=back
+
 =over
 
 =cut
@@ -45,7 +57,7 @@ not be made to the hints (without being renamed).
 =item $ewmh->B<get_NET_SUPPORTED>() => { map{$_=>1} @names }
 
 Returns a reference to a hash with each existing index reflecting the
-name of a supoorted atom.
+name of a supported atom.
 
 =cut
 
@@ -55,7 +67,7 @@ sub get_NET_SUPPORTED {
 
 =item $ewmh->B<event_handler_PropertyNotify_NET_SUPPORT>($e,$X,$v)
 
-Process a property notificaiton event for the C<_NET_SUPPORTED> property
+Process a property notification event for the C<_NET_SUPPORTED> property
 on the root window.  Note that this property should not normally change
 unless window managers are restarted or switched.
 
@@ -81,8 +93,8 @@ These properties SHOULD be set and updated by the Window Manager.
 
 =item $ewmh->B<get_NET_CLIENT_LIST>() => [ @windows ]
 
-Get the array reference to an array of clents (XID numbers) and store it
-in C<$ewmh-E<gt>{_NET_CLIENT_LIST}>.
+Get the array reference to an array of clients (XID numbers) and store
+it in C<$ewmh-E<gt>{_NET_CLIENT_LIST}>.
 
 =cut
 
@@ -104,7 +116,7 @@ sub event_handler_PropertyNotify_NET_CLIENT_LIST {
 
 =item $ewmh->B<get_NET_CLIENT_LIST_STACKING>() => [ @windows ]
 
-Get the array reference to an array of clents (XID numbers) and store it
+Get the array reference to an array of clients (XID numbers) and store it
 in C<$ewmh-E<gt>{_NET_CLIENT_LIST}>.
 
 =cut
@@ -230,7 +242,7 @@ _NET_DESKTOP_GEOMETRY client message to the root window:
 The Window Manager MAY choose to ignore this message, in which case
 _NET_DESKTOP_GEOMETRY property will remain unchanged.
 
-B<Note:> This property is not handled consitently across supported
+B<Note:> This property is not handled consistently across supported
 window managers:
 
 =over
@@ -327,9 +339,9 @@ L<afterstep(1)> supports large desktops an largely sets it correctly,
 however, at points _NET_NUMBER_OF_DESKTOPS can be larger than the
 _NET_DESKTOP_VIEWPORT array; with the assumption it seems that the
 viewport is (0,0) for any desktops not represented in the
-_NET_DESKTOP_VIEWPORT array.  AfterStep does not tie the viewport on
-each desktop together, and there may be different viewport settings for
-different desktops.
+_NET_DESKTOP_VIEWPORT array.  L<afterstep(1)> does not tie the viewport
+on each desktop together, and there may be different viewport settings
+for different desktops.
 
 =item 4.
 
@@ -2969,6 +2981,1039 @@ and/or provide unnecessary default positions.
 
 Note: The property is not used anywhere else besides being listed in
 _NET_SUPPORTED.
+
+=head1 WINDOW MANAGERS
+
+This section provides the current state of compliance of the various
+window managers supported by L<XDE(3pm)> with the EWMH specification, in
+order of support:
+
+=over
+
+=item L<metacity(1)> EWMH(66:5) WMH(1:16)
+
+=over
+
+=item 1.
+
+L<metacity(1)> does not list support for C<_NET_VIRTUAL_ROOTS>.
+
+=item 2.
+
+L<metacity(1)> does not list support for C<_NET_WM_FULL_PLACEMENT>.
+
+=item 3.
+
+L<metacity(1)> does not list support for C<_NET_HANDLED_ICONS>.
+
+=item 4.
+
+L<metacity(1)> does not list support for C<_NET_WM_SYNC_REQUEST_COUNTER>.
+
+=item 5.
+
+L<metacity(1)> does not list support for C<_NET_WM_SYNC_REQUEST>.
+
+=item 6.
+
+L<metacity(1)> does not list support for C<_NET_WM_VISIBLE_ICON_NAME>.
+
+=item 7.
+
+L<metacity(1)> does not list support for C<_NET_WM_VISIBLE_NAME>.
+
+=item 8.
+
+L<metacity(1)> does not list support for C<_NET_WM_TYPE_NOTIFICATION>.
+
+=back
+
+=item L<openbox(1)> EWMH(65:5) WMH(0:17)
+
+=over
+
+=item 1.
+
+L<openbox(1)> does not list support for C<_NET_VIRTUAL_ROOTS>.
+
+=item 2.
+
+L<openbox(1)> does not list support for C<_NET_WM_ACTION_STICK>.
+
+=item 3.
+
+L<openbox(1)> does not list support for C<_NET_WM_FULLSCREEN_MONITORS>.
+
+=item 4.
+
+L<openbox(1)> does not list support for C<_NET_WM_HANDLED_ICONS>.
+
+=item 5.
+
+L<openbox(1)> does not list support for C<_NET_WM_PING>.
+
+=item 6.
+
+L<openbox(1)> does not list support for C<_NET_WM_STATE_STICKY>.
+
+=item 7.
+
+L<openbox(1)> does not list support for C<_NET_WM_USER_TIME_WINDOW>.
+
+=item 8.
+
+L<openbox(1)> does not list support for C<_NET_WM_TYPE_NOTIFICATION>.
+
+=back
+
+=item L<pekwm(1)> EWMH(55:16) WMH(0:17)
+
+=over
+
+=item 1.
+
+L<pekwm(1)> does not list support for C<_NET_FRAME_EXTENTS>.
+
+=item 2.
+
+L<pekwm(1)> does not list support for C<_NET_MOVERESIZE_WINDOW>.
+
+=item 3.
+
+L<pekwm(1)> does not list support for C<_NET_REQUEST_FRAME_EXTENTS>.
+
+=item 4.
+
+L<pekwm(1)> does not list support for C<_NET_RESTACK_WINDOW>.
+
+=item 5.
+
+L<pekwm(1)> does not list support for C<_NET_SHOWING_DESKTOP>.
+
+=item 6.
+
+L<pekwm(1)> does not list support for C<_NET_STARTUP_ID>.
+
+=item 7.
+
+L<pekwm(1)> does not list support for C<_NET_VIRTUAL_ROOTS>.
+
+=item 8.
+
+L<pekwm(1)> does not list support for C<_NET_WM_ACTION_ABOVE>.
+
+=item 9.
+
+L<pekwm(1)> does not list support for C<_NET_WM_ACTION_BELOW>.
+
+=item 10.
+
+L<pekwm(1)> does not list support for C<_NET_WM_FULL_PLACEMENT>.
+
+=item 11.
+
+L<pekwm(1)> does not list support for C<_NET_WM_FULLSCREEN_MONITORS>.
+
+=item 12.
+
+L<pekwm(1)> does not list support for C<_NET_WM_MOVERESIZE>.
+
+=item 13.
+
+L<pekwm(1)> does not list support for C<_NET_WM_PING>.
+
+=item 14.
+
+L<pekwm(1)> does not list support for C<_NET_WM_STRUT_PARTIAL>.
+
+=item 15.
+
+L<pekwm(1)> does not list support for C<_NET_WM_SYNC_REQUEST_COUNTER>.
+
+=item 16.
+
+L<pekwm(1)> does not list support for C<_NET_WM_SYNC_REQUEST>.
+
+=item 17.
+
+L<pekwm(1)> does not list support for C<_NET_WM_USER_TIME>.
+
+=item 18.
+
+L<pekwm(1)> does not list support for C<_NET_WM_USER_TIME_WINDOW>.
+
+=item 19.
+
+L<pekwm(1)> does not list support for C<_NET_WM_WINDOW_TYPE_NOTIFICATION>.
+
+=back
+
+=item L<fluxbox(1)> EWMH(52:16) WMH(0:17)
+
+=over
+
+=item 1.
+
+L<fluxbox(1)> does not list support for C<_NET_DESKTOP_LAYOUT>.
+
+=item 2.
+
+L<fluxbox(1)> does not list support for C<_NET_SHOWING_DESKTOP>.
+
+=item 3.
+
+L<fluxbox(1)> does not list support for C<_NET_STARTUP_ID>.
+
+=item 4.
+
+L<fluxbox(1)> does not list support for C<_NET_VIRTUAL_ROOTS>.
+
+=item 5.
+
+L<fluxbox(1)> does not list support for C<_NET_WM_ACTION_ABOVE>.
+
+=item 6.
+
+L<fluxbox(1)> does not list support for C<_NET_WM_ACTION_BELOW>.
+
+=item 7.
+
+L<fluxbox(1)> does not list support for C<_NET_WM_FULL_PLACEMENT>.
+
+=item 8.
+
+L<fluxbox(1)> does not list support for C<_NET_WM_FULLSCREEN_MONITORS>.
+
+=item 9.
+
+L<fluxbox(1)> does not list support for C<_NET_WM_HANDLED_ICONS>.
+
+=item 10.
+
+L<fluxbox(1)> does not list support for C<_NET_WM_ICON_GEOMETRY>.
+
+=item 11.
+
+L<fluxbox(1)> does not list support for C<_NET_WM_PID>.
+
+=item 12.
+
+L<fluxbox(1)> does not list support for C<_NET_WM_PING>.
+
+=item 13.
+
+L<fluxbox(1)> does not list support for C<_NET_WM_STATE_SKIP_PAGER>.
+
+=item 14.
+
+L<fluxbox(1)> does not list support for C<_NET_WM_STRUT_PARTIAL>.
+
+=item 15.
+
+L<fluxbox(1)> does not list support for C<_NET_WM_SYNC_REQUEST_COUNTER>.
+
+=item 16.
+
+L<fluxbox(1)> does not list support for C<_NET_WM_SYNC_REQUEST>.
+
+=item 17.
+
+L<fluxbox(1)> does not list support for C<_NET_WM_USER_TIME>.
+
+=item 18.
+
+L<fluxbox(1)> does not list support for C<_NET_WM_USER_TIME_WINDOW>.
+
+=item 19.
+
+L<fluxbox(1)> does not list support for C<_NET_WM_VISIBLE_ICON_NAME>.
+
+=item 20.
+
+L<fluxbox(1)> does not list support for C<_NET_WM_VISIBLE_NAME>.
+
+=item 21.
+
+L<fluxbox(1)> does not list support for C<_NET_WM_TYPE_NOTIFICAITON>.
+
+=item 22.
+
+L<fluxbox(1)> does not list support for C<_NET_WM_TYPE_UTILITY>.
+
+=back
+
+=item L<jwm(1)> EWMH(50:18) WMH(0:17)
+
+L<jwm(1)> does not list support for C<_NET_DESKTOP_LAYOUT> even though it
+provides a pager and the pager has a layout.
+
+L<jwm(1)> does not list support for C<_NET_RESTACK_WINDOW>.
+
+L<jwm(1)> is one of the few window managers that supports
+C<_NET_SHOWING_DESKTOP>.
+
+L<jwm(1)> unnecessarily places C<_NET_SUPPORTED> in C<_NET_SUPPORTED>.
+
+L<jwm(1)> unnecessarily places C<_NET_SYSTEM_TRAY_OPCODE> in
+C<_NET_SUPPORTED>.
+
+L<jwm(1)> does not list support for C<_NET_WM_ACTION_FULLSCREEN>.
+
+L<jwm(1)> does not report support for C<_NET_WM_FULL_PLACEMENT>, even
+though it really does.
+
+L<jwm(1)> does not list support for C<_NET_WM_FULLSCREEN_MONITORS>.
+
+L<jwm(1)> does not report support C<_NET_WM_HANDLED_ICONS> even though
+it essentially does (because it would never handle the icons itself
+anyway).
+
+L<jwm(1)> does not list support for C<_NET_WM_ICON_GEOMETRY> but it is optional
+anyway.
+
+L<jwm(1)> does not report support C<_NET_WM_ICON_NAME>, although it
+essentially does (it supports C<WM_ICON_NAME>).
+
+L<jwm(1)> does not list support for C<_NET_WM_MOVERESIZE>.
+
+L<jwm(1)> does not report support for C<_NET_WM_PID> even though it
+essentially does: support for killing hung processes is optional.
+
+L<jwm(1)> does not list support for C<_NET_WM_PING>.
+
+L<jwm(1)> does not list support for C<_NET_WM_STATE_DEMANDS_ATTENTION>.
+
+L<jwm(1)> does not list support for C<_NET_WM_STATE_MODAL>.
+
+L<jwm(1)> does not list support for C<_NET_WM_SYNC_REQUEST_COUNTER>.
+
+L<jwm(1)> does not list support for C<_NET_WM_SYNC_REQUEST>.
+
+L<jwm(1)> does not list support for C<_NET_WM_USER_TIME>.
+
+L<jwm(1)> does not list support for C<_NET_WM_USER_TIME_WINDOW>.
+
+L<jwm(1)> does not list support for C<_NET_VISIBLE_ICON_NAME>.
+
+L<jwm(1)> does not list support for C<_NET_VISIBLE_NAME>.
+
+L<jwm(1)> does not list support for C<_NET_WM_WINDOW_OPACITY>.
+
+L<jwm(1)> does not list support for C<_NET_WM_WINDOW_TYPE_MENU>.
+
+L<jwm(1)> does not list support for C<_NET_WM_WINWOW_TYPE_NOTIFICATION>.
+
+L<jwm(1)> does not list support for C<_NET_WM_WINDOW_TYPE_TOOLBAR>.
+
+L<jwm(1)> does not list support for C<_NET_WM_WINDOW_TYPE_UTILITY>.
+
+=item L<fvwm(1)> EWMH(52:20) WMH(12:5)
+
+=over
+
+=item 1.
+
+L<fvwm(1)> does not list support for C<_NET_DESKTOP_LAYOUT>.
+
+=item 2.
+
+L<fvwm(1)> does not list support for C<_NET_REQUEST_FRAME_EXTENTS>.
+
+=item 3.
+
+L<fvwm(1)> does not list support for C<_NET_SHOWING_DESKTOP>.
+
+=item 4.
+
+L<fvwm(1)> does not list support for C<_NET_STARTUP_ID>.
+
+=item 5.
+
+L<fvwm(1)> does not list support for C<_NET_WM_ACTION_ABOVE>.
+
+=item 6.
+
+L<fvwm(1)> does not list support for C<_NET_WM_ACTION_BELOW>.
+
+=item 7.
+
+L<fvwm(1)> does not list support for C<_NET_WM_FULL_PLACEMENT>.
+
+=item 8.
+
+L<fvwm(1)> does not list support for C<_NET_WM_FULLSCREEN_MONITORS>.
+
+=item 9.
+
+L<fvwm(1)> does not list support for C<_NET_WM_HANDLED_ICONS>.
+
+=item 10.
+
+L<fvwm(1)> does not list support for C<_NET_WM_STATE_ABOVE>.
+
+=item 11.
+
+L<fvwm(1)> does not list support for C<_NET_WM_STATE_DEMANDS_ATTENTION>.
+
+=item 12.
+
+L<fvwm(1)> does not list support for C<_NET_WM_STRUT_PARTIAL>.
+
+=item 13.
+
+L<fvwm(1)> does not list support for C<_NET_WM_SYNC_REQUEST_COUNTER>.
+
+=item 14.
+
+L<fvwm(1)> does not list support for C<_NET_WM_SYNC_REQUEST>.
+
+=item 15.
+
+L<fvwm(1)> does not list support for C<_NET_WM_USER_TIME>.
+
+=item 16.
+
+L<fvwm(1)> does not list support for C<_NET_WM_USER_TIME_WINDOW>.
+
+=item 17.
+
+L<fvwm(1)> does not list support for C<_NET_WM_VISIBLE_ICON_NAME>.
+
+=item 18.
+
+L<fvwm(1)> does not list support for C<_NET_WM_TYPE_SPLASH>.
+
+=item 19.
+
+L<fvwm(1)> does not list support for C<_NET_WM_TYPE_UTILITY>.
+
+=back
+
+=item L<wmaker(1)> EWMH(49:21) WMH(0:17)
+
+=over
+
+=item 1.
+
+L<wmaker(1)> does not list support for C<_NET_CLOSE_WINDOW>.
+
+=item 2.
+
+L<wmaker(1)> does not list support for C<_NET_DESKTOP_LAYOUT>.
+
+=item 3.
+
+L<wmaker(1)> does not list support for C<_NET_MOVERESIZE_WINDOW>.
+
+=item 4.
+
+L<wmaker(1)> does not list support for C<_NET_REQUEST_FRAME_EXTENTS>.
+
+=item 5.
+
+L<wmaker(1)> does not list support for C<_NET_RESTACK_WINDOW>.
+
+=item 6.
+
+L<wmaker(1)> does not list support for C<_NET_STARTUP_ID>.
+
+=item 7.
+
+L<wmaker(1)> does not list support for C<_NET_VIRTUAL_ROOTS>.
+
+=item 8.
+
+L<wmaker(1)> does not list support for C<_NET_WM_ACTION_ABOVE>.
+
+=item 9.
+
+L<wmaker(1)> does not list support for C<_NET_WM_ACTION_BELOW>.
+
+=item 10.
+
+L<wmaker(1)> does not list support for C<_NET_WM_FULL_PLACEMENT>.
+
+=item 11.
+
+L<wmaker(1)> does not list support for C<_NET_WM_FULLSCREEN_MONITORS>.
+
+=item 12.
+
+L<wmaker(1)> does not list support for C<_NET_WM_MOVERESIZE>.
+
+=item 13.
+
+L<wmaker(1)> does not list support for C<_NET_WM_PID>.
+
+=item 14.
+
+L<wmaker(1)> does not list support for C<_NET_WM_STATE_DEMANDS_ATTENTION>.
+
+=item 15.
+
+L<wmaker(1)> does not list support for C<_NET_WM_STATE_MODAL>.
+
+=item 16.
+
+L<wmaker(1)> does not list support for C<_NET_WM_STRUT_PARTIAL>.
+
+=item 17.
+
+L<wmaker(1)> does not list support for C<_NET_WM_SYNC_REQUEST_COUNTER>.
+
+=item 18.
+
+L<wmaker(1)> does not list support for C<_NET_WM_SYNC_REQUEST>.
+
+=item 19.
+
+L<wmaker(1)> does not list support for C<_NET_WM_USER_TIME>.
+
+=item 20.
+
+L<wmaker(1)> does not list support for C<_NET_WM_USER_TIME_WINDOW>.
+
+=item 21.
+
+L<wmaker(1)> does not list support for C<_NET_WM_VISIBLE_ICON_NAME>.
+
+=item 22.
+
+L<wmaker(1)> does not list support for C<_NET_WM_VISIBLE_NAME>.
+
+=item 23.
+
+L<wmaker(1)> does not list support for C<_NET_WM_TYPE_NOTIFICATION>.
+
+=item 24.
+
+L<wmaker(1)> does not list support for C<_NET_WORKAREA>.
+
+=back
+
+=item L<blackbox(1)> EWMH(45:22) WMH(0:17)
+
+=over
+
+=item 1.
+
+L<blackbox(1)> does not list support for C<_NET_DESKTOP_GEOMETRY>.
+
+=item 2.
+
+L<blackbox(1)> does not list support for C<_NET_DESKTOP_VIEWPORT>.
+
+=item 3.
+
+L<blackbox(1)> does not list support for C<_NET_FRAME_EXTENTS>.
+
+=item 4.
+
+L<blackbox(1)> does not list support for C<_NET_REQUEST_FRAME_EXTENTS>.
+
+=item 5.
+
+L<blackbox(1)> does not list support for C<_NET_RESTACK_WINDOW>.
+
+=item 6.
+
+L<blackbox(1)> does not list support for C<_NET_SHOWING_DESKTOP>.
+
+=item 7.
+
+L<blackbox(1)> does not list support for C<_NET_STARTUP_ID>.
+
+=item 8.
+
+L<blackbox(1)> does not list support for C<_NET_VIRTUAL_ROOTS>.
+
+=item 9.
+
+L<blackbox(1)> does not list support for C<_NET_WM_ACTION_ABOVE>.
+
+=item 10.
+
+L<blackbox(1)> does not list support for C<_NET_WM_ACTION_BELOW>.
+
+=item 11.
+
+L<blackbox(1)> does not list support for C<_NET_WM_ACTION_STICK>.
+
+=item 12.
+
+L<blackbox(1)> does not list support for C<_NET_WM_FULL_PLACEMENT>.
+
+=item 13.
+
+L<blackbox(1)> does not list support for C<_NET_WM_FULLSCREEN_MONITORS>.
+
+=item 14.
+
+L<blackbox(1)> does not list support for C<_NET_WM_HANDLED_ICONS>.
+
+=item 15.
+
+L<blackbox(1)> does not list support for C<_NET_WM_ICON_GEOMETRY>.
+
+=item 16.
+
+L<blackbox(1)> does not list support for C<_NET_WM_ICON>.
+
+=item 17.
+
+L<blackbox(1)> does not list support for C<_NET_WM_MOVERESIZE>.
+
+=item 18.
+
+L<blackbox(1)> does not list support for C<_NET_WM_PID>.
+
+=item 19.
+
+L<blackbox(1)> does not list support for C<_NET_WM_STATE_DEMANDS_ATTENTION>.
+
+=item 20.
+
+L<blackbox(1)> does not list support for C<_NET_WM_STATE_STICKY>.
+
+=item 21.
+
+L<blackbox(1)> does not list support for C<_NET_WM_STRUT_PARTIAL>.
+
+=item 22.
+
+L<blackbox(1)> does not list support for C<_NET_WM_SYNC_REQUEST_COUNTER>.
+
+=item 23.
+
+L<blackbox(1)> does not list support for C<_NET_WM_SYNC_REQUEST>.
+
+=item 24.
+
+L<blackbox(1)> does not list support for C<_NET_WM_USER_TIME>.
+
+=item 25.
+
+L<blackbox(1)> does not list support for C<_NET_WM_USER_TIME_WINDOW>.
+
+=item 26.
+
+L<blackbox(1)> does not list support for C<_NET_WM_WINDOW_TYPE_NOTIFICATION>.
+
+=back
+
+=item L<afterstep(1)> EWMH(29:42) WMH(?:17)
+
+=over
+
+=item 1.
+
+L<afterstep(1)> does not list support for C<_NET_CLOSE_WINDOW>.
+
+=item 2.
+
+L<afterstep(1)> does not list support for C<_NET_DESKTOP_LAYOUT>.
+
+=item 3.
+
+L<afterstep(1)> does not list support for C<_NET_FRAME_EXTENTS>.
+
+=item 4.
+
+L<afterstep(1)> does not list support for C<_NET_MOVERESIZE_WINDOW>.
+
+=item 5.
+
+L<afterstep(1)> does not list support for C<_NET_REQUEST_FRAME_EXTENTS>.
+
+=item 6.
+
+L<afterstep(1)> does not list support for C<_NET_RESTACK_WINDOW>.
+
+=item 7.
+
+L<afterstep(1)> does not list support for C<_NET_SHOWING_DESKTOP>.
+
+=item 8.
+
+L<afterstep(1)> does not list support for C<_NET_STARTUP_ID>.
+
+=item 9.
+
+L<afterstep(1)> does not list support for C<_NET_VIRTUAL_ROOTS>.
+
+=item 10.
+
+L<afterstep(1)> does not list support for C<_NET_WM_ACTION_ABOVE>.
+
+=item 11.
+
+L<afterstep(1)> does not list support for C<_NET_WM_ACTION_BELOW>.
+
+=item 12.
+
+L<afterstep(1)> does not list support for C<_NET_WM_ACTION_CHANGE_DESKTOP>.
+
+=item 13.
+
+L<afterstep(1)> does not list support for C<_NET_WM_ACTION_CLOSE>.
+
+=item 14.
+
+L<afterstep(1)> does not list support for C<_NET_WM_ACTION_FULLSCREEN>.
+
+=item 15.
+
+L<afterstep(1)> does not list support for C<_NET_WM_ACTION_MAXIMIZE_HORZ>.
+
+=item 16.
+
+L<afterstep(1)> does not list support for C<_NET_WM_ACTION_MAXIMIZE_VERT>.
+
+=item 17.
+
+L<afterstep(1)> does not list support for C<_NET_WM_ACTION_MINIMIZE>.
+
+=item 18.
+
+L<afterstep(1)> does not list support for C<_NET_WM_ACTION_MOVE>.
+
+=item 19.
+
+L<afterstep(1)> does not list support for C<_NET_WM_ACTION_RESIZE>.
+
+=item 20.
+
+L<afterstep(1)> does not list support for C<_NET_WM_ACTION_SHADE>.
+
+=item 21.
+
+L<afterstep(1)> does not list support for C<_NET_WM_ACITON_STICK>.
+
+=item 22.
+
+L<afterstep(1)> does not list support for C<_NET_WM_ALLOWED_ACTIONS>.
+
+=item 23.
+
+L<afterstep(1)> does not list support for C<_NET_WM_FULL_PLACEMENT>.
+
+=item 24.
+
+L<afterstep(1)> does not list support for C<_NET_WM_FULLSCREEN_MONITORS>.
+
+=item 25.
+
+L<afterstep(1)> does not list support for C<_NET_WM_HANDLED_ICONS>.
+
+=item 26.
+
+L<afterstep(1)> does not list support for C<_NET_WM_ICON_GEOMETRY>.
+
+=item 27.
+
+L<afterstep(1)> does not list support for C<_NET_WM_ICON_NAME>.
+
+=item 28.
+
+L<afterstep(1)> does not list support for C<_NET_WM_NOVERESIZE>.
+
+=item 29.
+
+L<afterstep(1)> does not list support for C<_NET_WM_STATE_ABOVE>.
+
+=item 30.
+
+L<afterstep(1)> does not list support for C<_NET_WM_STATE_BELOW>.
+
+=item 31.
+
+L<afterstep(1)> does not list support for C<_NET_WM_STATE_DEMANDS_ATTENTION>.
+
+=item 32.
+
+L<afterstep(1)> does not list support for C<_NET_WM_STATE_FULLSCREEN>.
+
+=item 33.
+
+L<afterstep(1)> does not list support for C<_NET_WM_STATE_HIDDEN>.
+
+=item 34.
+
+L<afterstep(1)> does not list support for C<_NET_WM_STATE_SKIP_PAGER>.
+
+=item 35.
+
+L<afterstep(1)> does not list support for C<_NET_WM_STRUT_PARTIAL>.
+
+=item 36.
+
+L<afterstep(1)> does not list support for C<_NET_WM_STRUT>.
+
+=item 37.
+
+L<afterstep(1)> does not list support for C<_NET_WM_SYNC_REQUEST_COUNTER>.
+
+=item 38.
+
+L<afterstep(1)> does not list support for C<_NET_WM_SYNC_REQUEST>.
+
+=item 39.
+
+L<afterstep(1)> does not list support for C<_NET_WM_USER_TIME>.
+
+=item 40.
+
+L<afterstep(1)> does not list support for C<_NET_WM_USER_TIME_WINDOW>.
+
+=item 41.
+
+L<afterstep(1)> does not list support for C<_NET_WM_VISIBLE_ICON_NAME>.
+
+=item 42.
+
+L<afterstep(1)> does not list support for C<_NET_WM_VISIBLE_NAME>.
+
+=item 43.
+
+L<afterstep(1)> does not list support for C<_NET_WM_WINDOW_TYPE_NOTIFICATION>.
+
+=item 44.
+
+L<afterstep(1)> does not list support for C<_NET_WM_WINDOW_TYPE_SPLASH>.
+
+=item 45.
+
+L<afterstep(1)> does not list support for C<_NET_WM_WINDOW_TYPE_UTILITY>.
+
+=item 46.
+
+L<afterstep(1)> does not list support for C<_NET_WORKAREA>.
+
+=back
+
+=item L<icewm(1)> EWMH(21:46) WMH(14:2)
+
+=over
+
+=item 1.
+
+L<icewm(1)> does not list support for C<_NET_DESKTOP_GEOMETRY>.
+
+=item 2.
+
+L<icewm(1)> does not list support for C<_NET_DESKTOP_LAYOUT>.
+
+=item 3.
+
+L<icewm(1)> does not list support for C<_NET_DESKTOP_NAMES>.
+
+=item 4.
+
+L<icewm(1)> does not list support for C<_NET_DESKTOP_VIEWPORT>.
+
+=item 5.
+
+L<icewm(1)> does not list support for C<_NET_FRAME_EXTENTS>.
+
+=item 6.
+
+L<icewm(1)> does not list support for C<_NET_MOVERESIZE_WINDOW>.
+
+=item 7.
+
+L<icewm(1)> does not list support for C<_NET_REQUEST_FRAME_EXTENTS>.
+
+=item 8.
+
+L<icewm(1)> does not list support for C<_NET_RESTACK_WINDOW>.
+
+=item 9.
+
+L<icewm(1)> does not list support for C<_NET_SHOWING_DESKTOP>.
+
+=item 10.
+
+L<icewm(1)> does not list support for C<_NET_STARTUP_ID>.
+
+=item 11.
+
+L<icewm(1)> does not list support for C<_NET_VIRTUAL_ROOTS>.
+
+=item 12.
+
+L<icewm(1)> does not list support for C<_NET_WM_ACTION_ABOVE>.
+
+=item 13.
+
+L<icewm(1)> does not list support for C<_NET_WM_ACTION_BELOW>.
+
+=item 14.
+
+L<icewm(1)> does not list support for C<_NET_WM_ACTION_CHANGE_DESKTOP>.
+
+=item 15.
+
+L<icewm(1)> does not list support for C<_NET_WM_ACTION_CLOSE>.
+
+=item 16.
+
+L<icewm(1)> does not list support for C<_NET_WM_ACTION_FULLSCREEN>.
+
+=item 17.
+
+L<icewm(1)> does not list support for C<_NET_WM_ACTION_MAXIMIZE_HORZ>.
+
+=item 18.
+
+L<icewm(1)> does not list support for C<_NET_WM_ACTION_MAXIMIZE_VERT>.
+
+=item 19.
+
+L<icewm(1)> does not list support for C<_NET_WM_ACTION_MINIMIZE>.
+
+=item 20.
+
+L<icewm(1)> does not list support for C<_NET_WM_ACTION_MOVE>.
+
+=item 21.
+
+L<icewm(1)> does not list support for C<_NET_WM_ACTION_RESIZE>.
+
+=item 22.
+
+L<icewm(1)> does not list support for C<_NET_WM_ACTION_SHADE>.
+
+=item 23.
+
+L<icewm(1)> does not list support for C<_NET_WM_ACTION_STICK>.
+
+=item 24.
+
+L<icewm(1)> does not list support for C<_NET_WM_ALLOWED_ACTIONS>.
+
+=item 25.
+
+L<icewm(1)> does not list support for C<_NET_WM_FULL_PLACEMENT>.
+
+=item 26.
+
+L<icewm(1)> does not list support for C<_NET_WM_FULLSCREEN_MONITORS>.
+
+=item 27.
+
+L<icewm(1)> does not list support for C<_NET_WM_HANDLED_ICONS>.
+
+=item 28.
+
+L<icewm(1)> does not list support for C<_NET_WM_ICON_GEOMETRY>.
+
+=item 29.
+
+L<icewm(1)> does not list support for C<_NET_WM_ICON_NAME>.
+
+=item 30.
+
+L<icewm(1)> does not list support for C<_NET_WM_ICON>.
+
+=item 31.
+
+L<icewm(1)> does not list support for C<_NET_WM_MOVERESIZE>.
+
+=item 32.
+
+L<icewm(1)> does not list support for C<_NET_WM_NAME>.
+
+=item 33.
+
+L<icewm(1)> does not list support for C<_NET_WM_PID>.
+
+=item 34.
+
+L<icewm(1)> does not list support for C<_NET_WM_PING>.
+
+=item 35.
+
+L<icewm(1)> does not list support for C<_NET_WM_STATE_DEMANDS_ATTENTION>.
+
+=item 36.
+
+L<icewm(1)> does not list support for C<_NET_WM_STATE_HIDDEN>.
+
+=item 37.
+
+L<icewm(1)> does not list support for C<_NET_WM_STATE_MODAL>.
+
+=item 38.
+
+L<icewm(1)> does not list support for C<_NET_WM_SKIP_PAGER>.
+
+=item 39.
+
+L<icewm(1)> does not list support for C<_NET_WM_STATE_STICKY>.
+
+=item 40.
+
+L<icewm(1)> does not list support for C<_NET_WM_STRUT_PARTIAL>.
+
+=item 41.
+
+L<icewm(1)> does not list support for C<_NET_WM_SYNC_REQUEST_COUNTER>.
+
+=item 42.
+
+L<icewm(1)> does not list support for C<_NET_WM_SYNC_REQUEST>.
+
+=item 43.
+
+L<icewm(1)> does not list support for C<_NET_WM_USER_TIME>.
+
+=item 44.
+
+L<icewm(1)> does not list support for C<_NET_WM_USER_TIME_WINDOW>.
+
+=item 45.
+
+L<icewm(1)> does not list support for C<_NET_WM_VISIBLE_ICON_NAME>.
+
+=item 46.
+
+L<icewm(1)> does not list support for C<_NET_WM_VISIBLE_NAME>.
+
+=item 47.
+
+L<icewm(1)> does not list support for C<_NET_WM_WINDOW_TYPE_DIALOG>.
+
+=item 48.
+
+L<icewm(1)> does not list support for C<_NET_WM_WINDOW_TYPE_MENU>.
+
+=item 49.
+
+L<icewm(1)> does not list support for C<_NET_WM_WINDOW_TYPE_NORMAL>.
+
+=item 50.
+
+L<icewm(1)> does not list support for C<_NET_WM_WINDOW_TYPE_NOTIFICATION>.
+
+=item 51.
+
+L<icewm(1)> does not list support for C<_NET_WM_TYPE_TOOLBAR>.
+
+=item 52.
+
+L<icewm(1)> does not list support for C<_NET_WM_TYPE_UTILITY>.
+
+=item 53.
+
+L<icewm(1)> does not list support for C<_NET_WM_WINDOW_TYPE>.
+
+=item 54.
+
+L<icewm(1)> does not list support for C<_NET_WORKAREA>.
+
+=back
+
+=back
 
 =head1 AUTHOR
 

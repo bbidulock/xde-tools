@@ -83,13 +83,13 @@ This module provides the following methods:
 
 =over
 
-=item $directory = XDE::Desktop::Icon::Directory->B<new>(I<$desktop>,I<$directory>)
+=item B<new> XDE::Desktop::Icon::Directory I<$desktop>,I<$directory> => $icon
 
 Creates an instance of an XDE::Desktop::Icon::Directory object.  A
 directory corresponds to a normal directory under the F<Desktop>
 directory that may be opened with a file manager.  C<$desktop> is an
-instance of an XDE::Desktop object, and C<$directory> is the full path
-to the subdirectory.
+instance of an L<XDE::Desktop(3pm)> object, and C<$directory> is the
+full path to the subdirectory.
 
 This method identifies the icon (full path) and label associated with
 the directory.  The icon is the directory icon under the icon theme; the
@@ -117,7 +117,11 @@ sub new {
 
 1;
 
+__END__
+
 =back
+
+See L<XDE::Desktop::Icon(3pm)/METHODS> for additional inherited methods.
 
 =head1 AUTHOR
 
@@ -128,7 +132,5 @@ Brian Bidulock <bidulock@cpan.org>
 L<XDE::Desktop(3pm)>, L<XDE::Desktop::Icon(3pm)>
 
 =cut
-
-__END__
 
 # vim: set sw=4 tw=72:

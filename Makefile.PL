@@ -13,6 +13,7 @@ WriteMakefile(
 		xde-init
 		xde-input
 		xde-input-edit
+		xde-keys
 		xde-logout
 		xde-menu
 		xde-menugen
@@ -32,6 +33,7 @@ WriteMakefile(
 		xde-setup
 		xde-startup
 		xde-theme
+		xde-theme2
 		xde-traymenu
 		xde-xset
 	)],

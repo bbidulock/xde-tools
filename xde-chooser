@@ -351,11 +351,10 @@ C<fvwm>, C<wmaker> and C<afterstep>.
 
 The I<XDE> suite ships with a number of session files that are contained
 in the F</usr/share/xde/xsessions> directory.  Currently these are:
-
-=over
-
-
-=back
+F<AfterStep>, F<blackbox>, F<fluxbox>, F<Fvwm1>, F<fvwm-crystal>,
+F<Fvwm>, F<fvwm>, F<gnome>, F<icewm-session>, F<Jwm>, F<LXDE>,
+F<openbox>, F<openbox-gnome>, F<openbox-kde>, F<pekwm>, F<ssh>, F<twm>,
+F<wmaker>, F<wmii>, F<xfce>.
 
 =head1 FILES
 

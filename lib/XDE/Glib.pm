@@ -11,8 +11,8 @@ XDE::Glib -- a Glib implementation object for an XDE context
 =head1 DESCRIPTION
 
 Provides a package based on L<XDE::Context(3pm)> that provides a Glib
-implementation object for the XDE context.  This package integrates the
-Glib event loop into an XDE context.
+implementation object for the L<XDE(3pm)> context.  This package
+integrates the Glib event loop into an XDE context.
 
 =head1 METHODS
 
@@ -26,7 +26,7 @@ The following methods are provided:
 
 Obtains a new B<XDE::Glib> object.  For the use of I<%OVERRIDES> see
 L<XDE::Context(3pm)>.  This package is based on the L<XDE::Context(3pm)>
-package and simply calls its C<new> method with all agruments intact.
+package and simply calls its C<new> method with all arguments intact.
 
 =cut
 

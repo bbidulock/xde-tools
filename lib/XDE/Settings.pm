@@ -20,8 +20,9 @@ XDE::Xsettings -- manage XSETTINGS for the XDE desktop
 
 =head1 DESCRIPTION
 
-Provides a module that runs out of the Glib::Mainloop that will manage
-the XSETTINGS on a lightweight destop and monitor for changes.
+Provides a module that runs out of the L<Glib::Mainloop(3pm)> that will
+manage the I<XSETTINGS> on a lightweight desktop and monitor for
+changes.
 
 =head1 METHODS
 
@@ -46,18 +47,18 @@ sub new {
 Performs initialization for just this module.  Called after
 L<XDE::Dual(3pm)> is fully initialized.
 
-Initialization routine that is called like Gtk2->init.  It establishes
-the X11::Protocol connection to the X Server and determines the initial
-values and settings for the root window of each screen of the display
-for later management of XSETTINGS.
+Initialization routine that is called like C<Gtk2-E<gt>init>.  It
+establishes the L<X11::Protocol::Connection(3pm)> to the X Server and
+determines the initial values and settings for the root window of each
+screen of the display for later management of I<XSETTINGS>.
 
-Called internally by B<new> to setup the XSETTINGS instance.  It
+Called internally by B<new> to setup the I<XSETTINGS> instance.  It
 establishes a window on each screen and attempts to assume management of
-the _XSETTINGS_S[n] selection for each screen (n).  It also monitors for
-structure notifications on each screen's root window as well as on its
-own windows.  It monitors for property change notifications on each
-screen's root window and on any window that ultimately owns the
-_XSETTINGS_S[n] selection.
+the C<_XSETTINGS_S[n]> selection for each screen (C<n>).  It also
+monitors for structure notifications on each screen's root window as
+well as on its own windows.  It monitors for property change
+notifications on each screen's root window and on any window that
+ultimately owns the C<_XSETTINGS_S[n]> selection.
 
 =cut
 
@@ -228,21 +229,22 @@ sub get_color {
 
 =item $xde->B<convert>(I<\%newset>,I<$serial>) => $changed
 
-Addes the set of XSETTINGS C<\%newset> into the current settings with
-serial number C<$serial>.  It returns the number of XSETTINGS that were
-actually changed.  If the number of XSETTINGS changed is zero, there is
-no need to change the B<_XSETTINGS_SETTINGS> property or perform client
-actions on the changed.
+Adds the set of I<XSETTINGS>, C<\%newset>, into the current settings
+with serial number C<$serial>.  It returns the number of I<XSETTINGS>
+that were actually changed.  If the number of I<XSETTINGS> changed is
+zero, there is no need to change the B<_XSETTINGS_SETTINGS> property or
+perform client actions on the changed.
 
-The C<\%newset> hash reference referes to a hash that has keys that are
-the XSETTINGS names.   An optional character, C<i>, C<s>, or C<c> can be
-prefixed to the XSETTING name to specify clearly whether the setting is
-an integer, string or color respectively.  The values of the hash can
-beither be plain scalars, or can be an arrayref of the form:
+The C<\%newset> hash reference refers to a hash that has keys that are
+the I<XSETTINGS> names.   An optional character, C<i>, C<s>, or C<c> can
+be prefixed to the I<XSETTINGS> name to specify clearly whether the
+setting is an integer, string or color respectively.  The values of the
+hash can either be plain scalars, or can be an array reference of the
+form:
 
  [ $type, $name, $serial, $value ]
 
-wehre C<$type> is the SETTING_TYPE (0 => integer, 1 => string, 2 =>
+where C<$type> is the SETTING_TYPE (0 => integer, 1 => string, 2 =>
 color); C<$name> is the SETTING_NAME, C<$serial> is the serial number of
 the last change, and C<$value> is the scalar integer or string value, or
 the color in C<#RRRRGGGGBBBBAAAA> format.
@@ -294,6 +296,9 @@ sub convert {
 
 =item $xde->B<pack_xsettings>(I<$serial>) => $pack
 
+Packs I<XSETTINGS> into an packed representation and returns that
+representation.
+
 =cut
 
 sub pack_xsettings {
@@ -329,6 +334,9 @@ sub pack_xsettings {
 }
 
 =item $xde->B<unpack_xsettings>(I<$data>) => (\I<%xset>,I<$serial>)
+
+Unpacks I<XSETTINGS> from a packet representation, C<$data>, to a hash
+reference of I<XSETTINGS>, C<%xset>, and a serial number, C<$serial>.
 
 =cut
 
@@ -387,6 +395,18 @@ sub change_xsettings {
 
 }
 
+=back
+
+=head2 Event handlers
+
+This module provides the following default event handlers:
+
+=over
+
+=item $xde->B<event_handler_PropertyNotify_XSETTINGS_SETTINGS>(I<$e>,I<$X>,I<$v>)
+
+=cut
+
 sub event_handler_PropertyNotify_XSETTINGS_SETTINGS {
     my ($self,$e,$X,$v) = @_;
     if ($v) {
@@ -398,12 +418,22 @@ sub event_handler_PropertyNotify_XSETTINGS_SETTINGS {
 	printf STDERR "  code => %d\n", $e->{code};
     }
 }
+
+=item $xde->B<event_handler_SelectionClear>(I<$e>,I<$X>,I<$v>)
+
+=cut
+
 sub event_handler_SelectionClear {
     my ($self,$e,$X,$v) = @_;
     if ($v) {
 	printf STDERR "%s:\n", $e->{name};
     }
 }
+
+=item $xde->B<event_handler_SelectionRequest>(I<$e>,I<$X>,I<$v>)
+
+=cut
+
 sub event_handler_SelectionRequest {
     my ($self,$e,$X,$v) = @_;
     if ($v) {
@@ -416,6 +446,11 @@ sub event_handler_SelectionRequest {
 	printf STDERR "  property => %s\n", $e->{property} eq 'None' ?  'None' : $X->atom_name($e->{property});
     }
 }
+
+=item $xde->B<event_handler_SelectionNotify>(I<$e>,I<$X>,I<$v>)
+
+=cut
+
 sub event_handler_SelectionNotify {
     my ($self,$e,$X,$v) = @_;
     if ($v) {
@@ -427,6 +462,11 @@ sub event_handler_SelectionNotify {
 	printf STDERR "  property => %s\n", $e->{property} eq 'None' ?  'None' : $X->atom_name($e->{property});
     }
 }
+
+=item $xde->B<event_handler_CreateNotify>(I<$e>,I<$X>,I<$v>)
+
+=cut
+
 sub event_handler_CreateNotify {
     my ($self,$e,$X,$v) = @_;
     if ($v) {
@@ -441,6 +481,11 @@ sub event_handler_CreateNotify {
 	printf STDERR "  override-redirect => %s\n", $e->{override_redirect};
     }
 }
+
+=item $xde->B<event_handler_DestroyNotify>(I<$e>,I<$X>,I<$v>)
+
+=cut
+
 sub event_handler_DestroyNotify {
     my ($self,$e,$X,$v) = @_;
     if ($v) {
@@ -449,6 +494,11 @@ sub event_handler_DestroyNotify {
 	printf STDERR "  window => 0x%08x\n", $e->{window};
     }
 }
+
+=item $xde->B<event_handler_ClientMessage>(I<$e>,I<$X>,I<$v>)
+
+=cut
+
 sub event_handler_ClientMessage {
     my ($self,$e,$X,$v) = @_;
     if ($v) {
@@ -461,13 +511,11 @@ sub event_handler_ClientMessage {
     }
 }
 
-=back
-
-=cut
-
 1;
 
 __END__
+
+=back
 
 =head1 AUTHOR
 

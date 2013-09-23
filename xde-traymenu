@@ -182,7 +182,7 @@ B<xde-traymenu> accepts the following options:
 =item B<--help>, B<-h>
 
 Print usage information, including the current values of option
-defaults, and exits.
+defaults, and exit.
 
 =item B<--verbose>, B<-v>
 
@@ -213,7 +213,7 @@ sub-menu, or not.  The default is to output a full menu.
 
 Specify the desktop name for C<NotShowIn> and C<OnlyShowIn> comparisons.
 The default is the all upper-case value corresponding to the format
-unless B<XDG_CURRENT_DESKTOP> is defined (see L</ENVIRONMENT>).
+unless C<XDG_CURRENT_DESKTOP> is defined (see L</ENVIRONMENT>).
 
 =item B<--charset>, B<-c> I<CHARSET>
 
@@ -234,7 +234,7 @@ F<$XDG_CONFIG_HOME:$XDG_CONFIG_DIRS> search path.
 
 =item B<--die-on-error>, B<-e>
 
-Abort output on any error.
+Abort execution on any error.
 
 =item B<--output>, B<-o> [I<FILENAME>]
 
@@ -251,6 +251,12 @@ That is, when the B<--format> is one such as C<blackbox>, it is not
 possible to place icons in the menu and this option is therefore
 ignored.  The default is to place icons in capable generated menus.
 
+=item B<--theme>, B<-t> THEME
+
+Specify the icon theme name to use when generating icons.  The default
+is to obtain the icon theme name from default locations (such as the
+F<$HOME/.gtkrc-2.0> file).
+
 =item B<--monitor>, B<-m>
 
 Specifies that B<xde-traymenu> is not to exit after successfully
@@ -264,7 +270,6 @@ the B<--output> option.  This option requires L<Linux::Inotify2(3pm)>.
 
 my %ops = (
     help	=> '',
-    verbose	=> '',
     format	=> "\L$XDG_CURRENT_DESKTOP\E",
     fullmenu	=> '',
     desktop	=> "\U$XDG_CURRENT_DESKTOP\E",
@@ -272,6 +277,7 @@ my %ops = (
     language	=> setlocale(LC_MESSAGES),
     root_menu	=> $XDG_ROOT_MENU,
     die_on_error=> '',
+    verbose	=> '',
     output	=> '',
     icons	=> '',
     noicons	=> '',
@@ -281,7 +287,6 @@ my %ops = (
 
 my $syntax = GetOptions(
     "help|h"	    =>\$ops{help},
-    "verbose|v"	    =>\$ops{verbose},
     "format|f=s"    =>\$ops{format},
     "fullmenu|F!"   =>\$ops{fullmenu},
     "N"		    =>sub{$ops{fullmenu}=0},
@@ -290,6 +295,7 @@ my $syntax = GetOptions(
     "language|l=s"  =>\$ops{language},
     "root-menu|r=s" =>\$ops{root_menu},
     "die-on-error|e"=>\$ops{die_on_error},
+    "verbose|v"	    =>\$ops{verbose},
     "output|o:s"    =>\$ops{output},
     "icons!"	    =>\$ops{icons},
     "n"		    =>sub{$ops{icons}=0},
@@ -661,26 +667,24 @@ F<$HOME/.gtkrc-2.0>).
 
 =back
 
-=cut
-
 =head1 HISTORY
 
-I wrote B<xde-traymenu> for a number of reasons:
+B<xde-traymenu> was written for a number of reasons:
 
 =over
 
 =item 1.
 
 Existing fluxbox menu generators that read XDG .desktop files
-(L<menutray(1)>) do not conform to XDG menu generation specifications
-and in particular are incapable of merging menus.
+(L<fbmenugen(1)>, L<menutray(1)>) do not conform to XDG menu generation
+specifications and in particular are incapable of merging menus.
 
 =item 2.
 
 Existing XDG menu generators (such as the SuSE L<xdg_menu(1)> script) do
-not properly merge default merge directories and do no observe <Layout>
-commands.  Also, they are poor at including icons in the generated
-menus.  They, of course, do not generate tray menus either.
+not properly merge default merge directories and do not observe <Layout>
+commands.  Also, they are poor at including icons in the generated menus.
+They, of course, do not generate tray menus either.
 
 =item 3.
 
@@ -696,5 +700,9 @@ specific submenus.
 
 =back
 
-=cut
+=head1 SEE ALSO
 
+L<XDG::Menu(3pm)>, L<XDG::Icons(3pm)>,
+L<Linux::Inotify2(3pm)>.
+
+=cut

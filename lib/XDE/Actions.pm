@@ -10,6 +10,8 @@ XDE::Actions -- provides methods for controlling window manager behaviour.
 =head1 DESCRIPTION
 
 Provides a modules with methods that can be used to control a window manager.
+This module is meant to be used as a base for other modules.  It
+supports actions performable using either EWMH or WMH specifications.
 
 =head1 METHODS
 
@@ -20,6 +22,11 @@ This module provides the following methods:
 =cut
 
 =item $ewmh->B<setup>
+
+Called to set up this module.  Setting up the module consists of
+registering for the proper events on the root window and establishing
+root window properties.  If no window manager yet exists, root window
+properties for WMH and EWMH will be obtained when one appears.
 
 =cut
 
@@ -1023,7 +1030,7 @@ Brian Bidulock <bidulock@cpan.org>
 
 =head1 SEE ALSO
 
-L<XDE::Context(3pm)>, L<XDE::X11(3pm)>
+L<XDE::X11(3pm)>, L<XDE::EWMH(3pm)>, L<XDE::WMH(3pm)>.
 
 =cut
 

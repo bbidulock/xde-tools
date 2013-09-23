@@ -9,6 +9,11 @@ XDE::Desktop::Icon::Link -- a C<Link> F<.desktop> file
 
 =head1 SYNOPSIS
 
+ my $desktop = XDE::Desktop->new();
+ my $filename = q{somefile.desktop};
+ my ($x,$y) = (0,0);
+ my $icon = XDE::Desktop::Icon::Link->new($desktop,$filename,$x,$y);
+
 =head1 DESCRIPTION
 
 This modules provides the methods and attributes unique to a C<Link>
@@ -18,11 +23,9 @@ Desktop entry keys for this type are:
 
 =over
 
-=item Type (mandatory, generic)
+=item Type (mandatory, generic) => Link
 
-For applications, this field must have a value of C<Link>.
-
-=item Version (generic)
+=item Version (generic) => 1.0
 
 =item Name (mandatory, generic)
 
@@ -44,9 +47,11 @@ For applications, this field must have a value of C<Link>.
 
 =head1 METHODS
 
+The following methods are provided:
+
 =over
 
-=item $shortcut = XDE::Desktop::Icon::Link->B<new>(I<$desktop>,I<$filename>)
+=item B<new> XDE::Desktop::Icon::Link I<$desktop>,I<$filename> => $icon
 
 Creates an instance of an XDE::Desktop::Icon::Link object.  A link
 corresponds to a freedesktop.org F<.desktop> file.  C<$desktop> is an
@@ -55,12 +60,12 @@ full path and file name of the F<.desktop> file to which the link
 corresponds.
 
 This method identifies the icon and label associated with the link
-and then calls XDE::Desktop::Icon->new_from_entry() to create the
+and then calls C<XDE::Desktop::Icon-E<gt>new_from_entry()> to create the
 desktop icon.  The icon is determined from the C<Icon> entry in the
 F<.desktop> file and the label is determined from the C<Name> entry.
 
 Any invalid link file will be represented simply as a
-XDE::Desktop::Icon::File instance instead.
+L<XDE::Desktop::Icon::File(3pm)> instance instead.
 
 =cut
 
@@ -83,6 +88,9 @@ sub new {
 1;
 
 =back
+
+See L<XDE::Desktop::Icon::Shortcut(3pm)/METHODS> for additional
+inherited methods.
 
 =head1 AUTHOR
 

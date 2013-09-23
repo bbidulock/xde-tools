@@ -11,28 +11,43 @@ XDE::Desktop::Icon::Shortcut -- desktop shortcut
 
 =head1 SYNOPSIS
 
+ my $desktop = new XDE::Desktop;
+ my $filename = q{some_file_name};
+ my($x,$y) = (0,0);
+ my $icon = new XDE::Desktop::Icon::Shortcut $desktop,$filename,$x,$y;
+
 =head1 DESCRIPTION
+
+This package provides a base package for use in desktop application and
+link shortcuts.  Its constructor can be used by the derived classes to
+interrogate the F<.desktop> file and determine which implementation
+package object to return.
 
 =head1 METHODS
 
+The following methods are provided:
+
 =over
 
-=item $shortcut = XDE::Desktop::Icon::Shortcut->B<new>(I<$desktop>,I<$filename>,I<$x>,I<$y>)
+=item B<new> XDE::Desktop::Icon::Shortcut I<$desktop>,I<$filename>,I<$x>,I<$y> => $icon
 
 Creates an instance of an XDE::Desktop::Icon::Shortcut object.  A
-shortcut corresponds to a freedesktop.org F<.desktop> file.
-C<$desktop> is an instance of an XDE::Desktop object, and C<$filename>
-is the full path and file name of the F<.desktop> file to which the
-shortcut corresponds.  C<$x> and C<$y> are the x- and y-coordinates of
-the upper-left corner of the cell on which to render the icon and label.
+shortcut corresponds to a freedesktop.org F<.desktop> file.  C<$desktop>
+is an instance of an XDE::Desktop object, and C<$filename> is the full
+path and file name of the F<.desktop> file to which the shortcut
+corresponds.  C<$x> and C<$y> are the x- and y-coordinates of the
+upper-left corner of the cell on which to render the icon and label.
 
 This method identifies the icon and label associated with the shortcut
-and then calls XDE::Desktop::Icon->new() to create the desktop icon.
-The icon is determined from the C<Icon> entry in the F<.desktop> file
-and the label is determined from the C<Name> entry.
+and then calls C<XDE::Desktop::Icon-E<gt>new()> to create the desktop
+icon.  The icon is determined from the C<Icon> entry in the F<.desktop>
+file and the label is determined from the C<Name> entry.
 
-Any invalid shortcut file will be represented simply as a
-XDE::Desktop::Icon::File instance instead.
+This method will return a L<XDE::Desktop::Icon::Application(3pm)> or
+L<XDE::Desktop::Icon::Link(3pm)> object depending on the C<Type> key
+field of the desktop entry.  Any invalid shortcut file will be
+represented simply as a L<XDE::Desktop::Icon::File(3pm)> instance
+instead.
 
 =cut
 
@@ -61,10 +76,11 @@ sub new {
     return XDE::Desktop::Icon::File->new($desktop,$filename);
 }
 
-=item $shortcut->B<launch>()
+=item $icon->B<launch>()
 
 This method performs the default click action associated with the
-shortcut.
+shortcut.  The default action is to launch (in the background) the
+command specified in the C<Exec> key field of the desktop entry.
 
 =cut
 
@@ -91,7 +107,11 @@ Brian Bidulock <bidulock@cpan.org>
 
 =head1 SEE ALSO
 
-L<XDE::Desktop(3pm)>, L<XDE::Desktop::Icon(3pm)>
+L<XDE::Desktop(3pm)>,
+L<XDE::Desktop::Icon(3pm)>,
+L<XDE::Desktop::Icon::Application(3pm)>,
+L<XDE::Desktop::Icon::Link(3pm)>,
+L<XDE::Desktop::Icon::File(3pm)>
 
 =cut
 

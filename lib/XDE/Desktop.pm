@@ -21,6 +21,14 @@ XDE::Desktop -- XDE Desktop Environment
 B<XDE::Desktop> provides a module that manages the desktop environment
 for the L<XDE(3pm)> suite.
 
+Like most desktop environments (typically file managers run in desktop
+mode), B<XDE::Desktop> provides clickable icons on the desktop.
+Following XDG specifications, it places items from the user's
+F<~/Desktop> directory on the background (desktop).  Unlike most file
+managers run in desktop mode, B<XDE::Desktop> does not involve itself
+with setting the background image.  That is the domain of
+L<XDE::Setbg(3pm)>.  In general, B<XDE::Desktop> cooperates
+
 =head1 METHODS
 
 Most of the methods provided by this module are internal and used for
@@ -973,10 +981,13 @@ sub calculate_cells {
     if ($self->{_NET_WORKAREA}) {
 	 #print STDERR "Have _NET_WORKAREA\n";
 	($x,$y,$w,$h) = @{$self->{_NET_WORKAREA}};
+	if (0) {
+	     # This was fixed in JWM
 	if ($self->{wmname} eq 'jwm') {
 	     # JWM does not report its panel, normally at the
 	     # bottom, reduce height by 1/2 ICON_HIGH
 	    $h -= ICON_HIGH/2;
+	}
 	}
     }
     elsif ($self->{_WIN_WORKAREA}) {

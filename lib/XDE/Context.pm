@@ -318,6 +318,24 @@ sub mkdirs {
     }
 }
 
+=item $xde->B<DESKTOP_SESSION>(I<$newvalue>) => $value
+
+=item $xde->B<FBXDG_DE>(I<$newvalue>) => $value
+
+=item $xde->B<XDE_SESSION>(I<$newvalue>) => $value
+
+=item $xde->B<XDE_CONFIG_DIR>(I<$newvalue>) => $value
+
+=item $xde->B<XDE_CONFIG_FILE>(I<$newvalue>) => $value
+
+=item $xde->B<XDE_MENU_DIR>(I<$newvalue>) => $value
+
+=item $xde->B<XDE_MENU_FILE>(I<$newvalue>) => $value
+
+Get or set the corresponding environment variable in the context.
+
+=cut
+
 sub DESKTOP_SESSION	{ return shift->get_or_set(DESKTOP_SESSION  =>@_) }
 sub FBXDG_DE		{ return shift->get_or_set(FBXDG_DE	    =>@_) }
 sub XDE_SESSION		{ return shift->get_or_set(XDE_SESSION	    =>@_) }
@@ -538,9 +556,13 @@ not fully follow XDG precedence rules, but follow WM-specific rules.
 B<set_session> should be called before this function if it is to be
 called at all.
 
-Also establishes a hash refernece in $xdg->{dirs}{style} that contains
+Also establishes a hash reference in $xdg->{dirs}{style} that contains
 all of the directories searched (whether they existed or not) for use in
 conjunction with L<Linux::Inotify2(3pm)>.
+
+The following methods are used to implement B<get_styles>:
+
+=over
 
 =cut
 
@@ -563,7 +585,9 @@ sub get_styles {
 Normally invoked as B<get_styles>, gets the styles hash when the session
 is a C<FLUXBOX> session.  The directories searched are
 F<@XDG_DATA_DIRS/fluxbox/styles> with an override from
-F<$HOME/.fluxbox/styles>.
+F<$HOME/.fluxbox/styles>.  Styles are named by the name of an immediate
+subdirectory containing a F<theme.cfg> file, or by the file name of a
+theme file contained in the directory.
 
 =cut
 
@@ -595,7 +619,8 @@ sub get_styles_FLUXBOX {
 Normally invoked as B<get_styles>, gets the styles hash when the session
 is a C<BLACKBOX> session.  The directories searched are
 F<@XDG_DATA_DIRS/backbox/styles> with an override from
-F<$HOME/.fluxbox/styles>.
+F<$HOME/.fluxbox/styles>.  Styles are named by the name of the theme
+file.
 
 =cut
 
@@ -623,7 +648,8 @@ sub get_styles_BLACKBOX {
 
 Normally invoked as B<get_styles>, gets the styles hash when the session
 is a C<OPENBOX> session.  The directories searched are
-F<@XDG_DATA_DIRS/themes/*/openbox-3>.
+F<@XDG_DATA_DIRS/themes/*/openbox-3>.  Styles are named by the name of
+the F<themes> subdirectory containing a F<openbox-3/themerc> file.
 
 =cut
 
@@ -652,7 +678,10 @@ sub get_styles_OPENBOX {
 Normaly invoked as B<get_styles>, gets the styles hash wen the session
 is an C<ICEWM> session.  The directories searched are
 F<@XDG_DATA_DIRS/icewm/themes> with an override from
-F<$HOME/.icewm/themes>.
+F<$HOME/.icewm/themes>.  Styles are named by the name of the
+subdirectory containing a F<default.theme> file, or the name of the
+subdirectory and the base name of
+another F<*.theme> file: I<subdirectory/name>F<.theme>.
 
 =cut
 
@@ -671,7 +700,7 @@ sub get_styles_ICEWM {
 	    opendir(my $t, "$dir/$s") or next;
 	    foreach my $e (readdir($t)) {
 		my $f = "$dir/$s/$e";
-		next unless $f =~ /^(.*)\.theme$/ and -f $f;
+		next unless $e =~ /^(.*)\.theme$/ and -f $f;
 		my $tn = $1 eq 'default' ? "$s" : "$s/$1";
 		$styles{$tn} = $f;
 	    }
@@ -683,13 +712,74 @@ sub get_styles_ICEWM {
     return \%styles;
 }
 
+=item $xde->B<get_styles_JWM>() => HASHREF
+
+Normally invoked as B<get_styles>, gets the styles hash when the session
+is a C<JWM> session.  The directories searched are
+F<@XDG_DATA_DIRS/jwm/styles> with an override from F<$HOME/.jwm/styles>.
+Styles are named by the theme file name.
+
+=cut
+
+sub get_styles_JWM {
+    my $self = shift;
+    my %styledirs = ();
+    my %styles = ();
+    foreach my $d (reverse
+	    map{"$_/jwm/styles"}@{$self->{XDG_DATA_ARRAY}},
+	    "$ENV{HOME}/.jwm/styles") {
+	$styledirs{$d} = 1;
+	opendir(my $dir, $d) or next;
+	foreach my $s (readdir($dir)) {
+	    next if $s eq '.' or $s eq '..';
+	    next unless -f "$dir/$s";
+	    $styles{$s} = "$dir/$s";
+	}
+	closedir($dir);
+    }
+    $self->{dirs}{style} = \%styledirs;
+    return \%styles;
+}
+
+=item $xde->B<get_styles_PEKWM>() => HASHREF
+
+Normally invoked as B<get_styles>, gets the styles hash when the session
+is a C<PEKWM> session.  The directories searched are
+F<@XDG_DATA_DIRS/pekwm/themes> with an override from
+F<$HOME/.pekwm/themes>.  Styles are named by the subdirectories
+containing a file named F<theme>.
+
+=cut
+
+sub get_styles_PEKWM {
+    my $self = shift;
+    my %styledirs = ();
+    my %styles = ();
+    foreach my $d (reverse map{"$_/pekwm/themes"}@{$self->{XDG_DATA_ARRAY}},
+	    "$ENV{HOME}/.pekwm/themes") {
+	$styledirs{$d} = 1;
+	opendir(my $dir, $d) or next;
+	foreach my $s (readdir($dir)) {
+	    next if $s eq '.' or $s eq '..';
+	    next unless -d "$dir/$s" and -f "$dir/$s/theme";
+	    $styles{$s} = "$dir/$s/theme";
+	}
+	closedir($dir);
+    }
+    $self->{dirs}{style} = \%styledirs;
+    return \%styles;
+}
+
 =item $xde->B<get_styles_FVWM>() => HASHREF
 
-Normaly invoked as B<get_styles>, gets the styles hash when the session
+Normally invoked as B<get_styles>, gets the styles hash when the session
 is an C<FVWM> session.  The directories searched are
 F<@XDG_DATA_DIRS/fvwm/themes> with an override from
-F<$HOME/.fvwm/themes>.  Note that FVWM does not really have any themes
-directories.
+F<$HOME/.fvwm/themes>.  FVWM does not really have any basic themes, the
+L<fvwm-themes(1)> package does.  These themes are named after their
+subdirectory (with the first character capitalized it seems), unless a
+F<theme-name.cfg> file exists in the subdirectory, in which case the
+C<name> key-field in that file gives the exact name.
 
 =cut
 
@@ -704,6 +794,7 @@ sub get_styles_FVWM {
 	opendir(my $dir, $d) or next;
 	foreach my $s (readdir($dir)) {
 	    next if $s eq '.' or $s eq '..';
+	    # FIXME: make this work like the POD description
 	    next unless $s =~ m{^Theme\.(.*)$} and -f "$dir/$s";
 	    my $tn = $1;
 	    $styles{$tn} = "$dir/$s";
@@ -720,6 +811,9 @@ Normally invoked as B<get_styles>, gets the styles hash when the session
 is a C<WMAKER> session.  The directories searched are
 F<@XDG_DATA_DIRS/WindowMaker/{Themes,Styles}> with an override from
 F<{$GNUSTEP_USER_ROOT,$HOME/GNUstep}/Library/WindowMaker/{Themes,Styles}>.
+Styles named I<name>F<.style> are files containing theme information.
+Styles named I<name>F<.themed> are directories containing a file named
+F<style> that contains the theme information.
 
 =cut
 
@@ -754,6 +848,37 @@ sub get_styles_WMAKER {
     $self->{dirs}{style} = \%styledirs;
     return \%styles;
 }
+
+=item $xde->B<get_styles_METACITY>() => HASHREF
+
+Normally invoked as B<get_styles>, gets the styles hash when the session
+is a C<METACITY> session.  The directories searched are
+F<@XDG_DATA_DIRS/themes/*/metacity-1>.  Styles are named by the name of
+the F<themes> subdirectory containing a F<metacity-theme-1.xml> file.
+
+=cut
+
+sub get_styles_METACITY {
+    my $self = shift;
+    my %styledirs = ();
+    my %styles = ();
+    foreach my $d (reverse map{"$_/themes"}@{$self->{XDG_DATA_ARRAY}}) {
+	$styledirs{$d} = 1;
+	opendir(my $dir, $d) or next;
+	foreach my $s (readdir($dir)) {
+	    next if $s eq '.' or $s eq '..';
+	    next unless -d "$d/$s";
+	    my $f = "$d/$s/metacity-1/metacity-theme-1.xml";
+	    next unless -f $f;
+	    $styles{$s} = $f;
+	}
+	closedir($dir);
+    }
+    $self->{dirs}{style} = \%styledirs;
+    return \%styles;
+}
+
+=back
 
 =back
 

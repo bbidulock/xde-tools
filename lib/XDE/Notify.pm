@@ -13,8 +13,9 @@ my $X = XDE::Notify->new;
 
 =head1 DESCRIPTION
 
-XDE::Notify provides a wrapper class for integrating Linux::Inotify2
-operations in an L<XDE::Context(3pm)> derived class.
+XDE::Notify provides a wrapper class for integrating
+L<Linux::Inotify2(3pm)> operations in an L<XDE::Context(3pm)> derived
+class.
 
 =head1 METHODS
 
@@ -22,7 +23,8 @@ operations in an L<XDE::Context(3pm)> derived class.
 
 =item $N = B<new> XDE::Notify I<@OPTIONS> => bless HASHREF
 
-Creates a new Linux::Inotify2 object and connects it to the kernel.
+Creates a new L<Linux::Inotify2(3pm)> object and connects it to the
+kernel.
 
 =cut
 
@@ -36,7 +38,7 @@ Initializes the XDE::Notify object.  This sets handlers and initializes
 the L<Glib::Mainloop(3pm)> watchers for event-loop operation.
 Initialization is no done automatically, because the owner of this
 instance might want to set other things up before initializing the
-mainloop.
+main loop.
 
 C<$xde> is typically an L<XDE::Context(3pm)> derived object, but can be any
 object that implements (or not) B<notify_handler> methods.  These
@@ -62,7 +64,7 @@ sub init {
 
 Terminates the XDE::Notify object.  There are a number of circular
 references that are broken by this method that are necessary to allow
-perl garbage collection to collect the object.
+L<perl(1)> garbage collection to collect the object.
 
 =cut
 

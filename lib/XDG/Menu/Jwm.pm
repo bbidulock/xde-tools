@@ -29,6 +29,12 @@ sub new {
     return bless {}, shift;
 }
 
+sub escape {
+    my $string = shift;
+    $string =~ s/[&]/&amp;/g;
+    return $string;
+}
+
 sub icon {
     my ($self,$name) = @_;
     return '' unless $name;
@@ -107,7 +113,7 @@ sub Header {
     my ($self,$item,$indent) = @_;
     my $name = $item->Name; $name =~ s/["]/\\"/g;
     return sprintf "%s<Menu icon=\"%s\" label=\"%s\" labeled=\"false\"/>\n",
-	$indent, $item->Icon([qw(png xpm)]), $name;
+	$indent, $item->Icon([qw(png xpm)]), escape($name);
 }
 sub Separator {
     my ($self,$item,$indent) = @_;
@@ -117,7 +123,7 @@ sub Application {
     my ($self,$item,$indent) = @_;
     my $name = $item->Name; $name =~ s/["]/\\"/g;
     return sprintf "%s<Program icon=\"%s\" label=\"%s\">%s</Program>\n",
-	   $indent, $item->Icon([qw(png xpm)]), $name, $item->Exec;
+	   $indent, $item->Icon([qw(png xpm)]), escape($name), $item->Exec;
 }
 sub Directory {
     my ($self,$item,$indent) = @_;
@@ -125,7 +131,7 @@ sub Directory {
     if ($item->{Menu}{Elements} and @{$item->{Menu}{Elements}}) {
 	my $name = $item->Name; $name =~ s/["]/\\"/g;
 	$text .= sprintf "%s<Menu icon=\"%s\" label=\"%s\" labeled=\"false\">\n",
-	    $indent, $item->Icon([qw(png xpm)]), $name;
+	    $indent, $item->Icon([qw(png xpm)]), escape($name);
 	$text .= $self->build($item->{Menu},$indent.'   ');
 	$text .= sprintf "%s</Menu> <!-- %s -->\n",
 	    $indent, $item->Name;
@@ -161,13 +167,13 @@ sub themes {
 	my $icon = $self->icon('style');
 	$text .= "$indent<Menu ${icon}label=\"Themes\">\n";
 	foreach (sort @sthemes) {
-	    $text .= "$indent   <Program ${icon}label=\"$_\">$base/setstyle $sdir/$_</Program>\n";
+	    $text .= "$indent   <Program ${icon}label=\"".escape($_)."\">$base/setstyle $sdir/$_</Program>\n";
 	}
 	if (@sthemes and @uthemes) {
 	    $text .= "$indent   <Separator/>\n";
 	}
 	foreach (sort @uthemes) {
-	    $text .= "$indent   <Program ${icon}label=\"$_\">$base/setstyle $udir/$_</Program>\n";
+	    $text .= "$indent   <Program ${icon}label=\"".escape($_)."\">$base/setstyle $udir/$_</Program>\n";
 	}
 	$text .= "$indent</Menu>\n";
     }
@@ -202,13 +208,13 @@ sub styles {
 	my $icon = $self->icon('style');
 	$text .= "$indent<Menu ${icon}label=\"Styles\">\n";
 	foreach (sort @sstyles) {
-	    $text .= "$indent   <Program ${icon}label=\"$_\">$base/setstyle $sdir/$_</Program>\n";
+	    $text .= "$indent   <Program ${icon}label=\"".escape($_)."\">$base/setstyle $sdir/$_</Program>\n";
 	}
 	if (@sstyles and @ustyles) {
 	    $text .= "$indent   <Separator/>\n";
 	}
 	foreach (sort @ustyles) {
-	    $text .= "$indent   <Program ${icon}label=\"$_\">$base/setstyle $udir/$_</Program>\n";
+	    $text .= "$indent   <Program ${icon}label=\"".escape($_)."\">$base/setstyle $udir/$_</Program>\n";
 	}
 	$text .= "$indent</Menu>\n";
     }

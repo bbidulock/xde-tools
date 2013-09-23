@@ -17,13 +17,32 @@ XDE::Desktop::Icon -- base class for desktop icons
 
 =head1 DESCRIPTION
 
+Provides a base package for desktop icons.  The desktop icon is the
+widget that appears on the desktop with the icon and label underneath
+the icon.  Implementation packages using this package as a base
+(directly or indirectly) are:
+
+=over
+
+=item L<XDE::Desktop::Icon::Application(3pm)>
+
+=item L<XDE::Desktop::Icon::Directory(3pm)>
+
+=item L<XDE::Desktop::Icon::File(3pm)>
+
+=item L<XDE::Desktop::Icon::Link(3pm)>
+
+=item L<XDE::Desktop::Icon::Shortcut(3pm)>
+
+=back
+
 =head1 METHODS
 
 =over
 
 =cut
 
-=item XDE::Desktop::Icon->B<new>(I<$desktop>,I<$icon_name>,I<$label>) => $Icon
+=item B<new> XDE::Desktop::Icon I<$desktop>,I<$icon_name>,I<$label> => $icon
 
 Create an new instance of an XDE::Desktop::Icon.  This base class
 constructor is meant to be called only from the derived classes
@@ -46,65 +65,23 @@ sub new {
     }, $type;
 }
 
-sub new_from_names {
-    my ($type,$names,$label,$id) = @_;
-    my @names = (ref($names) eq 'ARRAY')?( @$names ):( $names );
-    my $pixbuf;
-    unless ($pixbuf = $PIXBUFS{$id}) {
-	my $theme = Gtk2::IconTheme->get_default;
-	foreach my $n (@names) {
-	    if ($theme->has_icon($n)) {
-		$pixbuf = $theme->load_icon($n,48,['generic-fallback','use-builtin']);
-	    }
-	    last if $pixbuf;
-	}
-    }
-    return undef unless $pixbuf;
-    $PIXBUFS{$id} = $pixbuf;
-    return new($type,$pixbuf,$label);
-}
+=item B<new_from_path> XDE::Desktop::Icon I<$path> => $icon
 
-sub new_from_mime {
-    my ($type,$label,$mime,@names) = @_;
-    my $icons = XDE::Desktop->get_icons($mime);
-    push @$icons,@names;
-    my $self = new_from_names($type,$icons,$label,$mime);
-    $self->{mime} = $mime if $self;
-    return $self;
-}
+Establishes a desktop icon given a path, C<$path>, to the file system
+object to represent.  This method is used when no F<*.desktop> entry
+can be associated with the object (otherwise, B<new_from_entry> is more
+appropriate).  This method simply calls one of: B<new_from_file>,
+B<new_from_directory> or B<new_from_unknown>, depending on whether the
+file system object at C<$path> is a file, directory or other,
+respectively.
 
-sub new_from_file {
-    my ($type,$filename) = @_;
-    my $label = $filename; $label =~ s{/*$}{}; $label =~ s{.*/}{};
-    my $mime = XDE::Desktop->get_mime_type($filename);
-    unless ($mime) {
-	warn "No mime type for filename $filename";
-	return undef;
-    }
-    return new_from_mime($type,$label,$mime,'gtk-file');
-}
+This base class constructor is meant to be called only from the derived
+classes
+L<XDE::Desktop::Icon::File(3pm)>,
+L<XDE::Desktop::Icon::Directory(3pm)> and
+L<XDE::Desktop::Icon::Unknown(3pm)>.
 
-sub new_from_directory {
-    my ($type,$directory) = @_;
-    my $label = $directory; $label =~ s{/*$}{}; $label =~ s{.*/}{};
-    my $mime = XDE::Desktop->get_mime_type($directory);
-    unless ($mime) {
-	warn "No mime type for directory $directory";
-	return undef;
-    }
-    return new_from_mime($type,$label,$mime,'folder');
-}
-
-sub new_from_unknown {
-    my ($type,$unknown) = @_;
-    my $label = $unknown; $label =~ s{/*$}{}; $label =~ s{.*/}{};
-    my $mime = XDE::Desktop->get_mime_type($unknown);
-    unless ($mime) {
-	warn "No mime type for object $unknown";
-	return undef;
-    }
-    return new_from_mime($type,$label,$mime,'gtk-missing-image');
-}
+=cut
 
 sub new_from_path {
     my ($type,$path) = @_;
@@ -121,6 +98,111 @@ sub new_from_path {
     $self->{path} = $path if $self;
     return $self;
 }
+
+=over
+
+=item B<new_from_file> XDE::Desktop::Icon::File I<$filename> => $icon
+
+This method is used internally by B<new_from_path> to establish a
+desktop icon for a file.
+The supplied type should be of type L<XDE::Desktop::Icon::File(3pm)>.
+
+=cut
+
+sub new_from_file {
+    my ($type,$filename) = @_;
+    my $label = $filename; $label =~ s{/*$}{}; $label =~ s{.*/}{};
+    my $mime = XDE::Desktop->get_mime_type($filename);
+    unless ($mime) {
+	warn "No mime type for filename $filename";
+	return undef;
+    }
+    return new_from_mime($type,$label,$mime,'gtk-file');
+}
+
+=item B<new_from_directory> XDE::Desktop::Icon::Directory I<$directory> => $icon
+
+This method is used internally by B<new_from_path> to establish a
+desktop icon for a directory.
+The supplied type should be of type L<XDE::Desktop::Icon::Directory(3pm)>.
+
+=cut
+
+sub new_from_directory {
+    my ($type,$directory) = @_;
+    my $label = $directory; $label =~ s{/*$}{}; $label =~ s{.*/}{};
+    my $mime = XDE::Desktop->get_mime_type($directory);
+    unless ($mime) {
+	warn "No mime type for directory $directory";
+	return undef;
+    }
+    return new_from_mime($type,$label,$mime,'folder');
+}
+
+=item B<new_from_unknown> XDE::Desktop::Icon::Unknown I<$unknown> => $icon
+
+This method is used internally by B<new_from_path> to establish a
+desktop icon for a file system object that is neither a file nor a
+directory.
+The supplied type should be of type L<XDE::Desktop::Icon::Unknown(3pm)>.
+
+=cut
+
+sub new_from_unknown {
+    my ($type,$unknown) = @_;
+    my $label = $unknown; $label =~ s{/*$}{}; $label =~ s{.*/}{};
+    my $mime = XDE::Desktop->get_mime_type($unknown);
+    unless ($mime) {
+	warn "No mime type for object $unknown";
+	return undef;
+    }
+    return new_from_mime($type,$label,$mime,'gtk-missing-image');
+}
+
+=over
+
+=item B<new_from_mime> XDE::Desktop::Icon I<$label>,I<$mime>,I<@names> => $icon
+
+This method is used internally by B<new_from_file>,
+B<new_from_directory> and B<new_from_unknown> to establish a desktop
+icon for a file, directory or other file system object based on mime
+type, C<$mime>, and with preferred icon names, C<@names>.  C<$label>
+contains the text to be displayed beneath the icon on the desktop.
+
+=cut
+
+sub new_from_mime {
+    my ($type,$label,$mime,@names) = @_;
+    my $icons = XDE::Desktop->get_icons($mime);
+    push @$icons,@names;
+    my $self = new_from_names($type,$icons,$label,$mime);
+    $self->{mime} = $mime if $self;
+    return $self;
+}
+
+=back
+
+=back
+
+=item B<new_from_entry> XDE::Desktop::Icon I<$path>,I<$entry> => $icon
+
+Establishes a desktop icon from the F<*.desktop> file at C<$path>, that
+has been read into the hash reference, C<$entry>.  This method
+establishes the list of possible icons for the entry using the C<Icon>
+key field in the entry and the type in the C<Type> key field.  The file
+path, C<$path>, is used to determine the mime type of the entry, which
+further contributes to the possible icon names.  Finally,
+B<new_from_names> is called to establish the desktop icon from the list
+of possible icon names.
+
+This method should be used in preference to B<new_from_path> when a
+F<*.desktop> entry is available.
+
+This base class constructor is meant to be called only from the derived
+classes L<XDE::Desktop::Icon::Application(3pm)> and
+L<XDE::Desktop::Icon::Link(3pm)>.
+
+=cut
 
 sub new_from_entry {
     my ($type,$path,$entry) = @_;
@@ -149,11 +231,48 @@ sub new_from_entry {
     return $self;
 }
 
+=over
+
+=item B<new_from_names> XDE::Desktop::Icon I<$names>,I<$label>,I<$id> => $icon
+
+This method is used internally by B<new_from_mime> and B<new_from_entry>
+to establish a desktop icon given the possible icon names associated
+with the icon in the array reference, C<$names>.  I<$label> contains the
+text placed under the icon on the desktop.  I<$id> is used to identify
+the pixmap so that one pixmap can be shared amongst all desktop icons
+displaying it.
+
+=cut
+
+sub new_from_names {
+    my ($type,$names,$label,$id) = @_;
+    my @names = (ref($names) eq 'ARRAY')?( @$names ):( $names );
+    my $pixbuf;
+    unless ($pixbuf = $PIXBUFS{$id}) {
+	my $theme = Gtk2::IconTheme->get_default;
+	foreach my $n (@names) {
+	    if ($theme->has_icon($n)) {
+		$pixbuf = $theme->load_icon($n,48,['generic-fallback','use-builtin']);
+	    }
+	    last if $pixbuf;
+	}
+    }
+    return undef unless $pixbuf;
+    $PIXBUFS{$id} = $pixbuf;
+    return new($type,$pixbuf,$label);
+}
+
+=back
+
 =item $icon->B<create>() => $widget
 
 Create a widget for the desktop icon.
 
 =cut
+
+sub create {
+    return shift->create2(@_);
+}
 
 sub create1 {
     my $self = shift;
@@ -418,10 +537,6 @@ sub create3 {
     return $but;
 }
 
-sub create {
-    return shift->create2(@_);
-}
-
 =item $icon->B<DESTROY>()
 
 Destroy a desktop icon.  This must destroy the X window resource.
@@ -436,15 +551,33 @@ sub DESTROY {
     }
 }
 
+=item $icon->B<show>
+
+Show the icon on the corresponding desktop.
+
+=cut
+
 sub show {
     my $self = shift;
     $self->{gtk}{widget}->show_all;
 }
 
+=item $icon->B<hide>
+
+Hide the icon from the corresponding desktop.
+
+=cut
+
 sub hide {
     my $self = shift;
     $self->{gtk}{widget}->hide_all;
 }
+
+=item $icon->B<remove>(I<$table>)
+
+Remove the icon from the corresponding desktop.
+
+=cut
 
 sub remove {
     my ($self,$table) = @_;
@@ -452,6 +585,13 @@ sub remove {
 	$table->remove($self->{gtk}{widget});
     }
 }
+
+=item $icon->B<place>(I<$table>,I<$col>,I<$row>)
+
+Place the icon on the corresponding desktop at column, C<$col>, and row,
+C<$row>.
+
+=cut
 
 sub place {
     my ($self,$table,$col,$row) = @_;
@@ -585,7 +725,7 @@ sub open_with {
 
 =item $icon->B<popup>(I<$event>)
 
-This method performs the default action to pops up a menu associated
+This method performs the default action to pop up a menu associated
 with the icon.
 
 =cut
@@ -1126,9 +1266,6 @@ sub props {
     $window->show_all;
     $window->show;
 }
-
-
-
 
 1;
 

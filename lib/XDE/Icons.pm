@@ -20,4 +20,16 @@ XDE::Icons - locate icons under an icon theme
 
 The B<XDE::Icons> module provides an XDG compliant mechanism for looking up Icons.
 
+=head1 BUGS
+
+This module is not yet implemented.
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
+
+L<XDE::Context(3pm)>
+
 =cut

@@ -35,10 +35,10 @@ Desktop Environment.  When invoked, it presents the user with a dialog
 that provides options such a rebooting, logging out and shutting down.
 
 XDE::Logout used the C<login1> service provided by L<systemd(1)> on the
-Dbus to determine whether power functions are available and presents a
-modal window for user selection.  Upon selection either the C<login1>
-service is invoked for a power function, the user is logged out, or the
-logout procedure is cancelled.
+L<Net::Dbus(3pm)> to determine whether power functions are available and
+presents a modal window for user selection.  Upon selection either the
+C<login1> service is invoked for a power function, the user is logged
+out, or the logout procedure is cancelled.
 
 =head1 METHODS
 
@@ -52,8 +52,7 @@ Creates a new XDE::Logout instance and returns a blessed reference.  The
 XDE::Logout module uses L<XDE::Context(3pm)> at a base, and the
 I<%OVERRIDES> are simply passed to the L<XDE::Context(3pm)> module.
 When an option hash, I<%ops>, is passed to the method, it is initialized
-with default option values.
-See L</OPTIONS> for details.
+with default option values.  See L</OPTIONS> for details.
 
 =over
 
@@ -87,17 +86,17 @@ sub defaults {
 	unless $self->{ops}{prompt};
 }
 
-# =item $xde->B<lxsession_check>()
-# 
-# An internal method to determine whether we have been invoked under a
-# session running L<lxsession(1)>.  When that is the case, we simply
-# execute L<lxsession-logout(1)> with the appropriate parameters for
-# branding.  In that case, this method does not return (executes
-# L<lxsession-logout(1)> directly).  Otherwise the method returns.
-# This method is currently unused and is deprecated.  C<$xde-E<gt>init>
-# must be called before this method.
-# 
-# =cut
+=item $xde->B<lxsession_check>()
+
+An internal method to determine whether we have been invoked under a
+session running L<lxsession(1)>.  When that is the case, we simply
+execute L<lxsession-logout(1)> with the appropriate parameters for
+branding.  In that case, this method does not return (executes
+L<lxsession-logout(1)> directly).  Otherwise the method returns.  This
+method is currently unused and is deprecated.  C<$xde-E<gt>init> must be
+called before this method.
+
+=cut
 
 sub lxsession_check {
     my $self = shift;
@@ -151,14 +150,14 @@ sub test_lock_screen_program {
     return;
 }
 
-# =item $xde->B<test_power_functions>()
-# 
-# Internal method that uses Net::DBus and the C<login1> service to test
-# for available power functions.  The results of the test are stored in
-# a hashref, C<$xde-E<gt>{can}>, indexed by power function name:
-# PowerOff, Reboot, Suspend, Hibernate and HybridSleep.
-# 
-# =cut
+=item $xde->B<test_power_functions>()
+
+Internal method that uses L<Net::DBus(3pm)> and the C<login1> service to
+test for available power functions.  The results of the test are stored
+in a hash reference, C<$xde-E<gt>{can}>, indexed by power function name:
+C<PowerOff>, C<Reboot>, C<Suspend>, C<Hibernate> and C<HybridSleep>.
+
+=cut
 
 sub test_power_functions {
     my $self = shift;
@@ -174,13 +173,13 @@ sub test_power_functions {
     $self->{can}{HybridSleep} = $result if $result = $self->{dbus}{obj}->CanHybridSleep();
 }
 
-# =item $xde->B<grabbed_window>(I<$window>)
-# 
-# Internal method to transform window, I<$window>, into a window that has
-# a grab on the pointer on a Gtk2 window and restricts pointer movement to
-# the window boundary.  I<$window> is a L<Gtk2::Window(3pm)>.
-# 
-# =cut
+=item $xde->B<grabbed_window>(I<$window>)
+
+Internal method to transform window, I<$window>, into a window that has
+a grab on the pointer on a L<Gtk2(3pm)> window and restricts pointer
+movement to the window boundary.  I<$window> is a L<Gtk2::Window(3pm)>.
+
+=cut
 
 sub grabbed_window {
     my $self = shift;
@@ -216,14 +215,14 @@ sub grabbed_window {
     }
 }
 
-# =item $xde->B<ungrabbed_window>(I<$window>)
-# 
-# Internal method to tranform window, I<$window>, back into a regular
-# window, releasing the pointer and keyboard grab and motion restriction.
-# I<$window> is a L<Gtk2::Window(3pm)> that previously had the
-# B<grabbed_window> method called on it.
-# 
-# =cut
+=item $xde->B<ungrabbed_window>(I<$window>)
+
+Internal method to transform window, I<$window>, back into a regular
+window, releasing the pointer and keyboard grab and motion restriction.
+I<$window> is a L<Gtk2::Window(3pm)> that previously had the
+B<grabbed_window> method called on it.
+
+=cut
 
 sub ungrabbed_window {
     my $self = shift;
@@ -234,14 +233,14 @@ sub ungrabbed_window {
     $win->hide;
 }
 
-# =item $xde->B<areyousure>(I<$window>,I<$message>) => $result {yes|no}
-# 
-# Simply dialog prompting the user with a yes/no question; however, the
-# window, I<$window>, is one that was previously grabbed using
-# B<grabbed_window>.  This method hands the focus grab to the dialog and
-# back to the window on exit.  Returns the response to the dialog.
-# 
-# =cut
+=item $xde->B<areyousure>(I<$window>,I<$message>) => $result {yes|no}
+
+Simply dialog prompting the user with a yes or no question; however, the
+window, I<$window>, is one that was previously grabbed using
+B<grabbed_window>.  This method hands the focus grab to the dialog and
+back to the window on exit.  Returns the response to the dialog.
+
+=cut
 
 sub areyousure {
     my $self = shift;
@@ -265,9 +264,11 @@ sub areyousure {
     return $result;
 }
 
-# =item $xde->B<PowerOff>(I<$window>)
-# 
-# =cut
+=item $xde->B<PowerOff>(I<$window>)
+
+Deprecated version of B<action_PowerOff>.
+
+=cut
 
 sub PowerOff {
     my $self = shift;
@@ -278,9 +279,11 @@ sub PowerOff {
     return Gtk2::EVENT_PROPAGATE;
 }
 
-# =item $xde->B<Reboot>(I<$window>)
-# 
-# =cut
+=item $xde->B<Reboot>(I<$window>)
+
+Deprecated version of B<action_Reboot>.
+
+=cut
 
 sub Reboot {
     my $self = shift;
@@ -291,9 +294,11 @@ sub Reboot {
     return Gtk2::EVENT_PROPAGATE;
 }
 
-# =item $xde->B<Suspend>(I<$window>)
-# 
-# =cut
+=item $xde->B<Suspend>(I<$window>)
+
+Deprecated version of B<action_Suspend>.
+
+=cut
 
 sub Suspend {
     my $self = shift;
@@ -304,9 +309,11 @@ sub Suspend {
     return Gtk2::EVENT_PROPAGATE;
 }
 
-# =item $xde->B<Hibernate>(I<$window>)
-# 
-# =cut
+=item $xde->B<Hibernate>(I<$window>)
+
+Deprecated version of B<action_Hibernate>.
+
+=cut
 
 sub Hibernate {
     my $self = shift;
@@ -317,9 +324,11 @@ sub Hibernate {
     return Gtk2::EVENT_PROPAGATE;
 }
 
-# =item $xde->B<HybridSleep>(I<$window>)
-# 
-# =cut
+=item $xde->B<HybridSleep>(I<$window>)
+
+Deprecated version of B<action_HybridSleep>.
+
+=cut
 
 sub HybridSleep {
     my $self = shift;
@@ -330,9 +339,11 @@ sub HybridSleep {
     return Gtk2::EVENT_PROPAGATE;
 }
 
-# =item $xde->B<SwitchUser>(I<$window>)
-# 
-# =cut
+=item $xde->B<SwitchUser>(I<$window>)
+
+Deprecated version of B<action_SwitchUser>.
+
+=cut
 
 sub SwitchUser {
     my $self = shift;
@@ -342,9 +353,11 @@ sub SwitchUser {
     return Gtk2::EVENT_PROPAGATE;
 }
 
-# =item $xde->B<SwitchDesk>(I<$window>)
-# 
-# =cut
+=item $xde->B<SwitchDesk>(I<$window>)
+
+Deprecated version of B<action_SwitchDesk>.
+
+=cut
 
 sub SwitchDesk {
     my $self = shift;
@@ -354,9 +367,11 @@ sub SwitchDesk {
     return Gtk2::EVENT_PROPAGATE;
 }
 
-# =item $xde->B<LockScreen>(I<$window>)
-# 
-# =cut
+=item $xde->B<LockScreen>(I<$window>)
+
+Deprecated version of B<action_LockScreen>.
+
+=cut
 
 sub LockScreen {
     my $self = shift;
@@ -366,9 +381,11 @@ sub LockScreen {
     return Gtk2::EVENT_PROPAGATE;
 }
 
-# =item $xde->B<Logout>(I<$window>)
-# 
-# =cut
+=item $xde->B<Logout>(I<$window>)
+
+Deprecated version of B<action_Logout>.
+
+=cut
 
 sub Logout {
     my $self = shift;
@@ -378,9 +395,11 @@ sub Logout {
     return Gtk2::EVENT_PROPAGATE;
 }
 
-# =item $xde->B<Restart>(I<$window>)
-# 
-# =cut
+=item $xde->B<Restart>(I<$window>)
+
+Deprecated version of B<action_Restart>.
+
+=cut
 
 sub Restart {
     my $self = shift;
@@ -390,9 +409,11 @@ sub Restart {
     return Gtk2::EVENT_PROPAGATE;
 }
 
-# =item $xde->B<Cancel>(I<$window>)
-# 
-# =cut
+=item $xde->B<Cancel>(I<$window>)
+
+Deprecated version of B<action_Cancel>.
+
+=cut
 
 sub Cancel {
     my $self = shift;
@@ -811,13 +832,13 @@ sub action_Logout {
     return;
 }
 
-=back
-
-=cut
-
 1;
 
 __END__
+
+=back
+
+See L<XDE::Gtk2(3pm)/METHODS> for additional inherited methods.
 
 =head1 OPTIONS
 
@@ -832,9 +853,9 @@ to the banner determined using XDG environment variables.
 
 =item prompt => $prompt
 
-Specifies the logout prompt to display (e.g. 'Logout of FLUXBOX
-session?').  When unspecified, the default is determined using XDG
-environment variables.  This string can use pango markup.
+Specifies the logout prompt to display (e.g. C<Logout of FLUXBOX
+session?>).  When unspecified, the default is determined using XDG
+environment variables.  This string can use C<pango> markup.
 
 =back
 
@@ -852,25 +873,25 @@ The behaviour of the B<action_Logout>() method is as follows:
 Check for B<XDG_SESSION_PID>, B<_FBSESSION_PID>, B<_LXSESSION_PID>
 environment variables.
 
-When any of these environment variables exist, the PID is sent a
+When any of these environment variables exist, the C<PID> is sent a
 C<SIGTERM> and the logout is considered complete.  This will normally
-terminate an XDE session or an L<lxsession(1)>.
+terminate an L<XDE(3pm)> session or an L<lxsession(1)>.
 
 =item 2.
 
 Check for B<_BLACKBOX_PID> and B<_OPENBOX_PID> display properties.
 
-When any of these properties exist, the PID is sent a C<SIGTERM> and the
-logout is considered complete.  (The B<_BLACKBOX_PID> is actually for
-L<fluxbox(1)> not L<blackbox(1)>).
+When any of these properties exist, the C<PID> is sent a C<SIGTERM> and
+the logout is considered complete.  (The B<_BLACKBOX_PID> is actually
+for L<fluxbox(1)> not L<blackbox(1)>).
 
 =item 3.
 
 Find the window manager using the B<_NET_SUPPORTING_WM_CHECK> property
 and locate the B<_NET_WM_PID> property of the window manager.
 
-When this property is found, the PID is sent a C<SIGTERM> and the logout
-is considered complete.
+When this property is found, the C<PID> is sent a C<SIGTERM> and the
+logout is considered complete.
 
 =back
 

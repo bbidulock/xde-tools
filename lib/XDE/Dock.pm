@@ -12,21 +12,31 @@ XDE::Dock -- XDE Dock for WMs that do not provide one
 
 =head1 SYNOPSIS
 
+ my $xde = XDE::Dock->new(%OVERRIDES,ops=>\%ops);
+ $xde->getenv;
+ $xde->default;
+ $SIG{TERM} = sub{$xde->main_quit};
+ $xde->init;
+ $xde->main;
+ $xde->term;
+ exit(0);
+
 =head1 DESCRIPTION
 
-A number of light-weigth window managers supported by XDE provide a
+A number of light-weight window managers supported by XDE provide a
 WindowMaker-like Dock: L<fluxbox(1)>, L<blackbox(1)>, L<openbox(1)>,
 L<pekwm(1)>, L<wmaker(1)>.  Of these, L<pekwm(1)> provides a suboptimal
 dock (it does not center swallowed windows); and L<wmaker(1)>'s dock is
-far too manual (it needs to launch the dock apps itself, unavailable
-dock apps still show a window position.).  All of these window managers
-are capapble of disabling the dock functionality through configuraiton.
-Other window managers supported by XDE do not provide a dock (per say):
-L<icewm(1)>, L<jwm(1)>, L<fvwm(1)>, L<afterstep(1)>.  Of these,
-L<fvwm(1)> and L<afterstep(1)> provide the ability to I<swallow> a dock
-app, but this, again, requires manual configuration.
+far too manual (it needs to launch the dock applications itself,
+unavailable dock applications still show a window position.).  All of
+these window managers are capable of disabling the dock functionality
+through configuration.  Other window managers supported by L<XDE(3pm)>
+do not provide a dock (per say): L<icewm(1)>, L<jwm(1)>, L<fvwm(1)>,
+L<afterstep(1)>, L<metacity(1)>.  Of these, L<fvwm(1)> and
+L<afterstep(1)> provide the ability to I<swallow> a dock application,
+but this, again, requires manual configuration.
 
-This is an applicaiton-based dock which performs much like the automatic
+This is an application-based dock which performs much like the automatic
 docks of the I<*box> window managers, however, it is standalone.
 
 Another objective of this module is to provide increased functionality
@@ -37,10 +47,10 @@ over the I<*box> window managers as follows:
 =item 1.
 
 Restore some of the more desirable WindowMaker behaviour to the dock.
-This includes getting the dock to launch the dock apps when it starts
-up, however, unlike WindowMaker, do not include space for dock apps that
-are not available.  Drawers.  Drag and Drop repositioning.  Drag and
-Drop addition and deletion.
+This includes getting the dock to launch the dock applications when it
+starts up, however, unlike WindowMaker, do not include space for dock
+applications that are not available.  Drawers.  Drag and Drop
+repositioning.  Drag and Drop addition and deletion.
 
 =item 2.
 
@@ -106,12 +116,12 @@ and C<SubstructureNotify> events.
 =item 6.
 
 A window is created to act as the parent for toplevel windows that are
-reparented that do not correspond to the dock app window itself.
+reparented that do not correspond to the dock application window itself.
 
 =item 7.
 
-The dock window itself is created and dock apps searched and reparented
-by calling the B<create_dock> method.
+The dock window itself is created and dock applications searched and
+reparented by calling the B<create_dock> method.
 
 =back
 
@@ -264,8 +274,8 @@ window manager will cease managing the window (as is required by the
 ICCCM), in preparation for reparenting the window to the dock.
 
 This method relies on ICCCM compliance.  Window managers are supposed to
-reparent back to root any toplevel window that was previously mapped and
-reparented when they are unmapped by the client.
+reparent back to root any top-level window that was previously mapped
+and reparented when they are unmapped by the client.
 
 =cut
 
@@ -324,9 +334,9 @@ sub withdraw_window {
 =item $dock->B<test_window>(I<$X>,I<$xid>) => $result
 
 Using the X11::Protocol::Connection, C<$X>, test the window, C<$win>, to
-see whether it is a dock app and whether it should be repartented to the
-dock.  This method returns true (1) when the window is a dock app and
-false (0) when it is not.
+see whether it is a dock application and whether it should be
+repartented to the dock.  This method returns true (1) when the window
+is a dock application and false (0) when it is not.
 
 This is an internal methods meant to be called from an event handler or
 when initially searching the window stack for currently running dock
@@ -355,8 +365,8 @@ Some dockapps use a separate toplevel window as the C<icon_window>.
 
 =item 5.
 
-Some dockapps make the C<icon_window> a child of their toplevel window,
-presumably so that WM's will map the child with the toplevel if it
+Some dockapps make the C<icon_window> a child of their top-level window,
+presumably so that WM's will map the child with the top-level if it
 doesn't understand windows being mapped in the withdrawn state.  When
 the C<icon_window> is a child of the toplevel, we do not want to steal
 it away from its parent because it will be reparented to root on the way
@@ -422,9 +432,9 @@ sub test_window {
 
 =item $dock->B<search_window>(I<$X>,I<$win>)
 
-Uses the X11::Protocol::Connection, C<$X>, to search for dock app
-windows in the subtree rooted at the window, C<$win>.  The search stops
-when a dock app is found in the subtree.
+Uses the L<X11::Protocol::Connection(3pm)>, C<$X>, to search for dock
+application windows in the subtree rooted at the window, C<$win>.  The
+search stops when a dock application is found in the subtree.
 
 This is an internal method intended on being called at startup.
 
@@ -437,9 +447,10 @@ sub search_window {
 
 =item $dock->B<search_kids>(I<$X>,I<$win>)
 
-Uses the X11::Protocol::Connection, C<$X>, to search for dock app
-windows in the children of the window, C<$win>.  The search is exectuted
-for each child regardless of whether dock app was found in a sibling.
+Uses the L<X11::Protocol::Connection(3pm)>, C<$X>, to search for dock
+application windows in the children of the window, C<$win>.  The search
+is executed for each child regardless of whether dock application was
+found in a sibling.
 
 This is an internal method intended on being called at startup.
 
@@ -456,8 +467,8 @@ sub search_kids {
 
 =item $dock->B<find_dockapps>(I<$X>)
 
-Uses the X11::Protocol::Connection, C<$X>, to search for dock apps below
-the root window.
+Uses the L<X11::Protocol::Connection(3pm)>, C<$X>, to search for dock
+applications below the root window.
 
 This is an internal method intended on being called at startup: it is
 called at the end of the B<create_dock> method.
@@ -475,8 +486,8 @@ sub find_dockapps {
 Requests that the dock rearrange itself and correct its position and the
 position of its children.
 
-This is an internal method intended on being called whenever a dock app
-is added to or removed from the dock.
+This is an internal method intended on being called whenever a dock
+application is added to or removed from the dock.
 
 =cut
 
@@ -645,24 +656,25 @@ Wrinkles:
 
 =item 1.
 
-When the C<icon_window> is a child of its toplevel window, we want to
-reparent the toplevel and not the child.
+When the C<icon_window> is a child of its top-level window, we want to
+reparent the top-level and not the child.
 
 =item 2.
 
-When the C<icon_window> is its own toplevel, we might have been
+When the C<icon_window> is its own top-level, we might have been
 withdrawing it and we just haven't received the event at this point...
 
 =item 3.
 
-If the C<icon_window> is its own toplevel window, independent of the
+If the C<icon_window> is its own top-level window, independent of the
 toplevel for which it is the C<icon_window>, we will need to wait for
 it to appear on its own before reparenting can be done.
 
 =item 4.
 
-In the complex case where the C<icon_window> has a different toplevel
-window that the withdrawn dockapp window, just reparent the icon window.
+In the complex case where the C<icon_window> has a different top-level
+window that the withdrawn dock application window, just reparent the
+icon window.
 
 =back
 
@@ -834,9 +846,10 @@ sub unswallow {
 
 =item $dock->B<test_for_dockapp>(I<$win>)
 
-Tests the window, C<$win>, to determine whether it is a dock app.  If
-the window, C<$win>, is a dock app, the window swallowing procedure is
-initiated; otherwise, the window unswallowing procedure is initiated.
+Tests the window, C<$win>, to determine whether it is a dock
+application.  If the window, C<$win>, is a dock application, the window
+swallowing procedure is initiated; otherwise, the window unswallowing
+procedure is initiated.
 
 This is an internal function that is not currently used.
 
@@ -874,10 +887,10 @@ The XDE::Dock module has the following default event handlers:
 
 =item $dock->B<event_handler_CreateNotify>(I<$e>,I<$X>,I<$v>)
 
-Event handler for when toplevel windows are created.  Whenever a
-toplevel window is created we want to subscribe to property changes so
+Event handler for when top-level windows are created.  Whenever a
+top-level window is created we want to subscribe to property changes so
 that we can determine when to check WM_HINTS for the tell-tale indicator
-of a windowmaker dockapp: initial_state of WithdrawnState.
+of a windowmaker dock application: initial_state of C<WithdrawnState>.
 
 This handler currently does nothing!
 
@@ -1026,7 +1039,7 @@ sub event_handler_UnmapNotify {
 Event handler for when windows are mapped.
 
 This handler tests when windows are mapped whether they have the
-signatures of dock apps.  L<pekwm(1)> needs this.
+signatures of dock applications.  L<pekwm(1)> needs this.
 
 =cut
 
@@ -1045,13 +1058,13 @@ sub event_handler_MapNotify {
 =item $dock->B<event_handler_PropertyNotifyWM_HINTS>(I<$e>,I<$X>,I<$v>)
 
 Event handler for changes to the C<WM_HINTS> property on windows so that
-we can discover the tell-tale signs of a windowmaker dock app: being
-mapped in the withdrawn state.
+we can discover the tell-tale signs of a windowmaker dock application:
+being mapped in the withdrawn state.
 
 We register for property notification on newly created windows to check
 for changes to the WM_HINTS property.  We recheck the window status when
-this property changes.  It can change any time between CreateNotify and
-this PropertyNotify.
+this property changes.  It can change any time between C<CreateNotify> and
+this C<PropertyNotify>.
 
 This action is currently commented out!
 
@@ -1072,16 +1085,16 @@ sub event_handler_PropertyNotifyWM_HINTS {
 
 =head1 BUGS
 
-Currently B<xde-dock> is not reparenting the dock apps back to root when
-the program terminates:
+Currently B<xde-dock> is not reparenting the dock applications back to
+root when the program terminates:
 
 =over
 
 =item 1.
 
 When the program terminates with C<SIGTERM>, we should catch the signal
-and repartent all of the dock apps back to the root and request of the
-window manager that they be mapped.
+and reparent all of the dock applications back to the root and request
+of the window manager that they be mapped.
 
 =item 2.
 

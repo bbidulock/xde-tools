@@ -23,12 +23,12 @@ XDE::Setbg -- set backgrounds on multiple desktops or workspaces
 
 =head1 DESCRIPTION
 
-Provides a module that runs out of the Glib::Mainloop that will set the
-backgrounds on a lightweight desktop and monitor for desktop changes.
-When the desktop changes, the modules will set the image for that
-desktop against the root window.  It basically provides a wallpaper per
-desktop.  It also remembers the image for a desktop when L<hsetroot(1)>
-or some other tool is used to set the background.
+Provides a module that runs out of the L<Glib::Mainloop(3pm)> that will
+set the backgrounds on a lightweight desktop and monitor for desktop
+changes.  When the desktop changes, the modules will set the image for
+that desktop against the root window.  It basically provides a wallpaper
+per desktop.  It also remembers the image for a desktop when
+L<hsetroot(1)> or some other tool is used to set the background.
 
 =head1 METHODS
 
@@ -288,9 +288,9 @@ Performs termination for just this module.  Called before
 C<XDE::X11-E<gt>term()> is called.
 
 B<XDE::Setbg> allocates pixmaps that persist on close.  This is so that
-the _XROOTPMAP_ID pixmap is never deallocated while the property is set.
+the B<_XROOTPMAP_ID> pixmap is never deallocated while the property is set.
 This method frees all of the pixmaps in the server except the one that
-is currently set as _XROOTPMAP_ID.
+is currently set as B<_XROOTPMAP_ID>.
 
 =cut
 
@@ -547,7 +547,7 @@ automatically determined from the size and aspect of the image and the
 size and aspect of the display.  Filenames may be specified as relative
 paths from the current working directory, absolute paths, or simply base
 file names (with or without the suffix).  Base file names will be
-searched in the background directories of the XDE::Context.
+searched in the background directories of the L<XDE::Context(3pm)>.
 
 =cut
 
@@ -621,8 +621,8 @@ sub set_backgrounds {
 =item $xde->B<get_ProprertyNotify_screen>(I<$e>,I<$X>,I<$v>) => $screen,$d,$root,$n
 
 Internal function to identify the screen, C<$screen>, desktop, C<$d>,
-root window C<$root>, and screen number, C<$n>, from X11::Protocol
-C<PropertyNotify> event information.
+root window C<$root>, and screen number, C<$n>, from
+L<X11::Protocol(3pm)> C<PropertyNotify> event information.
 
 =cut
 
@@ -723,10 +723,10 @@ so be it.
 
 =item $xde->B<event_handler_PropertyNotify_XSETROOT_ID>(I<$event>,I<$X>,I<$v>)
 
-Internal function that handles when the B<_XSETROOT_ID> property
-changes on the root window of any screen.  This is how XDE::Setbg
-determines that another root setting tool has been used to set the
-background.  This is for backward compatability with older root setters.
+Internal function that handles when the B<_XSETROOT_ID> property changes
+on the root window of any screen.  This is how XDE::Setbg determines
+that another root setting tool has been used to set the background.
+This is for backward compatibility with older root setters.
 
 We do not really process this because all proper root setters now set
 the B<_XROOTPMAP_ID> property which we handle above.  However, it is
@@ -853,9 +853,8 @@ sub event_handler_PropertyNotify_NET_NUMBER_OF_DESKTOPS {
 
 Internal function that handles when the B<_WIN_WORKSPACE> property
 changes on the root window of any screen.  This is how XDE::Setbg
-determines that the workspace has changed.
-This is for compatablity with older window managers (such as
-L<wmaker(1)>).
+determines that the workspace has changed.  This is for compatibility
+with older window managers (such as L<wmaker(1)>).
 
 =cut
 
@@ -891,9 +890,8 @@ sub event_handler_PropertyNotify_WIN_WORKSPACE {
 
 Internal function that handles when the B<_WIN_WORKSPACE_COUNT> property
 changes on the root window of any screen.  This is how XDE::Setbug
-determines the total number of workspaces.
-This is for compatablity with older window managers (such as
-L<wmaker(1)>).
+determines the total number of workspaces.  This is for compatibility
+with older window managers (such as L<wmaker(1)>).
 
 =cut
 
@@ -951,7 +949,7 @@ A restarting window manager (either the old one or a new one) will
 change this recursive property on the root window.  Re-establish the
 identity of the window manager and recheck the theme for that window
 manager as some window managers restart when setting themes (such as
-IceWM).
+L<icewm(1)>).
 
 =cut
 
@@ -963,8 +961,8 @@ sub event_handler_PropertyNotify_NET_SUPPORTING_WM_CHECK {
 
 =item $xde->B<event_handler_PropertyNotify_OB_THEME>(I<$event>,I<$X>,I<$v>)
 
-Openbox signals a theme change by changing the B<_OB_THEME> property on
-the root window.  Check the theme again when it changes.
+L<openbox(1)> signals a theme change by changing the B<_OB_THEME>
+property on the root window.  Check the theme again when it changes.
 
 =cut
 
@@ -975,7 +973,7 @@ sub event_handler_PropertyNotify_OB_THEME {
 
 =item $xde->B<event_handler_PropertyNotify_BB_THEME>(I<$event>,I<$X>,I<$v>)
 
-Our blackbox theme files have a rootCommand that changes the
+Our L<blackbox(1)> theme files have a C<rootCommand> that changes the
 B<_BB_THEME> property on the root window.  Check the theme again when it
 changes.
 
@@ -988,7 +986,7 @@ sub event_handler_PropertyNotify_BB_THEME {
 
 =item $xde->B<event_handler_PropertyNotify_BLACKBOX_PID>(I<$e>,I<$X>,I<$v>)
 
-When fluxbox restarts, it does not change the
+When L<fluxbox(1)> restarts, it does not change the
 B<_NET_SUPPORTING_WM_CHECK> but it does change the B<_BLACKBOX_PID>,
 even if its is just to replace it with the same value.  When restarting,
 check the theme again.
@@ -1002,9 +1000,9 @@ sub event_handler_PropertyNotify_BLACKBOX_PID {
 
 =item $xde->B<event_handler_ButtonPrees>(I<$event>,I<$X>,I<$v>)
 
-Internal method handles button proxy button-press events.  This is
-used to change the desktop on window managers that provide this and
-need to have the scroll wheel change desktops (IceWM and FVWM).  We
+Internal method handles button proxy button-press events.  This is used
+to change the desktop on window managers that provide this and need to
+have the scroll wheel change desktops (L<icewm(1)> and L<fvwm(1)>).  We
 ignore the press and only process the release.
 
 =cut
@@ -1022,7 +1020,8 @@ sub event_handler_ButtonPress {
 
 Internal method handles button proxy button-release events.  This is
 used to change the desktop on window managers that provide this and
-need to have the scroll wheel change desktops (IceWM and FVWM).
+need to have the scroll wheel change desktops (L<icewm(1)> and
+L<fvwm(1)>).
 
 =cut
 
@@ -1213,11 +1212,11 @@ We also add:
 
 Also the image name can be relative, with or without the trailing suffix
 (e.g. F<.jpg> or F<.png>) we will find them.  The method returns a hash
-that is primarily indexed on the desktop number ot C<all> for the default
+that is primarily indexed on the desktop number to C<all> for the default
 definitions, and C<numb> for the maximum desktop index specified plus
 one.  The secondary index is C<Color>, C<Image>, C<Center>, C<Scaled>
 and has the unquoted value from the file.  When a desktop is missing in
-the sequence from c<0> to C<numb-1>, it will be filled in with the C<all>
+the sequence from C<0> to C<numb-1>, it will be filled in with the C<all>
 definition.
 
 =cut
@@ -1271,9 +1270,9 @@ sub read_icewm_theme {
 
 =item $xde->B<read_jwm_theme>(I<$file>) => %resources
 
-JWM has a way of specifying backgrounds, but we don't expect to use it
-because it cannot fill the background (only aspect-scales); therefore,
-this function always returnes an empty set of resources.
+L<jwm(1)> has a way of specifying backgrounds, but we don't expect to
+use it because it cannot fill the background (only aspect-scales);
+therefore, this function always returns an empty set of resources.
 
 =cut
 
@@ -1285,8 +1284,8 @@ sub read_jwm_theme {
 
 =item $xde->B<read_pekwm_theme>(I<$file>) => %resources
 
-PekWM does not have a way of specifying backgrounds; therefore, this
-function always returns an empty set of resources.
+L<pekwm(1)> does not have a way of specifying backgrounds; therefore,
+this function always returns an empty set of resources.
 
 =cut
 
@@ -1298,10 +1297,11 @@ sub read_pekwm_theme {
 
 =item $xde->B<read_anybox_style>(I<$file>) => $stylefile
 
-Reads the init or rc file specified by C<$file> and obtains the file
-name specified against the C<session.styleFile> resource.  This works
-for L<fluxbox(1)> and L<blackbox(1)> but not L<openbox(1)> any more, but
-we use the B<_OB_THEME> root window property for L<openbox(1)> anyway.
+Reads the F<init> or F<rc> file specified by C<$file> and obtains the
+file name specified against the C<session.styleFile> resource.  This
+works for L<fluxbox(1)> and L<blackbox(1)> but not L<openbox(1)> any
+more, but we use the B<_OB_THEME> root window property for L<openbox(1)>
+anyway.
 
 =cut
 
@@ -1330,8 +1330,9 @@ sub read_anybox_style {
 
 =item $xde->B<read_icewm_style>(I<$file>) => @stylefiles
 
-Reads the theme file in the IceWM configuration directory and obtains
-the list of current and recent theme names under the C<Theme> field.
+Reads the theme file in the L<icewm(1)> configuration directory and
+obtains the list of current and recent theme names under the C<Theme>
+field.
 
 =cut
 
@@ -1357,8 +1358,8 @@ sub read_icewm_style {
 
 =item $xde->B<read_jwm_style>(I<$file>) => $stylefiles
 
-Reads the ~/.jwm/style file specified by C<$file> and obtains the file
-name in the <Include> tag.
+Reads the F<~/.jwm/style> file specified by C<$file> and obtains the
+file name in the <Include> tag.
 
 =cut
 
@@ -1385,7 +1386,7 @@ sub read_jwm_style {
 
 =item $xde->B<read_pekwm_style>(I<$file>) => $stylefiles
 
-Reads the config file specified by C<$file> and obtains the file name
+Reads the F<config> file specified by C<$file> and obtains the file name
 specified against the C<Theme> resource.
 
 =cut
@@ -1426,14 +1427,14 @@ sub _find_image {
 
 =item $xde->B<find_image>(I<$img>,I<\@dirs>) => $filename
 
-Go looking for the image.  C<$img> is the absolute or relative
-pathname to the image file.  Also, the name may be missing the
-extension, in which case F<.jpg>, F<.png>, F<.xpm> are searched in that
-order.  C<\@dirs> are the directories to search with the first directory
-being more important that subsequent directories.
+Go looking for the image.  C<$img> is the absolute or relative pathname
+to the image file.  Also, the name may be missing the extension, in
+which case F<.jpg>, F<.png>, F<.xpm> are searched in that order.
+C<\@dirs> are the directories to search with the first directory being
+more important that subsequent directories.
 
 The search is attempted with the full pathname, relative pathname,
-basename, basename minus extension with F<.jpg>, F<.png> and F<.xpm>
+base name, base name minus extension with F<.jpg>, F<.png> and F<.xpm>
 added.
 
 =cut
@@ -1704,60 +1705,112 @@ sub watch_theme_file {
 
 =item $xde->B<get_theme_by_name>(I<$name>) => %e
 
-Search out in XDG theme directories an XDE theme with the name,
-C<$name>, and collect the sections and fields into a hash reference.
-The keys of the hash reference are the sections in the file with subkeys
-representing fields in the section.  An empty hash is returned when no
-file of the appropriate name could be found or if the file was empty.
-When successful, C<$e{file}> contains the filename read.
+Search out in XDG theme directories an L<XDE(3pm)> theme with the name,
+C<$name>, and collect the sections and fields into a hash
+reference.  The keys of the hash reference are the sections in the file
+with sub-keys representing fields in the section.  An empty hash is
+returned when no file of the appropriate name could be found or if the
+file was empty.  When successful, C<$e{file}> contains the filename
+read.
 
-Because the theme name is derived from the window maanger specific style
-file or directory, it is possible to symbolicly link an arbitrary style
+Because the theme name is derived from the window manager specific style
+file or directory, it is possible to symbolically link an arbitrary style
 to a window manager specific style file or directory to associate it
-with an XDE theme.  In this way, different XDE themes can use the same
-window manager style.
+with an L<XDE(3pm)> theme.  In this way, different L<XDE(3pm)> themes
+can use the same window manager style.
 
 Themes consist of a C<[Theme]> section that contains definitions that
 apply to all window managers.  A window-manager-specific section can be
 included, (e.g. C<[fluxbox]>) that provides overrides for that window
 manager.
 
-Themefiles are named F<theme.ini> and contain the following fields in
-the C<[Theme]> section.  Any fields may be overridden by a
-window manager specific section (e.g. C<[fluxbox]>).
+Theme files are named F<theme.ini> and contain the following fields in
+the C<[Theme]> section.  Any fields may be overridden by a window
+manager specific section (e.g. C<[fluxbox]>).
+
+=over
 
  [Theme]
  Name=Airforce
  Style=Squared-green
-
- WorkspaceColor=rgb:00/20/40   (or #002040 or color name)
+ 
+ WallpaperDefault=emeraldcoast
+ WallpaperRepeat=true
+ Wallpaper0=emeraldcoast
+ Wallpaper1=squad
+ Wallpaper2=thunderbird
+ Wallpaper3=overalaska
+ 
+ Workspaces=6
+ WorkspaceNames= 1 , 2 , 3 , 4 , 5 , 6 , 7 , 8 , 9 
+ 
+ WorkspaceColor=rgb:00/20/40
  WorkspaceCenter=0
  WorkspaceScaled=0
- WorkspaceTiled=0
  WorkspaceFull=1
- WorkspaceImage=aviation/emeraldcoast.jpg
-
- Workspace0Image=aviation/emeraldcoast.jpg
- Workspace1Image=aviation/squad.jpg
- Workspace2Image=aviation/thunderbird.jpg
- Workspace3Image=aviation/overalaska.jpg
-
- Workspaces=4
- WorkspaceNames= 1 , 2 , 3 , 4 , 5 , 6 , 7 , 8 
-
+ WorkspaceImage=airforce/emeraldcoast.jpg
+ 
+ Workspace0Image=airforce/emeraldcoast.jpg
+ Workspace1Image=airforce/fighterjets.jpg
+ Workspace2Image=airforce/squad.jpg
+ Workspace3Image=airforce/landing.jpg
+ Workspace4Image=airforce/thunderbird.jpg
+ Workspace5Image=airforce/overalaska.jpg
+ 
  [Xsettings]
- sXde/ThemeName=Airforce
- sXde/StyleName=Squared-green
- sGtk/ColorScheme=
- sGtk/CursorThemeName=
-
+ Gtk/ButtonImages=1
+ Gtk/ColorScheme=
+ Gtk/CursorThemeName=
+ Gtk/CursorThemeSize=18
+ Gtk/EnableEventInputFeedbackSounds=1
+ Gtk/EnableEventSounds=1
+ Gtk/FallbackIconTheme=
+ Gtk/FontName=Liberation Sans 9
+ Gtk/IconSizes=
+ Gtk/IconThemeName=Mist
+ Gtk/KeyThemeName=
+ Gtk/MenuBarAccel=F10
+ Gtk/MenuImages=1
+ Gtk/SoundThemeName=freedesktop
+ Gtk/ThemeName=Mist
+ Gtk/ToolbarIconSize=2
+ Gtk/ToolbarStyle=2
+ 
+ Net/EnableEventSounds=1
+ Net/EnableInputFeedbackSounds=1
+ Net/IconThemeName=Mist
+ Net/ThemeName=Mist
+ 
+ Xft/Antialias=1
+ Xft/Hinting=1
+ Xft/HintStyle=hintfull
+ Xft/RGBA=rgb
+ 
+ Xde/ThemeName=Airforce
+ Xde/MenuThemeName=Squared-green
+ 
  [fluxbox]
- Style=Squared_green
-
+ 
  [blackbox]
  WorkspaceNames=Workspace 1,Workspace 2,Workspace 3,\
-		Workspace 4,Workspace 5,Workspace 5,\
-		Workspace 7,Workspace 8
+		Workspace 4,Workspace 5,Workspace 6,\
+		Workspace 7,Workspace 8,Workspace 9
+ 
+ [openbox]
+ WorkspaceNames=1,2,3,4,5,6,7,8,9
+ 
+ [icewm]
+ 
+ [jwm]
+ WorkspaceNames=1,2,3,4,5,6,7,8,9
+ 
+ [pekwm]
+ 
+ [fvwm]
+ 
+ [wmaker]
+
+=back
 
 =cut
 
@@ -1856,9 +1909,9 @@ sub get_theme_by_name {
 Called to check whether L<fluxbox(1)> has changed the theme or when the
 L<fluxbox(1)> window manager starts or restarts.  When L<fluxbox(1)>
 changes its style, it writes the new style in the C<sessionStyle>
-resource in the init file.  We might use Linux::Inotify2 to help us
-here.  Note that when B<XDE_CONFIG_DIR> and B<XDE_CONFIG_FILE> are set
-in the environment, it may be necessary to look in
+resource in the F<init> file.  We might use L<Linux::Inotify2(3pm)> to
+help us here.  Note that when B<XDE_CONFIG_DIR> and B<XDE_CONFIG_FILE>
+are set in the environment, it may be necessary to look in
 F<$XDE_CONFIG_DIR/$XDE_CONFIG_FILE> instead of F<$HOME/.fluxbox/init>.
 There is a way of using L<fluxbox-remote(1)> to get L<fluxbox(1)> to
 give up its initialization file that may be more reliable.
@@ -1920,11 +1973,12 @@ Backgrounds are normally specified as in L<blackbox(1)> as follows:
 
  rootCommand: bsetbg -full /usr/share/images/telecom/tower_bluesky4.jpg
 
-Note that the bsetbg command requires a full path to the image file.
+Note that the L<bsetbg(1)> command requires a full path to the image
+file.
 
-To maintain some consistency, we can change the rootCommand to a small
-program to change a property setting on the default root (screen 0) of
-the X Display, such as:
+To maintain some consistency, we can change the C<rootCommand> to a
+small program to change a property setting on the default root (screen
+0) of the X Display, such as:
 
  rootCommand: xprop -f _BB_THEME 8s -root -set _BB_THEME Squared-blue
 
@@ -1939,11 +1993,11 @@ L<fluxbox(1)>, e.g.:
  background.desktop1: fullscreen
  background.desktop1.pixmap: telecom/tower_bluesky2.jpg
 
-Blackbox themes (other than ones modified as above) invariably attempt
-to set the root image with L<bsetroot(1)> or L<bsetbg(1)>, which will
-usually change the B<_XROOTPMAP_ID> and B<ESETROOT_PMAP_ID> properties
-on the root window, so these should trigger a reread of the rc file and
-style file.
+L<blackbox(1)> themes (other than ones modified as above) invariably
+attempt to set the root image with L<bsetroot(1)> or L<bsetbg(1)>, which
+will usually change the B<_XROOTPMAP_ID> and B<ESETROOT_PMAP_ID>
+properties on the root window, so these should trigger a reread of the
+F<rc> file and style file.
 
 =cut
 
@@ -1972,14 +2026,14 @@ sub check_theme_BLACKBOX {
 =item $xde->B<check_theme_OPENBOX>() $new_theme or 0 or undef
 
 L<openbox(1)> will change the B<_OB_THEME> property on the root window
-when its theme changes: so a simple PropertyNotify on this property
+when its theme changes: so a simple C<PropertyNotify> on this property
 should trigger the recheck.  Note that L<openbox(1)> also sets
 B<_OB_CONFIG_FILE> on the root window when the configuration file
 differs from the default (but not otherwise).  Note that L<openbox(1)>
 also changes the C<theme> section in F<rc.xml> and writes the file, but
 we don't need that.
 
-Openbox theme files have no provisions for backgrounds whatsoever.
+L<openbox(1)> theme files have no provisions for backgrounds whatsoever.
 Therefore, we will use the same format as L<fluxbox(1)>, e.g.:
 
  background: fullscreen
@@ -2044,10 +2098,11 @@ sub check_theme_LXDE {
 
 =item $xde->B<check_theme_ICEWM>() $new_theme or 0 or undef
 
-Called when the IceWM restarts.  When IceWM changes its theme, it
-restarts, which results in a new _NET_SUPPORTING_WM_CHECK window, which
-invokes this internal function.  IceWM changes the setting for the theme
-in its ~/.icewm/theme or $ICEWM_PRIVCFG/theme file.
+Called when the L<icewm(1)> restarts.  When L<icewm(1)> changes its
+theme, it restarts, which results in a new _NET_SUPPORTING_WM_CHECK
+window, which invokes this internal function.  L<icewm(1)> changes the
+setting for the theme in its F<~/.icewm/theme> or
+F<$ICEWM_PRIVCFG/theme> file.
 
 =cut
 
@@ -2107,12 +2162,12 @@ sub check_theme_ICEWM {
 
 Called to check whether L<jwm(1)> has changed the theme or when the
 L<jwm(1)> window manager starts and restarts.  When L<jwm(1)> changes
-its style, it rewrites ~/.jwm/style to include a new file and restarts.
-JWM can perform its own per-desktop background setting; however, it does
-not fill the screen with the image (doesn't fully scale) leaving black
-bars.  So, we do it ourselves here.
+its style, it rewrites F<~/.jwm/style> to include a new file and
+restarts.  L<jwm(1)> can perform its own per-desktop background setting;
+however, it does not fill the screen with the image (doesn't fully
+scale) leaving black bars.  So, we do it ourselves here.
 
-The ~/.jwm/style file looks like:
+The F<~/.jwm/style> file looks like:
 
  <?xml version="1.0"?>
  <JWM>
@@ -2150,7 +2205,7 @@ sub check_theme_JWM {
 Called to check whether L<pekwm(1)> has changed the theme or when the
 L<pekwm(1)> window manager starts and restarts.  When L<pekwm(1)>
 changes its style, it places the theme directory into the
-~/.pekwm/config file.  This normally has the form:
+F<~/.pekwm/config> file.  This normally has the form:
 
  Files {
      Theme = "/usr/share/pekwm/themes/Airforce"

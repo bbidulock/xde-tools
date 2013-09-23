@@ -21,11 +21,12 @@ XDE::Keys -- perform actions on key bindings
 
 =head1 DESCRIPTION
 
-Provides a module that runs out of the Glib::Mainloop that will set key
-bindings and perform the actions associated witht those key bindings.
-It basically performs a similar action to that of L<bbkeys(1)>, but also
-provides the ability to edit the key definitions with a graphical
-interface and performs some functions not provided by L<bbkeys(1)>.
+Provides a module that runs out of the L<Glib::Mainloop(3pm)> that will
+set key bindings and perform the actions associated with those key
+bindings.  It basically performs a similar action to that of
+L<bbkeys(1)>, but also provides the ability to edit the key definitions
+with a graphical interface and performs some functions not provided by
+L<bbkeys(1)>.
 
 =head1 METHODS
 
@@ -201,7 +202,7 @@ sub _term {
 
 =item $keys->B<send_WINDOWMAKER_COMMAND>
 
-There is only one windowmaker command: 'Reconfigure', sent to the root
+There is only one L<wmaker(1)> command: 'Reconfigure', sent to the root
 window as follows:
 
  _WINDOWMAKER_COMMAND
@@ -235,7 +236,7 @@ sub send_WINDOWMAKER_COMMAND {
 =item $keys->B<send_WINDOWMAKER_WM_FUNCTION>($window,$how)
 
 The WM function can be sent to perform a hide application or hide other
-applications on a window under windowmaker.  The client message is sent
+applications on a window under L<wmaker(1)>.  The client message is sent
 to the root window as follows:
 
  _WINDOWMAKER_WM_FUNCTION
@@ -270,7 +271,7 @@ sub send_WINDOWMAKER_WM_FUNCTION {
 =item $keys->B<send_GNUSTEP_TITLEBAR_STATE>($window,$state)
 
 This client message can be sent to a client window to set the state of
-the titlebar to normal, main, or key.  The client message is sent to the
+the title bar to normal, main, or key.  The client message is sent to the
 client window as follows:
 
  _GNUSTEP_TITLEBAR_STATE
@@ -282,10 +283,10 @@ client window as follows:
     data.l[0] = state: Key(0), Normal(1), Main(2)
     other data.l[] elements = 0
 
-Key(0) corresponds to the FOCUSED state for themes (FTitleColor and
-FTitleBack); Normal(1) the UNFOCUSED state (UTitleColor and
-UTitleBack), and Main(2) the PFOCUSED state (PTitleColor and
-PTitleBack).  I'm not sure how useful this is.
+Key(0) corresponds to the FOCUSED state for themes (C<FTitleColor> and
+C<FTitleBack>); C<Normal>(1) the C<UNFOCUSED> state (C<UTitleColor> and
+C<UTitleBack>), and C<Main>(2) the C<PFOCUSED> state (C<PTitleColor>
+and C<PTitleBack>).  I'm not sure how useful this is.
 
 =cut
 

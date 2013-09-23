@@ -326,14 +326,14 @@ WM_COLORMAP_NOTIFY.
 
 =head2 Client properties
 
-Client properties are properties that the client is repsonsible for
+Client properties are properties that the client is responsible for
 maintaining.  The following are client properties:
 
 =head3 WM_NAME
 
-The WM_NAME property is an unintepreted string that the client wants the
-window manager to display in association with the window (for example,
-in a window headline bar).
+The WM_NAME property is an uninterpreted string that the client wants
+the window manager to display in association with the window (for
+example, in a window headline bar).
 
 The encoding used for this string (and all other uninterpreted string
 properties) is implied by the type of the property. The type atoms to be
@@ -418,8 +418,7 @@ sub getWM_ICON_NAME {
 =item $icccm->B<event_handler_PropertyNotifyWM_ICON_NAME>($e,$X,$v)
 
 Event handler for changes in C<WM_ICON_NAME> for the window,
-C<$e-E<gt>{window}>.
-The default action is simply to get the property.
+C<$e-E<gt>{window}>.  The default action is simply to get the property.
 
 =cut
 
@@ -464,46 +463,48 @@ The flags field bit defintions are as follows:
 
 To indicate that the size and position of the window (when a transition
 from the Withdrawn state occurs) was specified by the user, the client
-should set the USPosition and USSize flags, which allow a window manager
-to know that the user specifically asked where the window should be
-placed or how the window should be sized and that further interaction is
-superfluous. To indicate that it was specified by the client without any
-user involvement, the client should set PPosition and PSize.
+should set the C<USPosition> and C<USSize> flags, which allow a window
+manager to know that the user specifically asked where the window should
+be placed or how the window should be sized and that further interaction
+is superfluous. To indicate that it was specified by the client without
+any user involvement, the client should set C<PPosition> and C<PSize>.
 
 The size specifiers refer to the width and height of the client's window
 excluding borders.
 
-The win_gravity may be any of the values specified for WINGRAVITY in the
-core The win_gravity may be any of the values specified for WINGRAVITY
-in the core protocol except for Unmap: NorthWest (1), North (2),
-NorthEast (3), West (4), Center (5), East (6), SouthWest (7), South (8),
-and SouthEast (9). It specifies how and whether the client window
-wants to be shifted to make room for the window manager frame.
+The win_gravity may be any of the values specified for C<WINGRAVITY> in
+the core.   The C<win_gravity> may be any of the values specified for
+C<WINGRAVITY> in the core protocol except for C<Unmap>: C<NorthWest> (1),
+C<North> (2), C<NorthEast> (3), C<West> (4), C<Center> (5), C<East> (6),
+C<SouthWest> (7), C<South> (8), and C<SouthEast> (9). It specifies how
+and whether the client window wants to be shifted to make room for the
+window manager frame.
 
 If the win_gravity is Static, the window manager frame is positioned so
 that the inside border of the client window inside the frame is in the
 same position on the screen as it was when the client requested the
 transition from Withdrawn state. Other values of win_gravity specify a
-window reference point. For NorthWest, NorthEast, SouthWest, and
-SouthEast the reference point is the specified outer corner of the
-window (on the outside border edge). For North, South, East and West the
-reference point is the center of the specified outer edge of the window
-border. For Center the reference point is the center of the window. The
-reference point of the window manager frame is placed at the location on
-the screen where the reference point of the client window was when the
-client requested the transition from Withdrawn state.
+window reference point. For C<NorthWest>, C<NorthEast>, C<SouthWest>,
+and C<SouthEast> the reference point is the specified outer corner of
+the window (on the outside border edge). For C<North>, C<South>, C<East>
+and C<West> the reference point is the center of the specified outer
+edge of the window border. For Center the reference point is the center
+of the window. The reference point of the window manager frame is placed
+at the location on the screen where the reference point of the client
+window was when the client requested the transition from Withdrawn
+state.
 
 The min_width and min_height elements specify the minimum size that the
 window can be for the client to be useful. The max_width and max_height
 elements specify the maximum size. The base_width and base_height
 elements in conjunction with width_inc and height_inc define an
 arithmetic progression of preferred window widths and heights for
-non-negative integers i and j:
+non-negative integers C<i> and C<j>:
 
  width  = base_width  + ( i x width_inc  )
  height = base_height + ( j x heigth_inc )
 
-Window managers are encouraged to use i and j instead of width and
+Window managers are encouraged to use C<i> and C<j> instead of width and
 height in reporting window sizes to users. If a base size is not
 provided, the minimum size is to be used in its place and vice versa.
 
@@ -615,7 +616,7 @@ input flag to False. Clients with the Passive and Locally Active models
 should set the input flag to True.
 
 From the client's point of view, the window manager will regard the
-client's toplevel window as being in one of three states:
+client's top-level window as being in one of three states:
 
 =over
 
@@ -635,11 +636,11 @@ Withdrawn
 
 The semantics of these states are described in Changing Window State.
 Newly created windows start in the Withdrawn state. Transitions between
-states happen when a toplevel window is mapped and unmapped and when
+states happen when a top-level window is mapped and unmapped and when
 the window manager receives certain messages.
 
 The value of the initial_state field determines the state the client
-wishes to be in at the time the toplevel window is mapped from the
+wishes to be in at the time the top-level window is mapped from the
 Withdrawn state, as shown in the following table:
 
  NormalState	    1	    The window is visible
@@ -870,7 +871,7 @@ Withdrawn state. Window managers may examine the property only when they
 start up and when the window leaves the Withdrawn state, but there
 should be no need for a client to change its state dynamically.
 
-The two strings, respecitvely, are:
+The two strings, respectively, are:
 
 =over
 
@@ -880,7 +881,7 @@ A string that names the particular instance of the application to which
 the client that owns this window belongs. Resources that are specified
 by instance name override any resources that are specified by class
 name. Instance names can be specified by the user in an operating-system
-specific manner. On POSIX-conformant systems, the following conventions
+specific manner. On POSIX-conforming systems, the following conventions
 are used:
 
 =over
@@ -999,10 +1000,10 @@ identify both standard protocols and private protocols specific to
 individual window managers.
 
 All the protocols in which a client can volunteer to take part involve
-the window manager sending the client a ClientMessage event and the
+the window manager sending the client a C<ClientMessage> event and the
 client taking appropriate action. For details of the contents of the
-event, see ClientMessage Events In each case, the protocol transactions
-are initiated by the window manager.
+event, see C<ClientMessage> Events.   In each case, the protocol
+transactions are initiated by the window manager.
 
 The WM_PROTOCOLS property is not required. If it is not present, the
 client does not want to participate in any window manager protocols.
@@ -1052,11 +1053,11 @@ sub event_handler_PropertyNotifyWM_PROTOCOLS {
 =head3 WM_COLORMAP_WINDOWS
 
 The WM_COLORMAP_WINDOWS property (of type WINDOW) on a top-level window
-is a list of the IDs of windows that may need colormaps installed that
-differ from the colormap of the top-level window. The window manager
-will watch this list of windows for changes in their colormap
+is a list of the IDs of windows that may need color-maps installed that
+differ from the color-map of the top-level window. The window manager
+will watch this list of windows for changes in their color-map
 attributes. The top-level window is always (implicitly or explicitly) on
-the watch list. For the details of this mechanism, see Colormaps.
+the watch list. For the details of this mechanism, see Color-maps.
 
 =over
 
@@ -1073,8 +1074,8 @@ sub getWM_COLORMAP_WINDOWS {
 =item $icccm=>B<event_handler_PropertyNotifyWM_COLORMAP_WINDOWS>($e,$X,$v)
 
 Event handler for changes in C<WM_COLORMAP_WINDOWS> for the window,
-C<$e-E<gt>{window}>.
-The default action is simply to get the property.
+C<$e-E<gt>{window}>.  The default action is simply to get the
+property.
 
 =cut
 
@@ -1113,8 +1114,8 @@ sub getWM_CLIENT_MACHINE {
 =item $icccm->B<event_handler_PropertyNotifyWM_CLIENT_MACHINE>($e,$X,$v)
 
 Event handler for changes in C<WM_CLIENT_MACHINE> for the window,
-C<$e-E<gt>{window}>.
-The default action is simply to get the property.
+C<$e-E<gt>{window}>.  The default action is simply to get the
+property.
 
 =cut
 
@@ -1134,14 +1135,15 @@ WM_STATE property. Once the top-level window has been withdrawn, the
 client may re-use it for another purpose. Clients that do so should
 remove the WM_STATE property if it is still present.
 
-Some clients (such as xprop) will ask the user to click over a window on
-which the program is to operate. Typically, the intent is for this to be
-a top-level window. To find a top-level window, clients should search
-the window hierarchy beneath the selected location for a window with the
-WM_STATE property. This search must be recursive in order to cover all
-window manager reparenting possibilities. If no window with a WM_STATE
-property is found, it is recommended that programs use a mapped
-child-of-root window if one is present beneath the selected location.
+Some clients (such as L<xprop(1)>) will ask the user to click over a
+window on which the program is to operate. Typically, the intent is for
+this to be a top-level window. To find a top-level window, clients
+should search the window hierarchy beneath the selected location for a
+window with the WM_STATE property. This search must be recursive in
+order to cover all window manager reparenting possibilities. If no
+window with a WM_STATE property is found, it is recommended that
+programs use a mapped child-of-root window if one is present beneath the
+selected location.
 
 The contents of the WM_STATE property are defines as follows:
 
@@ -1162,13 +1164,13 @@ The state field describes the window manager's idea of the state the
 window is in, which may not match the client's idea as expressed in the
 initial_state field of the WM_HINTS property (for example, if the user
 has asked the window manager to iconify the window). If it is
-NormalState, the window manager believes the client should be animating
-its window. If it is IconicState, the client should animate its icon
+C<NormalState>, the window manager believes the client should be animating
+its window. If it is C<IconicState>, the client should animate its icon
 window. In either state, clients should be prepared to handle exposure
 events from either window.
 
 When the window is withdrawn, the window manager will either change the
-state field's value to WithdrawnState or it will remove the WM_STATE
+state field's value to C<WithdrawnState> or it will remove the WM_STATE
 property entirely.
 
 The icon field should contain the window ID of the window that the
@@ -1409,7 +1411,7 @@ The WM_COMMAND property represents the command used to start or restart
 the client. By updating this property, clients should ensure that it
 always reflects a command that will restart them in their current state.
 The content and type of the property depend on the operating system of
-the machine running the client. On POSIX-conformant systems using ISO
+the machine running the client. On POSIX-conforming systems using ISO
 Latin-1 characters for their command lines, the property should:
 
 =over
@@ -1524,13 +1526,14 @@ __END__
 =head3 WM_TAKE_FOCUS
 
 Windows with the atom WM_TAKE_FOCUS in their WM_PROTOCOLS property may
-receive a ClientMessage event from the window manager (as described in
-ClientMessage Events) with WM_TAKE_FOCUS in its data.l[0] field and a
-valid timestamp (i.e., not CurrentTime) in its data.l[1] field.  If they
-want the focus, they should response with a SetInputFocus request with
-its window field set to the window  of theirs that last had the input
-focuse or to their default input window, and the time field set to the
-timestamp in the message.  For further information, see Input Focus.
+receive a C<ClientMessage> event from the window manager (as described
+in C<ClientMessage> Events) with WM_TAKE_FOCUS in its C<data.l[0]> field
+and a valid time stamp (i.e., not C<CurrentTime>) in its C<data.l[1]>
+field.  If they want the focus, they should response with a
+C<SetInputFocus> request with its window field set to the window  of
+theirs that last had the input focus or to their default input window,
+and the time field set to the time stamp in the message.  For further
+information, see Input Focus.
 
 A client could receive WM_TAKE_FOCUS when opening from an icon or when
 the user has clicked outside the top-level window in an area that
@@ -1547,7 +1550,7 @@ generally believes that clients should take the input focus after being
 deiconified or raised.
 
 Clients that set the input focus need to decide a value for the
-revert-to field of the SetInputFocus request. This determines the
+revert-to field of the C<SetInputFocus> request. This determines the
 behavior of the input focus if the window the focus has been set to
 becomes not viewable. The value can be any of the following:
 
@@ -1573,9 +1576,9 @@ will be None, and there will probably be no way to change it.
 
 =back
 
-Note that neither PointerRoot nor None is really safe to use.  Clients
-that invoke a SetInputFocus request should set the revert-to argument to
-Parent.
+Note that neither C<PointerRoot> nor C<None> is really safe to use.
+Clients that invoke a C<SetInputFocus> request should set the revert-to
+argument to Parent.
 
 A convention is also required for clients that want to give up the input
 focus.  There is no safe value for them to set the input focus to;
@@ -1591,8 +1594,8 @@ should ignore input that they receive instead.
 Clients, usually those with multiple top-level windows, whose server
 connection must survive the deletion of some of their top-level windows,
 should include the atom WM_DELETE_WINDOW in the WM_PROTOCOLS property on
-each such window. They will receive a ClientMessage event as described
-above whose data[0] field is WM_DELETE_WINDOW.
+each such window. They will receive a C<ClientMessage> event as
+described above whose data[0] field is WM_DELETE_WINDOW.
 
 Clients receiving a WM_DELETE_WINDOW message should behave as if the
 user selected "delete window" from a hypothetical menu. They should
@@ -1644,7 +1647,7 @@ Discriminated Names.  Window managers should comply with the conventions
 for Manager Selections described in Manager Selections.  The intent is
 for clients to be able to request a variety of information or services
 by issuing conversion request on this selection.  Window managers
-shoulds upport conversion of the following target on their manager
+should support conversion of the following target on their manager
 selection:
 
  Atom	    Type	Data Received
@@ -1654,7 +1657,7 @@ selection:
 			version of the ICCM, the numebs are 2 and 0.
 
 As a special case, clients not wishing to implement a selection request
-may simply issue a GetSelectionOwner request on the appropriate WM_Sn
+may simply issue a C<GetSelectionOwner> request on the appropriate WM_Sn
 selection.  If this selection is owned, clients may assume that the
 window manager complies with ICCCM version 2.0 or later.
 
@@ -1666,14 +1669,14 @@ Clients that want to be warned when the session manager feels that they
 should save their internal state (for example, when termination impends)
 should include the atom WM_SAVE_YOURSELF in the WM_PROTOCOLS property on
 their top-level windows to participate in the WM_SAVE_YOURSELF
-protocol. They will receive a ClientMessage event as described in
-ClientMessage Events with the atom WM_SAVE_YOURSELF in its data[0]
+protocol. They will receive a C<ClientMessage> event as described in
+C<ClientMessage> Events with the atom WM_SAVE_YOURSELF in its data[0]
 field.
 
 Clients that receive WM_SAVE_YOURSELF should place themselves in a state
 from which they can be restarted and should update WM_COMMAND to be a
 command that will restart them in this state. The session manager will
-be waiting for a PropertyNotify event on WM_COMMAND as a confirmation
+be waiting for a C<PropertyNotify> event on WM_COMMAND as a confirmation
 that the client has saved its state. Therefore, WM_COMMAND should be
 updated (perhaps with a zero-length append) even if its contents are
 correct. No interactions with the user are permitted during this
@@ -1861,17 +1864,17 @@ a ConfigureWindow request will cause an error.
 
 =item Convention
 
-Clients that use a ConfigureWindow request to request a change in their
+Clients that use a C<ConfigureWindow> request to request a change in their
 position in the stack should do so using None in the sibling field.
 
 =back
 
 Clients that must position themselves in the stack relative to some
-window that was originally a sibling must do the ConfigureWindow request
-(in case they are running under a nonreparenting window manager), be
-prepared to deal with a resulting error; and then follow with a
-synthetic ConfigureRequest event by invoking a SendEvent request with
-the following arguments:
+window that was originally a sibling must do the C<ConfigureWindow>
+request (in case they are running under a nonreparenting window
+manager), be prepared to deal with a resulting error; and then follow
+with a synthetic C<ConfigureRequest> event by invoking a C<SendEvent>
+request with the following arguments:
 
  Argument	    Value
  --------           -----
@@ -1886,14 +1889,14 @@ the following arguments:
 Window managers are in any case free to position windows in the stack as
 they see fit, and so clients should not rely on receiving the stacking
 order they have requested.  Clients should ignore the above-sibling
-field of both real and synthetic ConfigureNotify events received on
+field of both real and synthetic C<ConfigureNotify> events received on
 their top-level windows because this field may not contain useful
 information.
 
 =head2 Changing window attributes
 
 The attributes that may be supplied when a window is created may be
-changed by using the ChangeWindowAttributes request.  The window
+changed by using the C<ChangeWindowAttributes> request.  The window
 attributes are listed in the following table:
 
  Attribute		Private to client
@@ -1912,7 +1915,7 @@ attributes are listed in the following table:
  colormap		yes
  cursor			yes
 
-Most attribtues are private to the client and will never by interfered
+Most attributes are private to the client and will never by interfered
 with by the window manager.  For the attributes that are not private to
 the client:
 

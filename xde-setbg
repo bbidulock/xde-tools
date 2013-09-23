@@ -94,7 +94,7 @@ sub show_usage {
     return <<USAGE_EOF;
 
 USAGE:
-    xde-setbg [OPIONS] [FILE [FILE ...]]
+    xde-setbg [OPTIONS] [FILE [FILE ...]]
 USAGE_EOF
 }
 
@@ -222,11 +222,11 @@ is running, it passes its arguments to the running program and exits.
 
 On the initial invocation of B<xde-setbg> for a given X Display,
 B<xde-setbg> will first await the appearance of an X Window Manager that
-conforms to the EHMH/NetWM specification.  After a delay, (configurable
+conforms to the EWMH/NetWM specification.  After a delay, (configurable
 with the B<--delay> option), B<xde-setbg> will start operation.
 
-The purpose of waiting after the window manager to appears is because
-most lightweight window managers do set the background before or after
+The purpose of waiting until after the window manager to appears is that
+most lightweight window managers set the background before or after
 startup.  Waiting a short duration after window manager startup serves
 to ignore any changes made to the desktop background during startup of
 the desktop environment.
@@ -235,14 +235,14 @@ After beginning full operation, B<xde-setbg> will complete startup
 notification (if it was requested).  It then determines whether an
 XSETTINGS daemon is in operation, and if so, will read its settings from
 the XSETTINGS daemon.  In the absence of an xsettings daemon, it will
-read its configuration from its configuration file, see
+read its configuration from its configuration file.  See
 L</CONFIGURATION> for how the configuration file is selected.
 
 The configuration will then be used to set backgrounds on the current
 desktop and any additional desktops provided by the window manager and
 will monitor for further desktop background changes on the X Display.
-When the backgound settings change, it will change the background of the
-root window to the corresponding selected background.  Whenever the
+When the background settings change, it will change the background of
+the root window to the corresponding selected background.  Whenever the
 image on the root window is changed using a tool such as L<hsetroot(1)>,
 B<xde-setbg> will record the change against the desktop and work area
 and restore those settings when the desktop and work area change.
@@ -254,11 +254,12 @@ changes.
 
 B<xde-setbg> also understands the file and style settings for various
 lightweight window managers: L<fluxbox(1)>, L<blackbox(1)>,
-L<openbox(1)>, L<icewm(1)>, L<fvwm(1)>, L<lxde(1)>, and L<wmaker(1)>.
-It can also detect when an instance of L<pcmanfm(1)> is controlling the
-desktop wallpaper.  When a multiple-background capable window manager is
-running and present (such as L<wmaker(1)> or an L<lxde(1)> session with
-L<pcmanfm(1)> desktop), B<xde-setbg> exits and does nothing.
+L<openbox(1)>, L<icewm(1)>, L<jwm(1)>, L<pekwm(1)>, L<fvwm(1)> and
+L<wmaker(1)>.  It can also detect when an instance of L<pcmanfm(1)> is
+controlling the desktop wallpaper.  When a multiple-background capable
+window manager is running and present (such as L<wmaker(1)> or an
+L<lxde(1)> session with L<pcmanfm(1)> desktop), B<xde-setbg> exits and
+does nothing.
 
 When there is a current background on initial startup, B<xde-setbg>
 assumes that this is a desktop background that was applied by the
@@ -283,22 +284,22 @@ workspaces, and optionally when changing work areas when enabled.
 
 =item 2.
 
-When metathemes are changed using the L<xde-theme(1)> setting tool, the
+When meta-themes are changed using the L<xde-theme(1)> setting tool, the
 set of backgrounds will also be changed.
 
 =item 3.
 
-When a background for a particular desktop or worspace and work area is
+When a background for a particular desktop or workspace and work area is
 changed using a background setting tool, it will remain changed for that
-desktop or workspace and work area for the reminaing session.
+desktop or workspace and work area for the remaining session.
 
 =item 4.
 
 When starting a session when running B<xde-setbg> on autostart, the
-desktop or workspace and work area and viewport will be changed to match
-that which was active when the window manager last shut down.  That is,
-if I was on desktop #4 when I logged out, upon login the desktop will
-switch to desktop #4.
+desktop or workspace and work area and view port will be changed to
+match that which was active when the window manager last shut down.
+That is, if I was on desktop #5 when I logged out, upon login the
+desktop will switch to desktop #4.
 
 =item 5.
 

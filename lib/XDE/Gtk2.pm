@@ -11,9 +11,10 @@ XDE::Gtk2 -- a Gtk2 implementation object for an XDE context
 
 =head1 DESCRIPTION
 
-Provides a package based on L<XDE::Glib(3pm)> that provides a Gtk2
-implementation object for the XDE context.  This package integrates the
-GTK2 main event loop into an XDE context.
+Provides a package based on L<XDE::Glib(3pm)> that provides a
+L<Gtk2(3pm)> implementation object for the L<XDE(3pm)> context.  This
+package integrates the L<Gtk2(3pm)> main event loop into an L<XDE(3pm)>
+context.
 
 =head1 METHODS
 
@@ -97,10 +98,10 @@ sub main_quit {
 
 =item $xde->B<get_gtk2rcs>() => HASHREF or (HASHREF, HASHREF)
 
-Search out all Gtk2 themes directories and collect Gtk2 themes into a
-hash reference.  The keys of the hash are the names of the names of the
-theme subdirectory in which the gtk2rc file resided.  Themes follow XDG
-precedence rules for XDG data directories.
+Search out all L<Gtk2(3pm)> themes directories and collect L<Gtk2(3pm)>
+themes into a hash reference.  The keys of the hash are the names of the
+names of the theme subdirectory in which the F<gtk2rc> file resided.
+Themes follow XDG precedence rules for XDG data directories.
 
 Also establishes a hash reference in $xde-E<gt>{dirs}{gtkrc} that contains
 all of the directories searched (whether they existed or not) for use in
@@ -134,9 +135,9 @@ sub get_gtk2rcs {
 
 =item $xde->B<icon_theme_changed>(I<$theme>) = Glib event flag
 
-Processes C<changed> signals on the Gtk2::IconTheme.  Not meant to be
-called directly.  The derived module can override this method if it is
-interested in receiving notification of theme changes.
+Processes C<changed> signals on the L<Gtk2::IconTheme(3pm)>.  Not meant
+to be called directly.  The derived module can override this method if
+it is interested in receiving notification of theme changes.
 L<XDE::MenuGen(3pm)> or L<XDE::TrayMenu(3pm)> might want to regenerate
 the menu when the icon theme changes.
 
@@ -150,10 +151,10 @@ sub icon_theme_changed {
 =item $xde->B<get_icon>(I<$size>,I<$stock>,I<@choices>) => Gtk2::Image
 
 Retrieve a L<Gtk2::Image(3pm)> for a specified icon with size, C<$size>,
-possible names (in order of preference), C<@choices>, and fallback stock
-icon name, C<$stock>.  Returns a L<Gtk2::Image(3pm)> or c<undef> if
-neither an image in C<@choices> nor the C<$stock> icon could be found in
-the icon theme.
+possible names (in order of preference), C<@choices>, and fall-back
+stock icon name, C<$stock>.  Returns a L<Gtk2::Image(3pm)> or C<undef>
+if neither an image in C<@choices> nor the C<$stock> icon could be found
+in the icon theme.
 
 =cut
 

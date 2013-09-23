@@ -54,7 +54,7 @@ B<xde-theme> [I<OPTIONS>] [I<THEME>]
 
 B<xde-theme> is responsible for setting a new them in an XDE session,
 modifying configuration files as necessary, and restarting applications
-that depend on those configuration files.  It is also reponsible for
+that depend on those configuration files.  It is also responsible for
 controlling the window manager to effect the theme.
 
 When

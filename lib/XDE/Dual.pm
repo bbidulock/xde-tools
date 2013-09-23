@@ -25,7 +25,7 @@ XDE::Dual - a dual Gtk2 and X11::Protocol object for an XDE context
 
 XDE::Dual is an abstract base for derived classes that wish to run both
 Gtk2 and X11::Protocol in the same event loop.  It uses
-L<X11::Gtk2(3pm)> as a base class and initalizes L<XDE::X11(3pm)> for
+L<X11::Gtk2(3pm)> as a base class and initializes L<XDE::X11(3pm)> for
 L<X11::Protocol(3pm)> connections.
 
 =head1 METHODS
@@ -48,12 +48,11 @@ sub new {
 =item $xde->B<init>() => $xde
 
 Use this function instead of C<XDE::Gtk2-E<gt>init> and
-C<XDE::X11-E<gt>new> to initialize both the Gtk2 toolkit
-environment and an X11::Protocol connection from the underlying
-L<XDE::Context(3pm)> object.  The client must call C<$xde-E<gt>setenv()>
-before calling this method.
-This method will invoke the C<_init> function of the derived class if
-such a method exists.
+C<XDE::X11-E<gt>new> to initialize both the Gtk2 toolkit environment and
+an X11::Protocol connection from the underlying L<XDE::Context(3pm)>
+object.  The client must call C<$xde-E<gt>setenv()> before calling this
+method.  This method will invoke the C<_init> function of the derived
+class if such a method exists.
 
 =cut
 
@@ -79,9 +78,9 @@ sub init {
 
 Process events that should occur on graceful termination of the process.
 Must be called by the creator of this instance and should be called from
-C<$SIG{TERM}> procedures or other signal handler.
-This method will invoke the C<_term> function of the derived class if
-such a method exists.
+C<$SIG{TERM}> procedures or other signal handler.  This method will
+invoke the C<_term> function of the derived class if such a method
+exists.
 
 =cut
 
@@ -138,7 +137,7 @@ sub wmcheck {
 
 =item $xde->B<main>() => $xde
 
-use this function instead of C<Gtk2->main> or C<Glib::mainloop> to run
+Use this function instead of C<Gtk2->main> or C<Glib::mainloop> to run
 the event loop.
 
 =cut
@@ -184,8 +183,8 @@ sub event_handler_PropertyNotify {
 
 Internal event handler use to demultiplex C<ClientMessage> events.  This
 method, when not overridden by the derived class, will call the
-B<event_handler_ClientMessage>I<$type> method of the derived class when a
-client message I<$type> arrives.
+B<event_handler_ClientMessage>I<$type> method of the derived class when
+a client message I<$type> arrives.
 
 =cut
 
@@ -214,11 +213,12 @@ sub event_handler_ClientMessage {
 
 Internal event handler for the XDE::Dual derived module.  This is an
 L<X11::Protocol(3pm)> handler that is invoked either by direct requests
-made of the X11::Protocol object ($self->{X}) or by Glib::Mainloop when
-it triggers an input watcher on the X11::Protocol::Connection.
-C<$event> is the unpacked X11::Protocol event.
-This method will invoke the C<event_handler_$e{name}> method of the
-derived class if such a method exists.
+made of the L<X11::Protocol(3pm)> object ($self->{X}) or by
+L<Glib::Mainloop(3pm)> when it triggers an input watcher on the
+L<X11::Protocol::Connection(3pm)>.  C<$event> is the unpacked
+L<X11::Protocol(3pm)> event.  This method will invoke the
+C<event_handler_$e{name}> method of the derived class if such a method
+exists.
 
 =cut
 
@@ -253,11 +253,11 @@ sub event_handler {
 
 Internal error handler for the XDE::Dual derived module.  This is an
 L<X11::Protocol(3pm)> handler that is invoked either by direct requests
-made of the X11::Protocol object ($self->{X}) or by Glib::Mainloop when
-it triggers an input watcher on the X11::Protocol::Connection.
-C<$error> is the packed error message.
-This method will invoke the C<_error_handler> method of the derived
-class if such a method exists.
+made of the LX11::Protocol(3pm)> object ($self->{X}) or by
+L<Glib::Mainloop(3pm)> when it triggers an input watcher on the
+L<X11::Protocol::Connection(3pm)>.  C<$error> is the packed error
+message.  This method will invoke the C<_error_handler> method of the
+derived class if such a method exists.
 
 =cut
 
@@ -307,7 +307,10 @@ Brian Bidulock <bidulock@cpan.org>
 
 =head1 SEE ALSO
 
-L<XDE::Context(3pm)>, L<XDE::X11(3pm)>, L<XDE::Gtk2>.
+L<XDE::Context(3pm)>,
+L<XDE::X11(3pm)>,
+L<XDE::Gtk2(3pm)>,
+L<X11::Protocol(3pm)>
 
 =cut
 

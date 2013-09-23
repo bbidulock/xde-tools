@@ -29,13 +29,13 @@ XDE::Session - create and manage an XDE session
 
 =head1 DESCRIPTION
 
-B<XDE::Session> provides a module that runs out of the Glib::Mainloop
-that will choose the desktop session, setup the user's directories with
-the necessary configuration files for the chosen session, execute
-preliminary commands, start the window manager, and launch an XDG
-autostart session.  It will monitor the session, provide notificaiton
-and restart as necessary and initiate logout procedures when detected or
-requested.
+B<XDE::Session> provides a module that runs out of the
+L<Glib::Mainloop(3pm> that will choose the desktop session, setup the
+user's directories with the necessary configuration files for the chosen
+session, execute preliminary commands, start the window manager, and
+launch an XDG autostart session.  It will monitor the session, provide
+notification and restart as necessary and initiate logout procedures
+when detected or requested.
 
 For detailed behaviour, see L</BEHAVIOUR>.
 
@@ -55,8 +55,8 @@ sub new {
 
 =item $xde->B<defaults>() => $xde
 
-Internal method to establish defaults for the each of the base
-classes, invoked by L<XDG::Context(3pm)> after establishing XDG::Context
+Internal method to establish defaults for the each of the base classes,
+invoked by L<XDG::Context(3pm)> after establishing L<XDG::Context(3pm)>
 and its own defaults.  XDE::Session has no defaults of its own really.
 This method should not be called directly.
 
@@ -76,11 +76,10 @@ sub defaults {
 
 =item $xde->B<_init>() => $xde
 
-Internal method to intialize the module.  Called by L<XDE::Dual(3pm)>
-after it performs its own initialization.  We need to intialize all of
-the intermediate inherited instances.
-The user of this module should call the C<init> method on the
-L<XDE::Dual(3pm)> module instead.
+Internal method to initialize the module.  Called by L<XDE::Dual(3pm)>
+after it performs its own initialization.  We need to initialize all of
+the intermediate inherited instances.  The user of this module should
+call the C<init> method on the L<XDE::Dual(3pm)> module instead.
 
 =cut
 
@@ -100,9 +99,8 @@ sub _init {
 
 Internal method to terminate the module.  Called by L<XDE::Dual(3pm)>
 before it performs its own shutdown.  We need to shutdown all of the
-intermediate inherited classes.
-The user of this module should call the C<term> method on the
-L<XDE::Dual(3pm)> module instead.
+intermediate inherited classes.  The user of this module should call the
+C<term> method on the L<XDE::Dual(3pm)> module instead.
 
 =cut
 
@@ -161,15 +159,15 @@ sub _setenv {
 }
 
 
-=back
-
-=cut
-
 1;
 
 __END__
 
+=back
+
 =head1 BEHAVIOUR
+
+(Need to complete this section.)
 
 =head1 AUTHOR
 

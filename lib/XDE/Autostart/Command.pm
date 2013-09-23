@@ -11,15 +11,23 @@ use warnings;
 
 XDE::Autostart::Command - an instance of an autostart command
 
-=head1 SYNOPSIS
-
 =head1 DESCRIPTION
+
+This modules is responsible for representing a single autostart command,
+including its current state and options associated with the command.
 
 =head1 METHODS
 
+The following methods are provided:
+
 =over
 
-=item $cmd = XDE::Autostart::Command->B<new>(I<$xde>,I<$command>)
+=item B<new> XDE::Autostart::Command I<$xde>,I<$command>,I<$restart> => $cmd
+
+Create a new instance of an autostart command for the
+L<XDE::Context(3pm)> object, C<$xde>, with the command line to execute,
+I<$command>, and a boolean value indicating whether to restart the
+command on abnormal termination, I<$restart>.
 
 =cut
 
@@ -135,6 +143,15 @@ sub shutdown {
     print STDERR "Command $self->{cmd} is not running...\n";
 }
 
+=back
+
+=head2  Event handlers
+
+The following are internal event handlers that are not meant to be
+called directly by the module user.
+
+=over
+
 =item $cmd->B<exited>(I<$xde>)
 
 Internal function called by the Glib::Child watcher when the child
@@ -183,10 +200,29 @@ sub exited {
     }
 }
 
-=back
+=item $cmd->B<started>(I<$xde>)
+
+Internal function called by the event loop once it has detected that the
+child process has started.  This is either because of startup
+notification, mapping of a window with WM_CLASS(name,class); or
+expiration of the 2-second guard timer.
 
 =cut
 
 1;
+
+__END__
+
+=back
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
+
+L<POSIX(3pm)>.
+
+=cut
 
 # vim: sw=4 tw=72

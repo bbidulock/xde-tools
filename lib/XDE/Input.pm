@@ -28,10 +28,10 @@ XDE::Input -- establish and monitor X Display input settings
 
 =head1 DESCRIPTION
 
-Provides a module that runs out of the Glib::Mainloop that will set the
-X Display input settings on a lightweight desktop and monitor for input
-changes.  When the input setting changes, the module will record the
-changes for later.
+Provides a module that runs out of the L<Glib::Mainloop(3pm)> that will
+set the X Display input settings on a lightweight desktop and monitor
+for input changes.  When the input setting changes, the module will
+record the changes for later.
 
 =head1 METHODS
 
@@ -43,9 +43,9 @@ changes for later.
 
 Creates an instance of an XDE::Input object.  The XDE::Input module uses
 the L<XDE::Context(3pm)> module as a base, so the C<%OVERRIDES> are
-simply passed to the L<XDE::Context(3pm)> module.
-When an options hash, I<%ops>, is passed to the method, it is
-initialized with default option values.
+simply passed to the L<XDE::Context(3pm)> module.  When an options hash,
+I<%ops>, is passed to the method, it is initialized with default option
+values.
 
 XDE::Input recognizes the following options:
 
@@ -58,12 +58,12 @@ operation.
 
 =item desktop => $desktop
 
-Specifies the desktop environment (e.g. FLUXBOX).  When unspecified,
-defaults will be set from envronment variables.
+Specifies the desktop environment (e.g. C<FLUXBOX>).  When unspecified,
+defaults will be set from environment variables.
 
 =item session => $session
 
-Specifies the desktop session (e.g. fluxbox).  When unspecified,
+Specifies the desktop session (e.g. C<fluxbox>).  When unspecified,
 defaults will be set from C<desktop> or environment variables.
 
 =item filename => $filename
@@ -74,7 +74,7 @@ F<$XDG_CONFIG_HOME/xde/$session/input.ini>.
 
 =back
 
-Addtional options may be recognized by the superior L<XDE::Context(3pm)>
+Additional options may be recognized by the superior L<XDE::Context(3pm)>
 object.
 
 =cut
@@ -582,6 +582,8 @@ sub set_input {
 }
 
 =item $xde->B<create_window>()
+
+Create a window for editing input setting values.
 
 =cut
 

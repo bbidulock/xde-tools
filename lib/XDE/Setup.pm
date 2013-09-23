@@ -25,7 +25,156 @@ XDE::Setup - setup an XDE session for a window manager
 =head1 DESCRIPTION
 
 The B<XDE::Setup> module provides the ability to set up a window manager
-environment for the X Desktop Environment.
+environment for the I<X Desktop Environment>, L<XDE(3pm)>.
+
+L<XDE(3pm)> relies on certain setup in the configuration files used for
+supported window managers.  For the most part, I have attempted to stay
+out of the way of base configurations for the respective window
+managers.
+
+=head2 WINDOW MANAGERS
+
+The following window managers are supported:
+
+=over
+
+=item L<fluxbox(1)>
+
+L<fluxbox(1)> looks for its primary configuration in the file
+F<~/.fluxbox/init>.  This file specifies the location of all other
+configuration files.   L<fluxbox(1)> can be invoked with the C<-rc>
+option specifying which F<init> file to use (i.e. one other than
+F<~/.fluxbox/init>).  The difficulty with doing this is that
+L<fluxbox(1)> provides no indication of the configuration file in use.
+L<fluxbox-remote(1)> can be used (when the configuration file is
+configured to allow it) to determine the location of the configuration
+file.
+
+Using this mechanism it is quite possible to relocate configuration
+files to the directory F<$XDG_CONFIG_HOME/fluxbox>.
+
+To avoid difficulties with restarting the L<fluxbox(1)> window manager
+from within XDE, XDE should control the menu item for window manager
+selection and add the C<-rc> option to the entry in the menu.
+
+=item L<blackbox(1)>
+
+L<blackbox(1)> looks for its primary configuration in the file
+F<~/.blackboxrc>.  This file specifies the location of all other
+configuration files (typically placed under F<~/.blackbox>).
+L<blackbox(1)> can be invoked with the C<-rc> option specifying the
+location of a different F<rc> file to use (i.e. one other than
+F<~/.blackboxrc>).  The difficulty with doing this is that
+L<blackbox(1)> provides no indication of the configuration file in use.
+
+Using this mechanism it is quite possible to relocate configuration
+files to the directory F<$XDG_CONFIG_HOME/blackbox>.
+
+To avoid difficulties with restarting the L<blackbox(1)> window manager
+from within XDE, XDE should control the menu item for window manager
+selection and add the C<-rc> option to the entry in the menu.
+
+=item L<openbox(1)>
+
+L<openbox(1)> looks for its primary configuration in the file
+F<~/.config/openbox/rc.xml>.  This file specifies the location of all
+other configuration files (typically placed under F<~/.config/openbox>).
+L<openbox(1)> can be invoked with the C<--config-file> option specifying
+a different F<rc.xml> file.  L<openbox(1)> does set a root window
+property, B<_OPENBOX_CONFIG>, indicating which F<rc> file is in use.
+
+Using this mechanism it is quite possible to use an F<xde-rc.xml>
+configuration file in the F<$XDG_CONFIG_HOME/openbox> directory.
+
+To avoid difficulties with restarting  the L<openbox(1)> window manager
+from within XDE, XDE should control the menu item for window manager
+selection and add the C<--config-file> option to the entry in the menu.
+
+=item L<icewm(1)>
+
+L<icewm(1)> looks for its configuration files in the directory
+F<~/.icewm>.  L<icewm(1)> can be invoked with the C<$ICEWM_PRIVCFG>
+environment variable set to a different directory.  Examining the
+C<$ICEWM_PRIVCFG> environment variable will determine which
+configuration files are in use.
+
+Using this mechanism, it is quite possible to relocate configuration
+files to the F<$XDG_CONFIG_HOME/icewm> directory.
+
+To avoid difficulties with restarting the L<icewm(1)> window manager
+from within XDE, XDE should always set the B<ICEWM_PRIVCFG> environment
+varilable.
+
+=item L<jwm(1)>
+
+L<jwm(1)> looks for its primary configuration in the file F<~/.jwmrc>.
+This file specifies the location of all other configuration files
+(typically placed under F<~/.jwm>).  L<jwm(1)> has no mechanism for
+specifying the name or location of the F<rc> file on startup.
+
+For L<jwm(1)>, XDE must replace any user F<~/.jwmrc> configuration file
+with one specialized for XDE.  The recommended technique is to move
+F<~/.jwmrc> to F<~/.jwmrc.bak> (if F<~/.jwmrc> exists and is a file),
+and symbolically link F<~/.jwmrc> to F<$XDG_CONFIG_HOME/jwm/rc>.
+
+=item L<pekwm(1)>
+
+L<pekwm(1)> looks for its primary configuraiton in the file
+F<~/.pekwm/config>.  This file specifies the location of all other
+configuration files.  L<pekwm(1)> may be invoked with the C<--config>
+option speciyfing the location of a different F<config> file to use
+(i.e. other than F<~/.pekwm/config>).  The difficulty with doing this is
+that L<pekwm(1)> provides no indication of the configuration file in
+use.
+
+Using this mechanism, it is quite possible to relocate configuration
+files to the F<$XDG_CONFIG_HOME/pekwm> directory.
+
+To avoid difficulties with restarting the L<pekwm(1)> window manager
+from within XDE, XDE needs to control the menu item for window manager
+selection and add the C<--config> option to the entry in the menu.
+
+=item L<fvwm(1)>
+
+L<fvwm(1)> looks for its primary configuration in the file
+F<~/.fvwm/config>.  This file specifies the location of all other
+configuration files.  L<fvwm(1)> may be invoked with the C<-f> option
+specifying the location of a different F<config> file to use (i.e. other
+than F<~/.fvwm/config>).  Also, the directory F<~/.fvwm> can be altered
+by setting the C<$FVWM_USERDIR> environment variable.
+
+Using this mechanism, it is quite possible to relocate configuration
+files to the F<$XDG_CONFIG_HOME/fvwm> directory.
+
+To avoid difficulties with restarting the L<fvwm(1)> window manager from
+within XDE, XDE should always set the B<FVWM_USERDIR> environment
+variable.
+
+=item L<wmaker(1)>
+
+L<wmaker(1)> looks for its primary configuration in the file
+F<~/GNUstep/Defaults/WindowMaker>.  This file specifies the location of
+all other configuration files.  L<wmaker(1)> may be invoked with the
+C<$GNUSTEP_USER_ROOT> environment variable set, which changes the
+directory from F<~/GNUstep> and the primary configuration file will be
+located in F<$GNUSTEP_USER_ROOT/Defaults/WindowMaker>.
+
+Using this mechanism, it is quite possible to reclocate configuration
+files to the F<$XDG_CONFIG_HOME/wmaker> directory.
+
+To avoid difficulties with restarting the L<wmaker(1)> window manager
+from within XDE, XDE should always set the B<GNUSTEP_USER_ROOT>
+environment variable.
+
+=item L<afterstep(1)>
+
+=item L<metacity(1)>
+
+L<metacity(1)> does not read a configuraiton file on startup.  It uses
+L<dconf(1)> to query the desktop configration database for window
+manager settings.
+
+=back
 
 =cut
 
@@ -34,14 +183,17 @@ use constant {
 	    ICEWM_PRIVCFG
 	    ICEWM_CFGDIR
 	    GNUSTEP_USER_ROOT
+	    FVWM_USERDIR
     )],
 };
 
 =head1 METHODS
 
+The following methods are provided:
+
 =over
 
-=item $xde = XDE::Setup->B<new>(I<%OVERRIDES>,ops=>\I<%ops>) => blessed HASHREF
+=item B<new> XDE::Setup I<%OVERRIDES>,ops=>\I<%ops> => $xde
 
 Creates a new instance of an B<XDE::Setup> object.  The B<XDE::Setup>
 module uses the L<XDE::Context(3pm)> module as a base, so the
@@ -91,7 +243,7 @@ sub new {
 Read environment variables for this module into the context and
 recalculate defaults.  Environment variables examined are:
 B<ICEWM_PRIVCFG>, B<ICEWM_CFGDIR> and B<GNUSTEP_USER_ROOT>.  This method
-may or may not be indempotent.
+may or may not be idempotent.
 
 =cut
 
@@ -103,10 +255,10 @@ sub _getenv {
 
 =item $xde->B<_setenv>()
 
-Write pertinent XDE environment variables for this module from the
-context into the environment.  Environment variables written are:
+Write pertinent L<XDE(3pm)> environment variables for this module from
+the context into the environment.  Environment variables written are:
 B<ICEWM_PRIVCFG>, B<ICEWM_CFGDIR> and B<GNUSTEP_USER_ROOT>.  This method
-may or may not be indempotent.
+may or may not be idempotent.
 
 =cut
 
@@ -148,7 +300,9 @@ sub setup_session {
     return $self;
 }
 
-=item $xde->B<setup_session_xde>() => $xde or undef
+=over
+
+=item $xde->B<setup_session_xde>(I<$session>) => $xde or undef
 
 Perform the actions necessary to prepare for an L<xde-session(1)> for
 the session I<$session>.  Populates the F<$XDG_CONFIG_HOME/xde>
@@ -230,10 +384,29 @@ INIT_EOF
 
 =item $xde->B<setup_session_FLUXBOX>() => $xde or undef
 
-Normally invoked as B<setup_session>, prepares the XDE files for the
-L<fluxbox(1)> window manager and a C<FLUXBOX> XDE session.  This method
-primarily adjusts the file location definitions in the F<xde-init> file.
-L<fluxbox(1)> normally has its configuration files in F<$HOME/.fluxbox>.
+Normally invoked as B<setup_session>, prepares the L<XDE(3pm)> files for
+the L<fluxbox(1)> window manager and a C<FLUXBOX> L<XDE(3pm)> session.
+This method primarily adjusts the file location definitions in the
+F<xde-init> file.  L<fluxbox(1)> normally has its configuration files in
+F<$HOME/.fluxbox>.
+
+L<fluxbox(1)> looks for its primary configuration in the file
+F<~/.fluxbox/init>.  This file specifies the location of all other
+configuration files.   L<fluxbox(1)> can be invoked with the C<-rc>
+option specifying which F<init> file to use (i.e. one other than
+F<~/.fluxbox/init>).  The difficulty with doing this is that
+L<fluxbox(1)> provides no indication of the configuration file in use.
+L<fluxbox-remote(1)> can be used (when the configuration file is
+configured to allow it) to determine the location of the configuration
+file.
+
+Using this mechanism it is quite possible to relocate configuration
+files to the directory F<$XDG_CONFIG_HOME/fluxbox>.
+
+To avoid difficulties with restarting the L<fluxbox(1)> window manager
+from within XDE, XDE should control the menu item for window manager
+selection and add the C<-rc> option to the entry in the menu.
+
 
 =cut
 
@@ -286,24 +459,24 @@ sub setup_session_FLUXBOX {
 
 =item $xde->B<setup_session_BLACKBOX>() => $xde or undef
 
-Normally invoked as B<setup_session>, prepares the XDE files for the
-L<blackbox(1)> window manager and a C<BLACKBOX> XDE session.  This
-method primarily adjust the file location definitions in the F<xde-rc>
-file.
+Normally invoked as B<setup_session>, prepares the L<XDE(3pm)> files for
+the L<blackbox(1)> window manager and a C<BLACKBOX> L<XDE(3pm)> session.
+This method primarily adjust the file location definitions in the
+F<xde-rc> file.
 
-I<Blackbox> normally has its configuration file in F<$HOME/.blackboxrc>,
-its menu file in F<$HOME/.bbmenu> and user styles in the directory
-F<$HOME/.blackbox/styles>.  The configuration file can be specified with
-the B<-rc> option when invoking L<blackbox(1)> (see
+L<blackbox(1)> normally has its configuration file in
+F<$HOME/.blackboxrc>, its menu file in F<$HOME/.bbmenu> and user styles
+in the directory F<$HOME/.blackbox/styles>.  The configuration file can
+be specified with the B<-rc> option when invoking L<blackbox(1)> (see
 L<blackbox(1)/OPTIONS>).
 
 The location of the menu file can be specified using the
 C<session.menuFile> resource in the configuration file.  The menu file
 defaults to F</usr/share/blackbox/menu>.
 
-L<blackbox(1)> reads the configuation file on setup, and only writes the
-configuration file on exit.  It will reread the configuration file when
-asked to restart.
+L<blackbox(1)> reads the configuration file on setup, and only writes
+the configuration file on exit.  It will reread the configuration file
+when asked to restart.
 
 Styles and their locations in L<blackbox(1)> are specified using the
 C<[stylesdir]> and C<[stylesmenu]> menu items.  By controlling the menu,
@@ -361,8 +534,8 @@ sub setup_session_BLACKBOX {
 
 =item $xde->B<setup_session_OPENBOX>() => $xde or undef
 
-Normally invoked as B<setup_session>, prepares the XDE files for the
-L<openbox(1)> window manager and a C<OPENBOX> XDE session.
+Normally invoked as B<setup_session>, prepares the L<XDE(3pm)> files for
+the L<openbox(1)> window manager and a C<OPENBOX> L<XDE(3pm)> session.
 
 I<Openbox> normally has its configuration file in
 F<$XDG_CONFIG_HOME/openbox/rc.xml>, and its menu file in
@@ -380,11 +553,11 @@ sub setup_session_OPENBOX {
 
 =item $xde->B<setup_session_ICEWM>() => $xde or undef
 
-Normally invoked as B<setup_session>, prepares the XDE files for the
-L<icewm(1)> window manager and a C<ICEWM> XDE session.  All we have to
-do for IceWM is point it into the configuration directory using the
-B<ICEWM_PRIVCFG> environment variable.  Note that some other
-programs look for B<ICEWM_CFGDIR>, so we set that too.
+Normally invoked as B<setup_session>, prepares the L<XDE(3pm)> files for
+the L<icewm(1)> window manager and a C<ICEWM> L<XDE(3pm)> session.  All
+we have to do for L<icewm(1)> is point it into the configuration
+directory using the B<ICEWM_PRIVCFG> environment variable.  Note that
+some other programs look for B<ICEWM_CFGDIR>, so we set that too.
 
 =cut
 
@@ -401,8 +574,8 @@ sub setup_session_ICEWM {
 
 =item $xde->B<setup_session_FVWM>() => $xde or undef
 
-Normally invoked as B<setup_session>, prepares the XDE files for the
-L<fvwm(1)> window manager and a C<FVWM> XDE session.
+Normally invoked as B<setup_session>, prepares the L<XDE(3pm)> files for
+the L<fvwm(1)> window manager and a C<FVWM> L<XDE(3pm)> session.
 
 =cut
 
@@ -414,12 +587,26 @@ sub setup_session_FVWM {
     return $self;
 }
 
+=item $xde->B<setup_session_JWM>() => $xde or undef
+
+Normally invoked as B<setup_session>, prepares the L<XDE(3pm)> files for
+the L<jwm(1)> window manager and a C<JWM> L<XDE(3pm)> session.
+
+=cut
+
+=item $xde->B<setup_session_PEKWM>() => $xde or undef
+
+Normally invoked as B<setup_session>, prepares the L<XDE(3pm)> files for
+the L<pekwm(1)> window manager and a C<PEKWM> L<XDE(3pm)> session.
+
+=cut
+
 =item $xde->B<setup_session_WMAKER>() => $xde or undef
 
-Normally invoked as B<setup_session>, prepares the XDE files for the
-L<wmaker(1)> window manager and a C<WMAKER> XDE session.  All we have to
-do for WindowMaker is point it into the configuration directory using
-the B<GNUSTEP_USER_ROOT> environment variable.
+Normally invoked as B<setup_session>, prepares the L<XDE(3pm)> files for
+the L<wmaker(1)> window manager and a C<WMAKER> L<XDE(3pm)> session.
+All we have to do for L<wmaker(1)> is point it into the configuration
+directory using the B<GNUSTEP_USER_ROOT> environment variable.
 
 =cut
 
@@ -431,13 +618,30 @@ sub setup_session_WMAKER {
     return $self;
 }
 
+=item $xde->B<setup_session_AFTERSTEP>() => $xde or undef
+
+Normally invoked as B<setup_session>, prepares the L<XDE(3pm)> files for
+the L<afterstep(1)> window manager and a C<AFTERSTEP> L<XDE(3pm)>
+session.
+
+=cut
+
+=item $xde->B<setup_session_METACITY>() => $xde or undef
+
+Normally invoked as B<setup_session>, prepares the L<XDE(3pm)> files for
+the L<metacity(1)> window manager and a C<METACITY> L<XDE(3pm)> session.
+
+=cut
+
 =item $xde->B<setup_session_LXDE>() => $xde or undef
 
-Normally invoked as B<setup_session>, prepares the XDE files for the
-L<openbox(1)> window manager under an C<LXDE> XDE session.
+Normally invoked as B<setup_session>, prepares the L<XDE(3pm)> files for the
+L<openbox(1)> window manager under an C<LXDE> L<XDE(3pm)> session.
 L<xde-session(1)> behaves like L<lxsession(1)> in this setup.  There is
 nothing additional to do because L<xde-session(1)> handles all
-compatability.
+compatibility.
+
+I<This method is deprecated: XDE no longer supports LXDE directly.>
 
 =cut
 
@@ -464,10 +668,10 @@ to L<lxpanel(1)>, that profile overrides environment variables.
 
 B<XDE> installs default profile files in
 F</usr/share/lxpanel/profile/$SESSION> for C<FLUXBOX>, C<BLACKBOX>,
-C<OPENBOX>, C<ICEWM>, C<FVWM> and C<WMAKER>.  So, B<XDE::Setup> look for
-them there.  B<XDE::Setup> also sets the B<XDG_MENU_PREFIX> environment
-variable appropriately, so that L<lxpanel(1)> will present the correct
-menu.
+C<OPENBOX>, C<ICEWM>, C<JWM>, C<PEKWM>, C<FVWM>, C<WMAKER>,
+C<AFTERSTEP> and C<METACITY>.  So, B<XDE::Setup> looks for them there.
+B<XDE::Setup> also sets the B<XDG_MENU_PREFIX> environment variable
+appropriately, so that L<lxpanel(1)> will present the correct menu.
 
 =cut
 
@@ -525,7 +729,7 @@ END_CONFIG
 
 =item $xde->B<setup_session_pcmanfm>(I<$session>)
 
-To signal which profile for L<pcmanfm(1)> to use, and which mneu to
+To signal which profile for L<pcmanfm(1)> to use, and which menu to
 include, the environment variables B<DESKTOP_SESSION>,
 B<XDG_CURRENT_DESKTOP> and B<XDG_MENU_PREFIX> are set to appropriate
 values.  L<lxpanel(1)> looks for its configuration files in the
@@ -537,10 +741,11 @@ C<default>.  When the B<--profile> option is specified to L<pcmanfm(1)>,
 that profile overrides environment variables.
 
 B<XDE> install default profile files in F</etc/xdg/pcmanfm/$SESSION> for
-C<FLUXBOX>, C<BLACKBOX>, C<OPENBOX>, C<ICEWM>, C<FVWM> and C<WMAKER>.
-So, B<XDE::Setup> looks for them there.  B<XDE::Setup> also sets the
-B<XDG_MENU_PREFIX> environment variable appropriately, so that
-L<pcmanfm(1)> will present the correct menu under C<Applications>.
+C<FLUXBOX>, C<BLACKBOX>, C<OPENBOX>, C<ICEWM>, C<JWM>, C<PEKWM>,
+C<FVWM>, C<WMAKER>, C<AFTERSTEP> and C<METACITY>.  So, B<XDE::Setup>
+looks for them there.  B<XDE::Setup> also sets the B<XDG_MENU_PREFIX>
+environment variable appropriately, so that L<pcmanfm(1)> will present
+the correct menu under C<Applications>.
 
 =cut
 
@@ -579,6 +784,8 @@ sub setup_session_pcmanfm {
     }
     return $self;
 }
+
+=back
 
 =item $xde->B<prompt_initialize>(I<@details>) => $choice
 
@@ -631,10 +838,34 @@ sub launch_session {
 }
 
 
+1;
+
+__END__
+
 =back
 
-=cut
+See L<XDE::Gtk2(3pm)/METHODS> for additional inherited methods.
 
-1;
+=head1
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
+
+L<fluxbox(1)>,
+L<blackbox(1)>,
+L<openbox(1)>,
+L<icewm(1)>,
+L<jwm(1)>,
+L<pekwm(1)>,
+L<fvwm(1)>,
+L<wmaker(1)>,
+L<afterstep(1)>,
+L<metacity(1)>,
+L<XDE::Gtk2(3pm)>
+
+=cut
 
 # vim: sw=4 tw=72

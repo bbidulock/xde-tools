@@ -17,6 +17,17 @@ XDE::Autostart - perform XDG autostart functions
  $xde->getenv();
  $xde->run();
 
+=head1 DESCRIPTION
+
+The B<XDE::Autostart> module provides the ability to perform XDG
+autostart functions for the X Desktop Environment.
+
+=head1 METHODS
+
+The following methods are provided:
+
+=over
+
 =cut
 
 use constant {
@@ -28,15 +39,6 @@ use constant {
 	DBUS_SESSION_BUS_PID
     )],
 };
-
-=head1 DESCRIPTION
-
-The B<XDE::Autostart> module provides the ability to perform XDG
-autostart functions for the X Desktop Environment.
-
-=head1 METHODS
-
-=over
 
 =item $xde = XDE::Autostart->B<new>(I<%OVERRIDES>,\I<%ops>) => blessed HASHREF
 
@@ -178,6 +180,9 @@ sub _init {
 
 =item $xde->B<_term>() => $xde
 
+Provides termination for just this module.  We destroy the window that
+we use for communication with other parties using the ICCCM.
+
 =cut
 
 sub _term {
@@ -191,7 +196,7 @@ sub _term {
 
 =item $xde->B<newsnid>() => SCALAR
 
-Obtains a new unique startup notification id.
+Obtains a new unique startup notification id based on a times tamp.
 
 =cut
 
@@ -205,8 +210,7 @@ sub newsnid {
 
 =item $xde->B<send_sn>(I<$msg>)
 
-Internal method to
-send a packed startup notification message.
+Internal method to send a packed startup notification message.
 
 =cut
 
@@ -261,8 +265,8 @@ sub send_sn_old {
 
 =item B<sn_quote>($txt) => $quoted_txt
 
-Internal method to
-quote parameter C<$txt> according to XDG startup notification rules.
+Internal method to quote parameter C<$txt> according to XDG startup
+notification rules.
 
 =cut
 
@@ -276,12 +280,11 @@ sub sn_quote {
 
 =item $xde->B<send_sn_new>(I<$id>,{I<%msg_hash>})
 
-Internal method to
-send a startup notification C<new> message.  C<%msg_hash> contains a
-hash of the valid startup notification fields.  The C<new> message
-requires the C<ID>, C<NAME> and C<SCREEN> fields, and may optionally
-contain the C<BIN>, C<ICON>, C<DESKTOP>, C<TIMESTAMP>, C<DESCRIPTION>,
-C<WMCLASS> and C<SILENT> fields.
+Internal method to send a startup notification C<new> message.
+C<%msg_hash> contains a hash of the valid startup notification fields.
+The C<new> message requires the C<ID>, C<NAME> and C<SCREEN> fields, and
+may optionally contain the C<BIN>, C<ICON>, C<DESKTOP>, C<TIMESTAMP>,
+C<DESCRIPTION>, C<WMCLASS> and C<SILENT> fields.
 
 =cut
 
@@ -300,12 +303,11 @@ sub send_sn_new {
 
 =item $xde->B<send_sn_change>(I<$id>,{I<%msg_hash>})
 
-Internal method to
-send a startup notification C<change> message.  C<%msg_hash> contains a
-hash of the valid startup notification fields.  The C<change> message
-requires the C<ID> field, and may optionally contain the C<NAME>,
-C<SCREEN>, C<BIN>, C<ICON>, C<DESKTOP>, C<TIMESTAMP>, C<DESCRIPTION>,
-C<WMCLASS> and C<SILENT> fields.
+Internal method to send a startup notification C<change> message.
+C<%msg_hash> contains a hash of the valid startup notification fields.
+The C<change> message requires the C<ID> field, and may optionally
+contain the C<NAME>, C<SCREEN>, C<BIN>, C<ICON>, C<DESKTOP>,
+C<TIMESTAMP>, C<DESCRIPTION>, C<WMCLASS> and C<SILENT> fields.
 
 =cut
 
@@ -322,10 +324,9 @@ sub send_sn_change {
 
 =item $xde->B<send_sn_remove>(I<$id>)
 
-Internal method to
-send a startup notification C<remove> message.  C<$id> is the startup
-notification identifier.  The task manager sends a startup-notification
-remove command when the application fails to.
+Internal method to send a startup notification C<remove> message.
+C<$id> is the startup notification identifier.  The task manager sends a
+startup-notification remove command when the application fails to.
 
 =cut
 
@@ -495,6 +496,12 @@ sub task_startup {
 	exec "$task->{cmd}" or exit 255;
     }
 }
+
+=item $xde->B<task_restart>(I<$task>) => $pid
+
+Internal method to restart a task.
+
+=cut
 
 sub task_restart {
     my ($self,$task) = @_;
@@ -807,7 +814,7 @@ sub autostart_guard_execs {
 
 =item $xde->B<autostart_begin_wment>()
 
-Internal method to launch the wment autostart phase.
+Internal method to launch the I<wment> autostart phase.
 
 =cut
 
@@ -828,8 +835,8 @@ sub autostart_begin_wment {
 =item $xde->B<autostart_idle_wment>()
 
 Internal method for starting the window manager.  When the window
-manager command is set up, this taks is run out of a Glib::Idle watcher,
-that starts the window manager when idle.  The taks manager then
+manager command is set up, this task is run out of a Glib::Idle watcher,
+that starts the window manager when idle.  The task manager then
 proceeds to detection of the window manager.  A guard timer protects
 this phase and limits it to 2 seconds.
 
@@ -849,7 +856,7 @@ sub autostart_idle_wment {
 
 =item $xde->B<autostart_done_wment>()
 
-Internal method for handling completion of the wment startup phase.
+Internal method for handling completion of the I<wment> startup phase.
 This method is called when the appearance of a window manager is
 detected.  The normal thing to do here is to move on to the autostart
 startup phase.
@@ -870,8 +877,8 @@ sub autostart_done_wment {
 
 =item $xde->B<autostart_guard_wment>()
 
-Internal method for guarding the window manager startup phase.  The wm
-autostart phase has 2 seconds to complete.
+Internal method for guarding the window manager startup phase.  The
+window manager autostart phase, I<wment>, has 2 seconds to complete.
 
 =cut
 
@@ -917,7 +924,7 @@ sub autostart_idle_start {
 =item $xde->B<autostart_guard_start>()
 
 Internal method for guarding the autostart startup phase.  The autostart
-statup phase has 5 seconds to complete.
+startup phase has 5 seconds to complete.
 
 =cut
 
@@ -999,6 +1006,12 @@ sub shutdown_complete {
 
 =item $xde->B<task_running>(I<$task>,I<$reason>)
 
+Internal method called by the task manager whenever it has detected that
+the task has started.  This is done either using startup notification,
+through the mapping of a window with the correct WM_CLASS(name,class)
+hint, or when the startup guard timer expires without the task
+indicating that it has exited abnormally.
+
 =cut
 
 sub task_running {
@@ -1028,7 +1041,7 @@ sub task_running {
 
 =back
 
-=head1 EVENTS
+=head2 Event handlers
 
 The following methods are internal event handlers:
 
@@ -1126,10 +1139,6 @@ sub task_timeout {
     return Glib::SOURCE_REMOVE;
 }
 
-#sub event_handler_PropertyNotify {
-#    my ($self,$e,$X,$v) = @_;
-#}
-
 =item $xde->B<event_handler_ClientMessage_NET_STARTUP_INFO_BEGIN>(I<$e>,I<$X>,I<$v>)
 
 Internal method handles the first message in a sequence of messages that
@@ -1205,18 +1214,39 @@ sub event_handler_MapNotify {
     return;
 }
 
+=item $xde->B<event_handler_UnmapNotify>(I<$e>,I<$X>,I<$v>)
+
+Event handler for C<UnmapNotify> events.
+
+=cut
+
 sub event_handler_UnmapNotify {
     my ($self,$e,$X,$v) = @_;
 }
+
+=item $xde->B<event_handler_CreateNotify>(I<$e>,I<$X>,I<$v>)
+
+Event handler for C<CreateNotify> events.
+
+=cut
 
 sub event_handler_CreateNotify {
     my ($self,$e,$X,$v) = @_;
 }
 
+=item $xde->B<event_handler_DestroyNotify>(I<$e>,I<$X>,I<$v>)
+
+Event handler for C<DestroyNotify> events.
+
+=cut
+
 sub event_handler_DestroyNotify {
     my ($self,$e,$X,$v) = @_;
 }
 
+1;
+
+__END__
 
 =back
 
@@ -1229,7 +1259,5 @@ Brian Bidulock <bidulock@cpan.org>
 L<XDE::Context(3pm)>, L<XDE::X11(3pm)>
 
 =cut
-
-1;
 
 # vim: sw=4 tw=72

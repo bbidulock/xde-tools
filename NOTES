@@ -214,7 +214,7 @@ _NET_WM_ACTION_ABOVE		Y	N	N	N	N	N	Y	N	N	Y
 _NET_WM_ACTION_BELOW		Y	N	N	N	N	N	Y	N	N	Y
 _NET_WM_ACTION_CHANGE_DESKTOP	Y	Y	Y	N	Y	Y	Y	Y	N	Y
 _NET_WM_ACTION_CLOSE		Y	Y	Y	N	Y	Y	Y	Y	N	Y
-_NET_WM_ACTION_FULLSCREEN	N	Y	Y	N	Y	Y	Y	Y	N	Y
+_NET_WM_ACTION_FULLSCREEN	Y	Y	Y	N	Y	Y	Y	Y	N	Y
 _NET_WM_ACTION_MAXIMIZE_HORZ	Y	Y	Y	N	Y	Y	Y	Y	N	Y
 _NET_WM_ACTION_MAXIMIZE_VERT	Y	Y	Y	N	Y	Y	Y	Y	N	Y
 _NET_WM_ACTION_MINIMIZE		Y	Y	Y	N	Y	Y	Y	Y	N	Y
@@ -232,7 +232,7 @@ _NET_WM_ICON_NAME		-	Y	Y	-	Y	Y	Y	Y	N	Y	(15)
 _NET_WM_ICON			Y	Y	Y	N	N	Y	Y	Y	Y	Y
 _NET_WM_MOVERESIZE		N	Y	N	N	N	N	Y	Y	N	Y
 _NET_WM_NAME			Y	Y	Y	-	Y	Y	Y	Y	Y	Y	(16)
-_NET_WM_PID			N	N	Y	N	N	N	Y	Y	Y	Y	(17)
+_NET_WM_PID			Y	N	Y	N	N	N	Y	Y	Y	Y	(17)
 _NET_WM_PING			-	-	-	-	-	-	X	-	Y	Y	(18)
 _NET_WM_STATE_ABOVE		Y	Y	Y	Y	Y	Y	Y	N*	N	Y	(21)
 _NET_WM_STATE_BELOW		Y	Y	Y	Y	Y	Y	Y	Y	N	Y
@@ -253,31 +253,31 @@ _NET_WM_SYNC_REQUEST_COUNTER	N	N	N	N	N	N	Y	N	N	N
 _NET_WM_SYNC_REQUEST		N	N	N	N	N	N	Y	N	N	N
 _NET_WM_USER_TIME		N	N	N	N	N	N	Y	N	N	Y
 _NET_WM_USER_TIME_WINDOW	N	N	N	N	N	N	N	N	N	Y
-_NET_WM_VISIBLE_ICON_NAME	N	N	Y	N	Y	N	Y	N*	N	N	* misspelt
-_NET_WM_VISIBLE_NAME		N	N	Y	N	Y	N	Y	Y	N	N
+_NET_WM_VISIBLE_ICON_NAME	Y	N	Y	N	Y	N	Y	N*	N	N	* misspelt
+_NET_WM_VISIBLE_NAME		Y	N	Y	N	Y	N	Y	Y	N	N
 _NET_WM_WINDOW_OPACITY		-	-	Y	-	-	-	-	-	-	-	non-standard
 _NET_WM_WINDOW_TYPE_DESKTOP	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
 _NET_WM_WINDOW_TYPE_DIALOG	Y	Y	Y	N	Y	Y	Y	Y	Y	Y
 _NET_WM_WINDOW_TYPE_DOCK	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_WM_WINDOW_TYPE_MENU	N	Y	Y	N	Y	Y	Y	Y	Y	Y
+_NET_WM_WINDOW_TYPE_MENU	Y	Y	Y	N	Y	Y	Y	Y	Y	Y
 _NET_WM_WINDOW_TYPE_NORMAL	Y	Y	Y	N	Y	Y	Y	Y	Y	Y
-_NET_WM_WINDOW_TYPE_NOTIFICATION N	N	N	N	N	N	N	Y	N	N
+_NET_WM_WINDOW_TYPE_NOTIFICATION Y	N	N	N	N	N	N	Y	N	N
 _NET_WM_WINDOW_TYPE_SPLASH	Y	Y	Y	Y	Y	Y	Y	N	N	Y
-_NET_WM_WINDOW_TYPE_TOOLBAR	N	Y	Y	N	Y	Y	Y	Y	Y	Y
-_NET_WM_WINDOW_TYPE_UTILITY	N	N	Y	N	Y	Y	Y	N	N	Y
+_NET_WM_WINDOW_TYPE_TOOLBAR	Y	Y	Y	N	Y	Y	Y	Y	Y	Y
+_NET_WM_WINDOW_TYPE_UTILITY	Y	N	Y	N	Y	Y	Y	N	N	Y
 _NET_WM_WINDOW_TYPE		Y	Y	Y	N	Y	Y	Y	Y	Y	Y
 _NET_WORKAREA			Y	Y	Y	N	Y	N	Y	Y	N	Y
 ------------------------------	---	---	---	---	---	---	---	---	---
-Total N				18N     16N     16N	46N	22N	21N	 5N	20N	42N	5N
-Total Y				50Y     52Y     55Y	21Y	45Y	49Y	65Y	52Y	29Y	66Y
+Total N				10N     16N     16N	46N	22N	21N	 5N	20N	42N	5N
+Total Y				58Y     52Y     55Y	21Y	45Y	49Y	65Y	52Y	29Y	66Y
 ------------------------------	---	---	---	---	---	---	---	---	---
 Total				75	75	75	75	75	75	75	75	75
 
 Metacity    66 Y     5 N
 Openbox	    65 Y     5 N
+JWM	    58 Y    10 N
 PeKWM	    55 Y    16 N
 Fluxbox	    52 Y    16 N
-JWM	    50 Y    18 N
 FVWM	    52 Y    20 N
 Wmaker	    49 Y    21 N
 Blackbox    45 Y    22 N
@@ -310,8 +310,8 @@ Notes:
 ( 7) _NET_STARTUP_ID is part of the startup notification specificaiton
      and need not be directly supported by the window manager.
 
-( 8) Some WMs report _NET_SUPPORTED in _NET_SUPPORTED.  It is
-     unnecessary.
+( 8) Some WMs (JWM, PekWM, IceWM, FVWM) report _NET_SUPPORTED in
+     _NET_SUPPORTED.  It is unnecessary.
 
 ( 9) Blackbox does not report support for _NET_SUPPORTING_WM_CHECK but
      it, of course, supports it.
