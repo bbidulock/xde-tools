@@ -1,0 +1,429 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+    if $running_under_some_shell;
+
+BEGIN {
+    use strict;
+    use warnings;
+    my $here = $0; $here =~ s{/[^/]*$}{};
+    if ($here =~ s{^\.}{}) {
+	chomp(my $cwd = `pwd`);
+	$here = "/$here" if $here;
+	$here = "$cwd$here";
+    }
+    unshift @INC, "$here/lib" unless $here =~ m{^/usr/bin};
+}
+
+use Getopt::Long;
+use Encode;
+use I18N::Langinfo qw(langinfo CODESET);
+use POSIX qw(locale_h);
+use XDE::Style;
+use strict;
+use warnings;
+
+my %OVERRIDES = ();
+my $here = $0; $here =~ s{/[^/]*$}{};
+if ($here =~ s{^\.}{}) {
+    chomp(my $cwd = `pwd`);
+    $here = "/$here" if $here;
+    $here = "$cwd$here";
+}
+unless ($here =~ m{^/usr/bin}) {
+    %OVERRIDES = (
+	HERE               => "$here",
+	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
+	XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
+	XDG_ICON_APPEND    => "$here/share/icons:$here/share/pixmaps",
+    );
+    my %path = (map{$_=>1}split(/:/,$ENV{PATH}));
+    $ENV{PATH} = "$here:$ENV{PATH}" unless exists $path{$here};
+}
+
+my $program = $0; $program =~ s{^.*/}{};
+
+my %ops = (
+    help	=> '',
+    verbose	=> '',
+    prompt	=> '',
+    banner      => '',
+    noask	=> '',
+    charset	=> langinfo(CODESET),
+    language	=> setlocale(LC_MESSAGES),
+    setdflt     => '',
+    default	=> '',
+    current	=> '',
+    choice	=> '',
+    vendor	=> '',
+    monitor	=> 1,
+    grab	=> 1,
+    theme	=> '',
+    id		=> '',
+    setroot	=> 1,
+);
+
+my $xde - XDE::Style->new(%OVERRIDES,ops=>\%ops);
+$xde->getenv;
+
+my $syntax = GetOptions(
+    'help|h'	    => \$ops{help},
+    'verbose|v'	    => \$ops{verbose},
+    'monitor!'	    => \$ops{monitor},
+    'setroot|s'	    => \$ops{setroot},
+    'grab|g'	    => \$ops{grab},
+    'n'		    => sub{ $ops{monitor} = 0 },
+    'id=s'	    => \$ops{id},
+);
+
+my @styles = @ARGV;
+
+$ops{id} = hex($ops{id}) if $ops{id} and $ops{id} =~ m{^0x};
+
+$xde->default; # reset defaults
+
+$xde->init;
+$xde->set_style(@styles);
+$xde->main;
+$xde->term;
+
+exit(0);
+
+sub show_usage {
+    return <<USAGE_EOF;
+
+USAGE:
+    xde-theme2 [OPTIONS] [THEME [THEME ...]]
+USAGE_EOF
+}
+
+1;
+
+__END__
+
+=head1 NAME
+
+xde-style - set window manager styles for the X Desktop Environment
+
+=head1 SYNOPSIS
+
+B<xde-style> [I<OPTIONS>] [I<STYLE>]
+
+=head1 DESCRIPTION
+
+B<xde-style> is responsible for setting window manager styles for an XDE
+session, modifying configuration files as necessary, and restarting or
+reconfiguring the window manager.
+
+=head1 ARGUMENTS
+
+B<xde-style> takes the following arguments:
+
+=over
+
+=item [I<STYLE> [I<STYLE> ...]]
+
+A list of style names that specify which style is to be applied (in
+order of preference).   Each style name can be a simple name which is
+search for in various directories in order of preference, or a full path
+name to a style directory or file.
+
+=back
+
+=head1 OPTIONS
+
+B<xde-style> uses L<Getopt::Long(3pm)> to parse options, so
+non-ambiguous options and single-dash long options are supported.  The
+following options are recognized:
+
+=head2 COMMAND OPTIONS
+
+B<xde-style> command options affect the major operating modes of the
+program: only one of these options should be specified.  The recognized
+command options are as follows:
+
+=over
+
+=item B<--edit>, B<-e>
+
+Do not set the style, but, rather, launch the style selection dialogue.
+When a current instance of B<xde-style> is running, the running instance
+will launch the dialogue; otherwise, a new B<xde-style> instance will be
+started.
+
+=item B<--quit>, B<-q>
+
+Ask a running instance of B<xde-style> to quit.
+
+=item B<--restart>, B<-r>
+
+Ask a running instance of B<xde-style> to restart.
+
+=item B<--help>, B<-h>
+
+Print usage information to standard error containing current defaults
+and exit.
+
+=back
+
+=head2 GENERAL OPTIONS
+
+B<xde-style> also recognizes the following general options:
+
+=over
+
+=item B<--verbose>, B<-v>
+
+Print debuggin information on standard error while running.
+
+=item B<--nomonitor>, B<-n>
+
+Specifies that B<xde-style> should just set the style and should not
+place itself in the background and monitor for changes.  You should just
+use the window manager to set the theme instead of using this option.
+
+=back
+
+=head1 BEHAVIOUR
+
+When B<xde-style> is executed and an existing instance of B<xde-style>
+is running, it passes its arguments to the running program an exits.
+
+On the initial invocation of B<xde-style> for a given X Display,
+B<xde-style> will first await the appearance of an X Window Manager that
+conforms to the EWMH/ICCCM specification.
+
+After beginning full operation, B<xde-style> will complete startup
+notification (if it was requested).  It then determines whether an
+XSETTINGS daemon is in operation, and, if so, will read its settings
+from the XSETTINGS daemon.  In the absencee of an XSETTINGS damon, it
+will read its configuration from its configuration file.  See
+L</CONFIGURATION> for how the configuration file is selected.
+
+The configuration will then be used to set the style and will monitor
+for further window manager style changes on the X Display.
+
+B<xde-style> understands the file and style settings for various
+lightweight window managers: L<fluxbox(1)>, L<blackbox(1)>,
+L<openbox(1)>, L<icewm(1)>, L<jwm(1)>, L<pekwm(1)>, L<fvwm(1)>, and
+L<wmaker(1)>.  B<xde-style> monitors the style files for these window
+managers and tracks the prevailing style.
+
+The user will observer the following when B<xde-style> is running:
+
+=head2 OPERATION
+
+B<xde-style> effects and monitors window manager style changes.  Styles
+are effected by performing the following actions:
+
+=over
+
+=item 1.
+
+Setting the appropriate values in the window manager's configuraion
+files.
+
+=item 2.
+
+Restarting or reloading the window manager.
+
+=item 3.
+
+Monitoring for further autonomous changes to the window manager style.
+
+=item 4.
+
+Monitoring for changes in window manager.
+
+=back
+
+=head1 CONFIGURATION
+
+An F<xde-style.desktop> file is distributed with B<xde-style> that can
+be used to autostart the program in an XDG compliant environment such as
+is provided by the L<XDE(3pm)>.  Startup of the the program conforms to
+the XDG Startup sepcifications, and the program will notify the launcher
+once it has fully started.
+
+=head1 WINDOW MANAGERS
+
+B<xde-style> supports a number of lightweight window managers and
+manages some quirks associated with each:
+
+=over
+
+=item L<fluxbox(1)>
+
+To change the L<fluxbox(1)> style, then new style is written to the
+C<sessionStyle> resource in the F<~/.fluxbox/init> file and a
+L<fluxbox(1)> restart is requested by sending a C<SIGHUP> to the
+L<fluxbox(1)> process.
+The PID can be found in the C<_BLACKBOX_PID(CARDINAL)> property on the
+root window.
+Note that it is necessary to restart
+L<fluxbox(1)> because a reload does not affect the style used for the
+root menu.
+
+L<fluxbox(1)> accepts the following signals to effect restart, reload,
+or reconfigure:
+
+=over
+
+=item C<SIGHUP>
+
+L<fluxbox(1)> performs a C<Restart> action.  This performs a full
+shutdown and restart of L<fluxbox(1)>.  This is the one we need to use.
+
+=item C<SIGUSR1>
+
+L<fluxbox(1)> just loads the rc file (F<~/.fluxbox/init>).  This does
+not affect workspace names.
+
+=item C<SIGUSR2>
+
+L<fluxbox(1)> performs a C<Reconfigure> action which loads the rc file
+and then waits a period of time before proceeding and then alters the
+workspace names on a per-screen basis.
+
+=back
+
+=item L<blackbox(1)>
+
+To change the L<blackbox(1)> style, the new style is written to the
+C<sessionStyle> resource in the F<~/.blackboxrc> file and a
+L<blackbox(1)> reload is requested by sending a C<SIGUSR1> signal to the
+L<blackbox(1)> process.  The PID can be found in the
+C<_NET_WM_PID(CARDINAL)> resource on the
+C<_NET_SUPPORTING_WM_CHECK(WINDOW)> window.
+
+L<blackbox(1)> accepts the following signals to effect restart, reload
+or reconfigure:
+
+=over
+
+=item C<SIGHUP>
+
+L<blackbox(1)> performs a C<Reconfigure> action.  This merges everything
+in the rc database file I<except> the C<session.styleFile> resource.
+Therefore, this action alone will never change the style.
+
+=item C<SIGUSR1>
+
+L<blackbox(1)> performs a C<Reload> action.  This reloads the F<rc> file
+and then performs reconfiguration, as above.  This results in the
+internal C<session.styleFile> being overwritten before the merge and
+will change the style.  Except for handling of the F<session.styleFile>
+resource, C<SIGHUP> and C<SIGUSR1> are identical.
+
+B<xde-style> uses C<SIGUSR1> because of this.
+
+=item C<SIGUSR2>
+
+L<blackbox(1)> performs a C<Reread Menu> action.  This simply rereads
+the root menu file.
+
+=back
+
+=item L<openbox(1)>
+
+L<openbox(1)> accepts the following signals to effect restart,
+reconfigure or exit:
+
+=over
+
+=item C<SIGTERM> or C<SIGINT>
+
+Terminate and return a zero exit status.
+
+=item C<SIGHUP>
+
+Terminate and return a non-zero exit status.
+
+=item C<SIGUSR1>
+
+Perform a C<Restart> action.
+
+=item C<SIGUSR2>
+
+Perform a C<Reconfigure> action.
+
+=back
+
+=item L<icewm(1)>
+
+L<icewm(1)> accepts the following signals to effect restart,
+reconfigure or exit:
+
+=over
+
+=item C<SIGINT> or C<SIGTERM>
+
+Terminate and return a zero exit status.
+
+=item C<SIGQUIT>
+
+Perform a logout action.
+
+=item C<SIGHUP>
+
+Perform a restart action.
+
+=back
+
+=item L<jwm(1)>
+
+Reloading L<jwm(1)> is effected by sending a C<_JWM_RELOAD>
+C<ClientMessage> to the root window; restart, using the C<_JWM_RESTART>
+message; exit, using the C<_JWM_EXIT> message.  It is also possible to
+execute C<jwm -reload>, C<jwm -restart> or C<jwm -exit> to perform these
+actions.
+
+=item L<pekwm(1)>
+
+L<pekwm(1)> accepts the following signals to effect restart,
+reconfigure or exit:
+
+=over
+
+=item C<SIGHUP>
+
+Causes a reload.  This is sufficient both to change styles as well as to
+cause the menu to be reloaded.
+
+=item C<SIGTERM> or C<SIGINT>
+
+Causes a graceful shutdown.
+
+=back
+
+=item L<fvwm(1)>
+
+=item L<wmaker(1)>
+
+=item L<afterstep(1)>
+
+=item L<metacity(1)>
+
+=item L<wmx(1)>
+
+=back
+
+=head1 HISTORY
+
+I wrote B<xde-style> to work with L<xde-setbg(1p)> to support control of
+the themes for the desktop environment from window-manager-specific menus.
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
+
+L<xde-setbg(1p)>,
+L<XDE::Style(3pm)>,
+L<XDE::Context(3pm)>
+
+=cut
+
+# vim: sw=4 tw=72

@@ -51,7 +51,7 @@ sub new {
 =item $xde->B<wmpropcheck>() => $window or undef
 
 Internal method for checking a recursive property such as
-B<_NET_SUPPORTING_WM_CHECK>.
+C<_NET_SUPPORTING_WM_CHECK(WINDOW)>.
 
 =cut
 
@@ -103,8 +103,8 @@ sub win_wmcheck {
 
 =item $xde->B<net_wmcheck>()
 
-Internal method to check for B<_NET_SUPPORTING_WM_CHECK> and establish
-the identity of the window manager.
+Internal method to check for C<_NET_SUPPORTING_WM_CHECK(WINDOW)> and
+establish the identity of the window manager.
 
 =cut
 
@@ -987,9 +987,9 @@ sub event_handler_PropertyNotify_BB_THEME {
 =item $xde->B<event_handler_PropertyNotify_BLACKBOX_PID>(I<$e>,I<$X>,I<$v>)
 
 When L<fluxbox(1)> restarts, it does not change the
-B<_NET_SUPPORTING_WM_CHECK> but it does change the B<_BLACKBOX_PID>,
-even if its is just to replace it with the same value.  When restarting,
-check the theme again.
+C<_NET_SUPPORTING_WM_CHECK(WINDOW)> but it does change the
+B<_BLACKBOX_PID(CARDINAL)>, even if its is just to replace it with the
+same value.  When restarting, check the theme again.
 
 =cut
 
@@ -2099,10 +2099,10 @@ sub check_theme_LXDE {
 =item $xde->B<check_theme_ICEWM>() $new_theme or 0 or undef
 
 Called when the L<icewm(1)> restarts.  When L<icewm(1)> changes its
-theme, it restarts, which results in a new _NET_SUPPORTING_WM_CHECK
-window, which invokes this internal function.  L<icewm(1)> changes the
-setting for the theme in its F<~/.icewm/theme> or
-F<$ICEWM_PRIVCFG/theme> file.
+theme, it restarts, which results in a new
+C<_NET_SUPPORTING_WM_CHECK(WINDOW)> window, which invokes this internal
+function.  L<icewm(1)> changes the setting for the theme in its
+F<~/.icewm/theme> or F<$ICEWM_PRIVCFG/theme> file.
 
 =cut
 
@@ -2186,7 +2186,7 @@ sub check_theme_JWM {
     return 0 if $self->{style} and $self->{style} eq $style;
 #   THEME CHANGED
     my %r;
-    my $theme = $style; $theme =~ s{.*/}{};
+    my $theme = $style; $theme =~ s{/style$}{}; $theme =~ s{.*/}{};
     %r = $self->get_theme_by_name($theme);
     %r = $self->read_jwm_theme($style) unless %r;
     return unless %r;

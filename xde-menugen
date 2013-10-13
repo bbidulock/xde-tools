@@ -43,6 +43,8 @@ use XDG::Menu::Icewm;
 use XDG::Menu::Wmaker;
 use XDG::Menu::Jwm;
 use XDG::Menu::Pekwm;
+use XDG::Menu::Openbox;
+use XDG::Menu::Openbox3;
 use Getopt::Long;
 use Encode;
 use I18N::Langinfo qw(langinfo CODESET);
@@ -149,7 +151,7 @@ my %formats = (
     blackbox    => [qw(BLACKBOX XDG::Menu::Blackbox )],
     openbox     => [qw(OPENBOX  XDG::Menu::Openbox  )],
     icewm       => [qw(ICEWM    XDG::Menu::Icewm    )],
-    openbox3    => [qw(LXDE     XDG::Menu::Openbox3 )],
+    openbox3    => [qw(OPENBOX  XDG::Menu::Openbox3 )],
     wmaker      => [qw(WMAKER   XDG::Menu::Wmaker   )],
     jwm         => [qw(JWM      XDG::Menu::Jwm      )],
     pekwm       => [qw(PEKWM    XDG::Menu::Pekwm    )],
@@ -159,7 +161,7 @@ my %desktops = (
     FLUXBOX     => [qw(fluxbox  XDG::Menu::Fluxbox  )],
     BLACKBOX    => [qw(blackbox XDG::Menu::Blackbox )],
     WMAKER      => [qw(wmaker   XDG::Menu::Wmaker   )],
-    OPENBOX     => [qw(openbox  XDG::Menu::Openbox  )],
+    OPENBOX     => [qw(openbox3 XDG::Menu::Openbox3 )],
     LXDE        => [qw(openbox3 XDG::Menu::Openbox3 )],
     ICEWM       => [qw(icewm    XDG::Menu::Icewm    )],
     JWM         => [qw(jwm      XDG::Menu::Jwm      )],

@@ -67,6 +67,18 @@ sub Exec {
     my $self = shift;
     return $self->{Entry}->Exec;
 }
+sub StartupNotify {
+    my $self = shift;
+    my $entry = $self->{Entry};
+    if ($entry->{StartupNotify} and $entry->{StartupNotify} =~ /yes|true/i) {
+	return 'yes';
+    }
+    return 'no';
+}
+sub StartupWMClass {
+    my $self = shift;
+    return $self->{Entry}->{StartupWMClass};
+}
 
 package XDG::Menu::Layout::Directory;
 use base qw(XDG::Menu::Layout::Entry);

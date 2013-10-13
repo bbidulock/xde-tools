@@ -7,6 +7,7 @@ use XDE::Desktop::Icon;
 use XDE::Desktop::Icon::Shortcut;
 use XDE::Desktop::Icon::Directory;
 use XDE::Desktop::Icon::File;
+use XDE::Desktop::Pmap;
 use strict;
 use warnings;
 
@@ -585,6 +586,9 @@ sub _init {
     # get the root pixmap
     $self->get_XROOTPMAP_ID;
 
+    # initialize pixmap array (one per desktop)
+    $self->{pixmaps} = [];
+
     # set up the desktop window
     $self->create_desktop;
 
@@ -636,7 +640,7 @@ sub create_desktop {
     $win->fullscreen;
     $win->set_gravity('static');
     $win->set_has_frame(FALSE);
-    $win->set_keep_below(TRUE);
+#   $win->set_keep_below(TRUE);
     $win->move(0,0);
     $win->set_opacity(1.0);
     $win->set_position('center-always');
@@ -923,17 +927,33 @@ it to work correctly.
 
 sub set_style {
     my $self = shift;
-    unless ($self->{_XROOTPMAP_ID}) {
+    my $pmap = $self->{_XROOTPMAP_ID};
+    $pmap = $self->get_XROOTPMAP_ID unless defined $pmap;
+    unless ($pmap) {
 	warn "No pixmap for _XROOTPMAP_ID!";
 	return;
     }
-    unless ($self->{old_XROOTPMAP_ID} and $self->{old_XROOTPMAP_ID} == $self->{_XROOTPMAP_ID}) {
-	my $pixmap = Gtk2::Gdk::Pixmap->foreign_new($self->{_XROOTPMAP_ID});
-	unless ($pixmap) {
-	    warn "Cannot get pixmap for $self->{_XROOTPMAP_ID}!";
-	    return;
+
+    unless ($self->{old_XROOTPMAP_ID} and $self->{old_XROOTPMAP_ID} == $pmap) {
+
+	my $dtop = $self->{_NET_CURRENT_DESKTOP};
+	$dtop = $self->get_NET_CURRENT_DESKTOP unless defined $dtop;
+	$dtop = $self->{_WIN_WORKSPACE} unless defined $dtop;
+	$dtop = $self->get_WIN_WORKSPACE unless defined $dtop;
+	$dtop = 1 unless defined $dtop;
+
+	my $pobj;
+	# go looking for it
+	foreach (@{$self->{pixmaps}}) {
+	    if ($_ and $_->{pmap} == $pmap) {
+		$pobj = $_;
+		last;
+	    }
 	}
-	$pixmap->set_colormap(Gtk2::Gdk::Screen->get_default->get_default_colormap);
+	$pobj = XDE::Desktop::Pmap->new($pmap) unless $pobj;
+	$self->{pixmaps}[$dtop] = $pobj;
+	my $pixmap = $pobj->{pixmap};
+#	$pixmap->set_colormap(Gtk2::Gdk::Screen->get_default->get_default_colormap);
 
 	my $style = $self->{desktop}->get_default_style->copy;
 	foreach (qw(normal prelight)) {
@@ -941,7 +961,7 @@ sub set_style {
 	}
 	$self->{desktop}->set_style($style);
 #	$self->{desktop}->window->clear;
-	$self->{old_XROOTPMAP_ID} = $self->{_XROOTPMAP_ID};
+	$self->{old_XROOTPMAP_ID} = $pmap;
     }
 }
 
@@ -983,16 +1003,17 @@ sub calculate_cells {
 	($x,$y,$w,$h) = @{$self->{_NET_WORKAREA}};
 	if (0) {
 	     # This was fixed in JWM
-	if ($self->{wmname} eq 'jwm') {
-	     # JWM does not report its panel, normally at the
-	     # bottom, reduce height by 1/2 ICON_HIGH
-	    $h -= ICON_HIGH/2;
-	}
+	    if ($self->{wmname} eq 'jwm') {
+		 # JWM does not report its panel, normally at the
+		 # bottom, reduce height by 1/2 ICON_HIGH
+		$h -= ICON_HIGH/2;
+	    }
 	}
     }
     elsif ($self->{_WIN_WORKAREA}) {
 	 #print STDERR "Have _WIN_WORKAREA\n";
-	($x,$y,$w,$h) = @{$self->{_WIN_WORKAREA}};
+	my ($x1,$y1,$x2,$y2) = @{$self->{_WIN_WORKAREA}};
+	($x,$y,$w,$h) = ($x1,$x2,$x2-$x1,$y2-$y1);
     }
     else {
 	 #print STDERR "No _NET_WORKAREA or _WIN_WORKAREA\n";
@@ -1843,6 +1864,7 @@ sub event_handler_PropertyNotify_NET_WORKAREA {
     my $self = shift;
     my ($e,$X,$v) = @_;
     return unless $e->{window} == $X->root;
+    $self->get_NET_WORKAREA;
     $self->rearrange_icons;
 }
 
@@ -1858,6 +1880,7 @@ sub event_handler_PropertyNotify_WIN_WORKAREA {
     my $self = shift;
     my ($e,$X,$v) = @_;
     return unless $e->{window} == $X->root;
+    $self->get_WIN_WORKAREA;
     $self->rearrange_icons;
 }
 

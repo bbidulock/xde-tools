@@ -51,6 +51,7 @@ sub create {
     $text .= "    [end] # (System Styles)\n";
     $text .= "    [submenu] (User Styles) {Choose a style...}\n";
     $text .= "      [sytlesdir] (~/.openbox/styles)\n";
+    $text .= "      [sytlesdir] (~/.config/openbox/styles)\n";
     $text .= "    [end] # (User Styles)\n";
     $text .= "    [separator]\n";
     $text .= "    [submenu] (Window Managers)\n";

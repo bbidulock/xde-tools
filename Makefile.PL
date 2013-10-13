@@ -32,6 +32,7 @@ WriteMakefile(
 		xde-settings
 		xde-setup
 		xde-startup
+		xde-style
 		xde-theme
 		xde-theme2
 		xde-traymenu

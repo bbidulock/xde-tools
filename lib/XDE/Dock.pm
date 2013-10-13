@@ -193,6 +193,7 @@ sub _term {
     $self->{saveset} = {} unless $self->{saveset};
     $self->{reparent} = {} unless $self->{reparent};
 
+    my %reparent = ();
     {
 	my @windows = (keys %{$self->{saveset}});
 	foreach my $xid (@windows) {
@@ -202,6 +203,7 @@ sub _term {
 		printf STDERR "==> SOCKETS: includes window 0x%x (%d)\n",
 		       $xid,$xid;
 	    }
+	    $reparent{$xid} = 1;
 	}
     }
     {
@@ -209,15 +211,61 @@ sub _term {
 	foreach my $xid (@windows) {
 	    printf STDERR "==> SOCKETS: includes window 0x%x (%d)\n",
 		   $xid,$xid;
+	    $reparent{$xid} = 1;
 	}
     }
     $self->{shuttingdown} = 1;
     {
-	my @windows = (keys %{$self->{reparent}});
+	my @windows = (keys %reparent);
 	foreach my $xid (@windows) {
 	    printf STDERR "==> REPARENTING: window 0x%x (%d) to root\n", $xid,$xid;
+	    my $remap;
+	    if ($self->{dockapps}{$xid}{needsremap}) {
+		print STDERR "--> dockapp needs remap\n";
+		$remap = 1;
+	    }
+	    if ($self->{iconwins}{$xid}{needsremap}) {
+		print STDERR "--> iconwin needs remap\n";
+		$remap = 1;
+	    }
+	    unless ($remap) {
+		print STDERR "--> unmapping\n";
+		$X->UnmapWindow($xid);
+	    }
+	    print STDERR "--> reparenting\n";
 	    $X->ReparentWindow($xid,$X->root,0,0);
-	    $X->MapWindow($xid);
+	    $X->GetScreenSaver;
+	    Gtk2->main_iteration while Gtk2->events_pending;
+	    if ($remap) {
+		print STDERR "--> mapping\n";
+		$X->MapWindow($xid);
+	    } else {
+		print STDERR "--> unmapping\n";
+		$X->UnmapWindow($xid);
+		$X->SendEvent($X->root,0,
+			$X->pack_event_mask(qw(
+				SubstructureRedirect
+				SubstructureNotify)),
+			$X->pack_event(
+			    name=>'UnmapNotify',
+			    event=>$X->root,
+			    window=>$xid,
+			    from_configure=>0,
+			    ));
+		if ($self->{wmname} eq 'pekwm') {
+		    $X->SendEvent($X->root,0,
+			    $X->pack_event_mask(qw(
+				    SubstructureRedirect
+				    SubstructureNotify)),
+			    $X->pack_event(
+				name=>'UnmapNotify',
+				event=>$xid,
+				window=>$xid,
+				from_configure=>0,
+				));
+		}
+	    }
+	    $X->GetScreenSaver;
 	}
 	$X->GetScreenSaver;
 	Gtk2->main_iteration while Gtk2->events_pending;
@@ -263,7 +311,7 @@ sub create_dock {
     $dock->realize;
 #   $dock->window->set_override_redirect(TRUE);
     $self->{dock}{apps} = 0;
-    $self->find_dockapps;
+    $self->find_dockapp_clients;
 }
 
 =item $dock->B<withdraw_window>(I<$X>,I<$win>) => $result
@@ -287,6 +335,8 @@ sub withdraw_window {
 	my ($root,$parent,@kids) = @$result;
 	$win->{root} = $root;
 	$win->{parent} = $parent;
+	printf STDERR "::: window 0x%x (%d) root 0x%x (%d) parent 0x%x (%d)\n",
+	       $xid,$xid,$root,$root,$parent,$parent;
 	if ($root and $parent and $root != $parent) {
 	    printf STDERR "==> DEPARENTING: window 0x%x (%d) from parent 0x%x (%d)\n",$xid,$xid,$parent,$parent;
 	    $win->{withdrawing} = 1;
@@ -415,6 +465,8 @@ sub test_window {
 		my ($root,$parent,@kids) = @$result;
 		$icon->{root} = $root;
 		$icon->{parent} = $parent;
+		printf STDERR "::: icon_window 0x%x (%d) root 0x%x (%d) parent 0x%x (%d)\n",
+		       $iid,$iid,$root,$root,$parent,$parent;
 		if ($parent == $icon->{owner}) {
 		    printf STDERR "::: icon_window 0x%x (%d) is a child of toplevel 0x%x (%d)\n",
 			$iid,$iid,$parent,$parent;
@@ -479,6 +531,27 @@ sub find_dockapps {
     my $self = shift;
     my $X = $self->{X};
     $self->search_kids($X,$X->root);
+}
+
+=item $dock->B<find_dockapp_clients>()
+
+Uses the EWMH client list to search for dock applications managed by the
+window manager.  This only works for window managers that do not have a
+dock of their own.  That is, this might not work for: L<fluxbox(1)>,
+L<blackbox(1)>, L<openbox(1)>, L<pekwm(1)>, and L<wmaker(1)>; but, it is
+intended to work for L<icewm(1)>, L<jwm(1)>, L<fvwm(1)>, L<afterstep(1)>,
+L<metacity(1)>, L<wmx(1)>.
+
+=cut
+
+sub find_dockapp_clients {
+    my $self = shift;
+    my $X = $self->{X};
+    if ($self->{_NET_CLIENT_LIST}) {
+	foreach (@{$self->{_NET_CLIENT_LIST}}) {
+	    $self->test_window($X,$_);
+	}
+    }
 }
 
 =item $dock->B<dock_rearrange>()
@@ -932,6 +1005,7 @@ sub event_handler_ReparentNotify {
     printf STDERR "::: ReparentNotify: event=0x%x (%d) window=0x%x (%d) parent=0x%x (%d)\n",
 	   $e->{event},$e->{event},$e->{window},$e->{window},$e->{parent},$e->{parent};
     return if $e->{override_redirect};
+    return if $self->{shuttingdown};
     my $xid = $e->{window};
     if ($e->{parent} == $X->root) {
 	 # window was parented back to the root window
@@ -940,6 +1014,7 @@ sub event_handler_ReparentNotify {
 	    my $parent = $dock->{parent};
 	    printf STDERR "::: RESTORED: dockapp = 0x%x (%d) from parent 0x%x (%d)\n",$xid,$xid,$parent,$parent;
 	    if (delete $dock->{withdrawing}) {
+		$dock->{needsremap} = 1;
 		printf STDERR "::: ACQUIRED: dockapp = 0x%x (%d)\n",$xid,$xid;
 		$win = $dock;
 		if (my $iid = $dock->{icon_window}) {
@@ -956,6 +1031,7 @@ sub event_handler_ReparentNotify {
 	    my $parent = $icon->{parent};
 	    printf STDERR "::: RESTORED: iconwin = 0x%x (%d) from parent 0x%x (%d)\n",$xid,$xid,$parent,$parent;
 	    if (delete $icon->{withdrawing}) {
+		$icon->{needsremap} = 1;
 		printf STDERR "::: ACQUIRED: iconwin = 0x%x (%d)\n",$xid,$xid;
 		if (my $own = $icon->{owner}) {
 		    if ($win = $self->{dockapps}{$own}) {
@@ -1048,6 +1124,7 @@ sub event_handler_MapNotify {
     my ($e,$X,$v) = @_;
     printf STDERR "::: MapNotify: event=0x%x (%d) window=0x%x (%d) override_redirect=%s\n",
 	   $e->{event},$e->{event},$e->{window},$e->{window},$e->{override_redirect};
+    return if $self->{shuttingdown};
     # pekwm needs this
     my $xid = $e->{window};
     unless ($self->{dockapps}{$xid}) {
@@ -1073,6 +1150,7 @@ This action is currently commented out!
 sub event_handler_PropertyNotifyWM_HINTS {
     my $self = shift;
     my ($e,$X,$v) = @_;
+    return if $self->{shuttingdown};
 #    my $xid = $e->{window};
 #    unless ($self->{dockapps}{$xid}) {
 #	$self->test_window($X,$xid);
@@ -1080,6 +1158,46 @@ sub event_handler_PropertyNotifyWM_HINTS {
 }
 
 1;
+
+=back
+
+=head1 WINDOW MANAGERS
+
+Each XDE-supported window manager behaves a little differently when it
+comes to dock apps as follows:
+
+=over
+
+=item L<fluxbox(1)>
+
+=item L<blackbox(1)>
+
+=item L<openbox(1)>
+
+=item L<icewm(1)>
+
+=item L<jwm(1)>
+
+=item L<pekwm(1)>
+
+=item L<wmaker(1)>
+
+=item L<fvwm(1)>
+
+=item L<afterstep(1)>
+
+=item L<metacity(1)>
+
+=item L<wmx(1)>
+
+=item B<unknown>
+
+When B<XDE::Dock> encounters a window manager that it does not directly
+support, it falls back to default behaviour.  Default behavior is to
+look for toplevel windows and client windows in the C<_NET_CLIENT_LIST>
+that have an initial state of C<WithdrawnState> and perform ICCCM
+unmapping requests on their toplevels.
+
 
 =back
 

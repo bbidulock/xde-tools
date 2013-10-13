@@ -287,9 +287,15 @@ manages some quirks associated with each:
 =item L<fluxbox(1)>
 
 When L<fluxbox(1)> changes its style, it writes the new style in the
-C<sessionStyle> resource in the F<~/.fluxbox/init> file.  When
-B<xde-theme2> detects the style change, it attempts to change the
+C<sessionStyle> resource in the F<~/.fluxbox/init> file.
+
+When B<xde-theme2> detects the style change, it attempts to change the
 L<XDE(3pm)> style to a corresponding GTK2 style.
+
+When a theme change is requested, it alters the C<sessionStyle> resource
+in the F<~/.fluxbox/init> file and then asks L<fluxbox(1)> to restart.
+(Note that a reload is not sufficient because L<fluxbox(1)> does not
+effect a change its menu styles without a restart.)
 
 =item L<blackbox(1)>
 
@@ -297,8 +303,13 @@ L<blackbox(1)> is similar to L<fluxbox(1)>: it set the them in the
 F<~/.blackboxrc> file when changing themes; however, L<blackbox(1)>
 normally changes the background with every theme change, therefore, a
 change in the background image should also trigger a theme recheck.
+
 When B<xde-theme2> detects the style change, it attempts to change the
 L<XDE(3pm)> style to a corresponding GTK2 style.
+
+When a theme change is requested, B<xde-theme2> changes the
+C<sessionStyle> resource in the F<~/.blackboxrc> file and then asks
+L<blackbox(1)> to restart.
 
 =item L<openbox(1)>
 
@@ -308,33 +319,59 @@ property should trigger a recheck.  Note that L<openbox(1)> also sets
 the C<_OB_CONFIG_FILE> property on the root window when the
 configuration file differs from the default (but not otherwise).  Note
 that L<openbox(1)> also changes the C<theme> section in
-F<~/.config/rc.xml> and writes the file, but we don't need that.  When
-B<xde-theme2> detects a C<_OB_THEME> property change, it attempts to
-change the L<XDE(3pm)> style to a corresponding GTK2 style.
+F<~/.config/rc.xml> and writes the file, but we don't need that for
+detection.
+
+When B<xde-theme2> detects a C<_OB_THEME> property change, it attempts
+to change the L<XDE(3pm)> style to a corresponding GTK2 style.
+
+When a theme change is requested, B<xde-theme2> alters the C<theme>
+section in the F<~/.config/rc.xml> file and requests that L<openbox(1)>
+perform a reconfigure (this is performed by sending a C<ClientMessage>
+to the root window).
 
 =item L<icewm(1)>
 
 L<icewm(1)> sets the theme in its F<~/.icewm/theme> or
 F<$ICEWM_PRIVCFG/theme> file.  However, when L<icewm(1)> changes its
-theme it restarts, which results in a new C<_NET_SUPPORTING_WM_CHECK>
-window.  When B<xde-theme2> detects the style change in response to a
-change to the file or a window manager restart, it attempts to change
-the L<XDE(3pm)> style to a corresponding GTK2 style.
+theme it restarts, which results in a new
+C<_NET_SUPPORTING_WM_CHECK(WINDOW)> window.
+
+When B<xde-theme2> detects the style change in response to a change to
+the file or a window manager restart, it attempts to change the
+L<XDE(3pm)> style to a corresponding GTK2 style.
+
+When a theme change is requested, B<xde-theme2> changes the
+F<~/.icewm/theme> or F<ICEWM_PRIVCFG/theme> file and requests a restart
+from L<icewm(1)>.
 
 =item L<jwm(1)>
 
 When L<jwm(1)> changes its style, it rewrites F<~/.jwm/style> to include
-a new file and restarts.  When B<xde-theme2> detects the style change in
-respond to a change in the file or a window manager restart, it attempts
-to change the L<XDE(3pm)> style to a corresponding GTK2 style.
+a new file and restarts.
+
+When B<xde-theme2> detects the style change in response to a change in
+the file or a window manager restart, it attempts to change the
+L<XDE(3pm)> style to a corresponding GTK2 style.
+
+When a theme change is requested, B<xde-theme2> alters the
+F<~/.jwm/style> file and requests a reload or restart from L<jwm(1)>.
+Reloading L<jwm(1)> is effected by sending a C<_JWM_RELOAD>
+C<ClientMessage> to the root window; restart, using a C<_JWM_RESTART>
+message.  It is also possible to execute C<jwm -reload> or C<jwm
+-restart> to effect the same change.
 
 =item L<pekwm(1)>
 
 When L<pekwm(1)> changes its style, it places the theme directory into
 the F<~/.pekwm/config> file.  This file should be checked whenever the
-window manager starts or restarts.  When B<xde-theme2> detects the style
-change, it attempts to change the L<XDE(3pm)> style to a corresponding
-GTK2 style.
+window manager starts or restarts.
+
+When B<xde-theme2> detects the style change, it attempts to change the
+L<XDE(3pm)> style to a corresponding GTK2 style.
+
+When a theme change is requested, B<xde-theme2> alters the
+F<~/.pekwm/config> file and requests a restart from L<pekwm(1)>.
 
 =item L<wmaker(1)>
 

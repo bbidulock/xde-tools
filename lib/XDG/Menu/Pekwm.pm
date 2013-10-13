@@ -72,6 +72,7 @@ sub create {
     $text .= q(        Submenu = "Themes" { ).$self->icon('style')."\n";
     $text .= q(            Entry { Actions = "Dynamic $_PEKWM_SCRIPT_PATH/pekwm_themeset.sh $_PEKWM_THEME_PATH" })."\n";
     $text .= q(            Entry { Actions = "Dynamic $_PEKWM_SCRIPT_PATH/pekwm_themeset.sh ~/.pekwm/themes" })."\n";
+    $text .= q(            Entry { Actions = "Dynamic $_PEKWM_SCRIPT_PATH/pekwm_themeset.sh ~/.config/pekwm/themes" })."\n";
     $text .= q(        })."\n";
     $text .= q(        Submenu = "Window Managers" { ).$self->icon('gtk-quit')."\n";
     $text .= q(            Entry = "Blackbox" { ).$self->icon('blackbox').q(Actions = "RestartOther blackbox" })."\n";

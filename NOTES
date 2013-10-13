@@ -22,7 +22,7 @@ _NET_DESKTOP_NAMES: property, UTF8_STRING[]
 	Change the property at any time to change the
 	names of the desktops.
 
-_NET_DESKTOP_ACTIVE_WINDOW: window, [32] source_ind, timestamp, requestor
+_NET_ACTIVE_WINDOW: window, [32] source_ind, timestamp, requestor
 
 	Change the active window.
 
@@ -75,17 +75,19 @@ IceWM:	Sets _NET_SUPPORTING_WM_CHECK(WINDOW) appropriately.  Note that is sets
 	same window.  It sets _NET_WM_NAME(STRING) to "IceWM 1.3.7 (Linux
 	3.4.0-1-ARCH/x86_64)" or some such.  Extract the first word of the
 	string for the actual name.  Note that _NET_WM_NAME should be
-	(UTF8_STRING) instead of (STRING).  It sets _NET_WM_PID(CARDINAL) to the
-	pid of the window manager; however, it does not set
-	WM_CLIENT_MACHINE(STRING) to the fully qualified domain name of the
-	window manager machine as required by the EWMH specification.
+	(UTF8_STRING) instead of (STRING) [this has been fixed].  It sets
+	_NET_WM_PID(CARDINAL) to the pid of the window manager; however, it does
+	not set WM_CLIENT_MACHINE(STRING) to the fully qualified domain name of
+	the window manager machine as required by the EWMH specification.
 
 Blackbox:
 	Blackbox is only EWMH compliant and is not ICCCM/WMH compliant.  It
 	properly sets _NET_SUPPORTING_WM_CHECK(WINDOW) on both the root and the
 	check window.  On the check window the only other thing it sets is
 	_NET_WM_NAME(UTF8_STRING) which is a proper UTF8_STRING with the single
-	word "Blackbox".
+	word "Blackbox". [It now sets _NET_WM_PID correctly, but still does not
+	set WM_CLIENT_MACHINE(STRING) to the fully qualified domain name of the
+	window manager machine.]
 
 Fluxbox:
 	Fluxbox is only EWMH compliant and is not ICCCM/WMH compilant.  It
@@ -96,6 +98,15 @@ Fluxbox:
 
 	Fluxbox also sets _BLACKBOX_PID(CARDINAL) on the root window.  (Gee,
 	blackbox doesn't!)
+
+	Fluxbox interns the _BLACKBOX_ATTRIBUTES atom and then does nothing
+	with it.  Fluxbox interns the _FLUXBOX_ACTION, _FLUXBOX_ACTION_RESULT
+	and _FLUXBOX_GROUP_LEFT atoms.  Actions are only possible when the
+	session.session0.allowRemoteActions resource is set to true.  They are
+	effected by changing the _FLUXBOX_ACTION(STRING) property on the root
+	window to reflect the new command.  The result is communicated by
+	fluxbox by setting the _FLUXBOX_ACTION_RESULT(STRING) property on the
+	root window with the result.
 
 Openbox:
 	Openbox is only EWMH compilant and is not ICCCM/WMH compliant.  It
@@ -143,7 +154,7 @@ JWM:
 	_NET_SUPPORTING_WM_CHECK(WINDOW) on both the root and the check window.
 	It properly sets _NET_WM_NAME(UTF8_STRING) on the check window (to
 	"JWM").  It does not properly set _NET_WM_PID(CARDINAL) on the check
-	window, or anywhere for that matter.  It does not set
+	window, or anywhere for that matter [it does now].  It does not set
 	WM_CLIENT_MACHINE(STRING) anywhere and there is no WM_CLASS(STRING) or
 	WM_NAME(STRING) on the check window.
 
@@ -182,107 +193,128 @@ WindowMaker:
 	communicate via the noticeboard.  It does set WM_ICON_SIZE(WM_ICON_SIZE)
 	per ICCCM to minimum 8x8, maximum 60x60, increment by 1x1.
 
+MetaCity:
+	Metacity still supports the _WIN_DESKTOP_BUTTON_PROXY(CARDINAL) window
+	from the GNOME window manager specification.
+
 
 SUPPORT:
 --------
+
+Current ICCCM support is as follows:
 
 Current EWMH support is as follows:
 
 .Item				JWM	Fluxbox	PeKWM	IceWM	Bbox	Wmaker	Openbox	FVWM	AStep	Mcity	Notes
 ----				---	-------	-----	-----	----	------	-------	----	-----			
 _NET_ACTIVE_WINDOW		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_CLIENT_LIST_STACKING	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
 _NET_CLIENT_LIST		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_CLIENT_LIST_STACKING	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
 _NET_CLOSE_WINDOW		Y	Y	Y	Y	Y	N	Y	Y	N	Y	(1)
 _NET_CURRENT_DESKTOP		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_DESKTOP_GEOMETRY		Y	Y	Y	N	N	Y	Y	Y	Y	Y
-_NET_DESKTOP_LAYOUT		-	-	Y	-	-	-	Y	-	N	Y	(4)
-_NET_DESKTOP_NAMES		Y	Y	Y	N	Y	Y	Y	Y	Y	Y	(2)
-_NET_DESKTOP_VIEWPORT		Y	Y	Y	N	N	Y	Y	Y	Y	Y	(3)
-_NET_FRAME_EXTENTS		Y	Y	N	N	N	Y	Y	Y	N	Y
-_NET_MOVERESIZE_WINDOW		Y	Y	N	N	Y	N	Y	Y	N	Y	(5)
+_NET_DESKTOP_GEOMETRY		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_DESKTOP_LAYOUT		-	-	Y	-	Y	-	Y	-	N	Y	(4)
+_NET_DESKTOP_NAMES		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	(2)
+_NET_DESKTOP_VIEWPORT		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	(3)
+_NET_FRAME_EXTENTS		Y	Y	N	Y	Y	Y	Y	Y	N	Y
+_NET_MOVERESIZE_WINDOW		Y	Y	N	Y	Y	N	Y	Y	N	Y	(5)
 _NET_NUMBER_OF_DESKTOPS		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	(23)
+_NET_PROPERTIES			-	-	-	-	-	-	-	-	-	-
 _NET_REQUEST_FRAME_EXTENTS	Y	Y	N	N	N	N	Y	N	N	Y
-_NET_RESTACK_WINDOW		N	Y	N	N	N	N	Y	Y	N	Y
-_NET_SHOWING_DESKTOP		Y	N	N	N	N	Y	Y	N	N	Y	(6)
-_NET_STARTUP_ID			N	N	N	N	N	N	Y	N	N	Y	(7)
-_NET_SUPPORTED			Y	-	Y	Y	-	-	-	Y	Y	-	(8)
-_NET_SUPPORTING_WM_CHECK	Y	Y	Y	Y	X	Y	Y	Y	Y	Y	(9)
-_NET_SYSTEM_TRAY_OPCODE		X	-	-	-	-	-	-	-	-	-	(10)
+_NET_RESTACK_WINDOW		N	Y	N	Y	N	N	Y	Y	N	Y
+_NET_SHOWING_DESKTOP		Y	N	N	Y	Y	Y	Y	N	N	Y	(6)
+_NET_STARTUP_ID			N	N	N	N	Y	N	Y	N	N	Y	(7)
+_NET_STARTUP_INFO		-	-	-	-	-	-	-	-	-	-
+_NET_STARTUP_INFO_BEGIN		-	-	-	-	-	-	-	-	-	-
+_NET_SUPPORTED			Y	-	Y	Y	Y	-	-	Y	Y	-	(8)
+_NET_SUPPORTING_WM_CHECK	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	(9)
+_NET_SYSTEM_TRAY_MESSAGE_DATA	-	-	-	Y	-	-	-	-	-	-
+_NET_SYSTEM_TRAY_OPCODE		X	-	-	Y	-	-	-	-	-	-	(10)
+_NET_SYSTEM_TRAY_ORIENTATION	-	-	-	N	-	-	-	-	-	-
+_NET_SYSTEM_TRAY_VISUAL		-	-	-	N	-	-	-	-	-	-
 _NET_VIRTUAL_ROOTS		-	-	-	-	-	-	-	X	X	-	(11)
-_NET_WM_ACTION_ABOVE		Y	N	N	N	N	N	Y	N	N	Y
-_NET_WM_ACTION_BELOW		Y	N	N	N	N	N	Y	N	N	Y
-_NET_WM_ACTION_CHANGE_DESKTOP	Y	Y	Y	N	Y	Y	Y	Y	N	Y
-_NET_WM_ACTION_CLOSE		Y	Y	Y	N	Y	Y	Y	Y	N	Y
-_NET_WM_ACTION_FULLSCREEN	Y	Y	Y	N	Y	Y	Y	Y	N	Y
-_NET_WM_ACTION_MAXIMIZE_HORZ	Y	Y	Y	N	Y	Y	Y	Y	N	Y
-_NET_WM_ACTION_MAXIMIZE_VERT	Y	Y	Y	N	Y	Y	Y	Y	N	Y
-_NET_WM_ACTION_MINIMIZE		Y	Y	Y	N	Y	Y	Y	Y	N	Y
-_NET_WM_ACTION_MOVE		Y	Y	Y	N	Y	Y	Y	Y	N	Y
-_NET_WM_ACTION_RESIZE		Y	Y	Y	N	Y	Y	Y	Y	N	Y
-_NET_WM_ACTION_SHADE		Y	Y	Y	N	Y	Y	Y	Y	N	Y
-_NET_WM_ACTION_STICK		Y	Y	Y	N	N	Y	N	Y	N	Y
-_NET_WM_ALLOWED_ACTIONS		Y	Y	Y	N	Y	Y	Y	Y	N	Y
+_NET_WM_ACTION_ABOVE		Y	N	N	Y	Y	N	Y	N	N	Y
+_NET_WM_ACTION_BELOW		Y	N	N	Y	Y	N	Y	N	N	Y
+_NET_WM_ACTION_CHANGE_DESKTOP	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_ACTION_CLOSE		Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_ACTION_FULLSCREEN	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_ACTION_MAXIMIZE_HORZ	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_ACTION_MAXIMIZE_VERT	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_ACTION_MINIMIZE		Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_ACTION_MOVE		Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_ACTION_RESIZE		Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_ACTION_SHADE		Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_ACTION_STICK		Y	Y	Y	Y	Y	Y	N	Y	N	Y
+_NET_WM_ALLOWED_ACTIONS		Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_BYPASS_COMPOSITOR	-	-	-	-	-	-	-	-	-	-
 _NET_WM_DESKTOP			Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
 _NET_WM_FULL_PLACEMENT		-	-	-	-	-	-	X	-	-		(12)
-_NET_WM_FULLSCREEN_MONITORS	N	N	N	N	N	N	N	N	N	Y
-_NET_WM_HANDLED_ICONS		-	-	-	-	-	Y	-	N*	-		(13)
+_NET_WM_FULLSCREEN_MONITORS	N	N	N	Y	Y	N	N	N	N	Y
+_NET_WM_HANDLED_ICONS		Y	-	-	Y-	Y	Y	-	N*	-		(13)
 _NET_WM_ICON_GEOMETRY		-	-	-	-	-	Y	Y	Y	-	Y	(14)
-_NET_WM_ICON_NAME		-	Y	Y	-	Y	Y	Y	Y	N	Y	(15)
-_NET_WM_ICON			Y	Y	Y	N	N	Y	Y	Y	Y	Y
-_NET_WM_MOVERESIZE		N	Y	N	N	N	N	Y	Y	N	Y
-_NET_WM_NAME			Y	Y	Y	-	Y	Y	Y	Y	Y	Y	(16)
-_NET_WM_PID			Y	N	Y	N	N	N	Y	Y	Y	Y	(17)
+_NET_WM_ICON_NAME		-	Y	Y	Y	Y	Y	Y	Y	N	Y	(15)
+_NET_WM_ICON			Y	Y	Y	Y	-	Y	Y	Y	Y	Y
+_NET_WM_MOVERESIZE		N	Y	N	Y	N	N	Y	Y	N	Y
+_NET_WM_MOVERESIZE_CANCEL	-	-	-	-	-	-	-	-	-	-
+_NET_WM_NAME			Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	(16)
+_NET_WM_OPAQUE_REGION		-	-	-	-	-	-	-	-	-	-
+_NET_WM_PID			Y	N	Y	Y	Y	N	Y	Y	Y	Y	(17)
 _NET_WM_PING			-	-	-	-	-	-	X	-	Y	Y	(18)
+_NET_WM_STATE			Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
 _NET_WM_STATE_ABOVE		Y	Y	Y	Y	Y	Y	Y	N*	N	Y	(21)
 _NET_WM_STATE_BELOW		Y	Y	Y	Y	Y	Y	Y	Y	N	Y
-_NET_WM_STATE_DEMANDS_ATTENTION	N	Y	Y	N	N	N	Y	N	N	Y	(19)
+_NET_WM_STATE_DEMANDS_ATTENTION	Y	Y	Y	Y	Y	N	Y	N	N	Y	(19)
+_NET_WM_STATE_FOCUSED		N	N	N	-	Y	N	N	N	N	N
 _NET_WM_STATE_FULLSCREEN	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
-_NET_WM_STATE_HIDDEN		Y	Y	Y	N	Y	Y	Y	Y	N	Y
+_NET_WM_STATE_HIDDEN		Y	Y	Y	Y	Y	Y	Y	Y	N	Y
 _NET_WM_STATE_MAXIMIZED_HORZ	Y	Y	Y	Y	Y	Y	Y	Y*	Y	Y	(20)
 _NET_WM_STATE_MAXIMIZED_VERT	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_WM_STATE_MODAL		N	Y	Y	N	Y	N	Y	Y	Y	Y
+_NET_WM_STATE_MODAL		N	Y	Y	Y-	Y	N	Y	Y	Y	Y
 _NET_WM_STATE_SHADED		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_WM_STATE_SKIP_PAGER	Y	N	Y	N	Y	Y	Y	Y	N	Y
+_NET_WM_STATE_SKIP_PAGER	Y	N	Y	Y	Y	Y	Y	Y	N	Y
 _NET_WM_STATE_SKIP_TASKBAR	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_WM_STATE_STICKY		Y	Y	Y	N	N	Y	N	Y	Y	Y
-_NET_WM_STATE			Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_WM_STRUT_PARTIAL		Y	N	N	N	N	N	Y	N	N	Y
+_NET_WM_STATE_STICKY		Y	Y	Y	Y	Y	Y	N	Y	Y	Y
 _NET_WM_STRUT			Y	Y	Y	Y	Y	Y	Y	Y	N	Y
-_NET_WM_SYNC_REQUEST_COUNTER	N	N	N	N	N	N	Y	N	N	N
+_NET_WM_STRUT_PARTIAL		Y	N	N	Y	Y	N	Y	N	N	Y
 _NET_WM_SYNC_REQUEST		N	N	N	N	N	N	Y	N	N	N
-_NET_WM_USER_TIME		N	N	N	N	N	N	Y	N	N	Y
-_NET_WM_USER_TIME_WINDOW	N	N	N	N	N	N	N	N	N	Y
-_NET_WM_VISIBLE_ICON_NAME	Y	N	Y	N	Y	N	Y	N*	N	N	* misspelt
-_NET_WM_VISIBLE_NAME		Y	N	Y	N	Y	N	Y	Y	N	N
+_NET_WM_SYNC_REQUEST_COUNTER	N	N	N	N	N	N	Y	N	N	N
+_NET_WM_USER_TIME		Y	N	N	Y	Y	N	Y	N	N	Y
+_NET_WM_USER_TIME_WINDOW	Y	N	N	Y	Y	N	N	N	N	Y
+_NET_WM_VISIBLE_ICON_NAME	Y	N	Y	Y	Y	N	Y	N*	N	N	* misspelt
+_NET_WM_VISIBLE_NAME		Y	N	Y	Y	Y	N	Y	Y	N	N
 _NET_WM_WINDOW_OPACITY		-	-	Y	-	-	-	-	-	-	-	non-standard
+_NET_WM_WINDOW_TYPE		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_WM_WINDOW_TYPE_COMBO	N	N	N	Y	Y	N	N	N	N	N
 _NET_WM_WINDOW_TYPE_DESKTOP	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_WM_WINDOW_TYPE_DIALOG	Y	Y	Y	N	Y	Y	Y	Y	Y	Y
+_NET_WM_WINDOW_TYPE_DIALOG	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_WM_WINDOW_TYPE_DND		N	N	N	Y	Y	N	N	N	N	N
 _NET_WM_WINDOW_TYPE_DOCK	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_WM_WINDOW_TYPE_MENU	Y	Y	Y	N	Y	Y	Y	Y	Y	Y
-_NET_WM_WINDOW_TYPE_NORMAL	Y	Y	Y	N	Y	Y	Y	Y	Y	Y
-_NET_WM_WINDOW_TYPE_NOTIFICATION Y	N	N	N	N	N	N	Y	N	N
+_NET_WM_WINDOW_TYPE_DROPDOWN_MENU N	N	N	Y	Y	N	N	N	N	N
+_NET_WM_WINDOW_TYPE_MENU	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_WM_WINDOW_TYPE_NORMAL	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_WM_WINDOW_TYPE_NOTIFICATION Y	N	N	Y	Y	N	N	Y	N	N
+_NET_WM_WINDOW_TYPE_POPUP_MENU	N	N	N	Y	Y	N	N	N	N	N
 _NET_WM_WINDOW_TYPE_SPLASH	Y	Y	Y	Y	Y	Y	Y	N	N	Y
-_NET_WM_WINDOW_TYPE_TOOLBAR	Y	Y	Y	N	Y	Y	Y	Y	Y	Y
-_NET_WM_WINDOW_TYPE_UTILITY	Y	N	Y	N	Y	Y	Y	N	N	Y
-_NET_WM_WINDOW_TYPE		Y	Y	Y	N	Y	Y	Y	Y	Y	Y
-_NET_WORKAREA			Y	Y	Y	N	Y	N	Y	Y	N	Y
-------------------------------	---	---	---	---	---	---	---	---	---
-Total N				10N     16N     16N	46N	22N	21N	 5N	20N	42N	5N
-Total Y				58Y     52Y     55Y	21Y	45Y	49Y	65Y	52Y	29Y	66Y
-------------------------------	---	---	---	---	---	---	---	---	---
-Total				75	75	75	75	75	75	75	75	75
+_NET_WM_WINDOW_TYPE_TOOLBAR	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_WM_WINDOW_TYPE_TOOLTIP	N	N	N	Y	Y	N	N	N	N	N
+_NET_WM_WINDOW_TYPE_UTILITY	Y	N	Y	Y	Y	Y	Y	N	N	Y
+_NET_WORKAREA			Y	Y	Y	Y	Y	N	Y	Y	N	Y
+------------------------------	---	---	---	---	---	---	---	---	---	---
+Total N				14N	22N	22N	 6N	 6N	27N	11N	26N	48N	11N
+Total Y				62Y	52Y	55Y	73Y	71Y	48Y	65Y	52Y	29Y	66Y
+------------------------------	---	---	---	---	---	---	---	---	---	---
+Total				80	80	80	80	80	80	80	80	80	80
 
-Metacity    66 Y     5 N
-Openbox	    65 Y     5 N
-JWM	    58 Y    10 N
-PeKWM	    55 Y    16 N
-Fluxbox	    52 Y    16 N
-FVWM	    52 Y    20 N
-Wmaker	    49 Y    21 N
-Blackbox    45 Y    22 N
-AfterStep   29 Y    42 N
-IceWM	    21 Y    46 N
+Blackbox    71 Y     6 N	(http://github.com/bbidulock/blackboxwm)
+IceWM	    73 Y     6 N	(http://github.com/bbidulock/icewm)
+Metacity    66 Y    11 N
+Openbox	    65 Y    11 N
+JWM	    62 Y    13 N	(http://github.com/joewing/jwm)
+PeKWM	    55 Y    22 N
+Fluxbox	    52 Y    22 N
+FVWM	    52 Y    26 N
+Wmaker	    49 Y    27 N
+AfterStep   29 Y    48 N
 
 Notes:
 ------
@@ -293,16 +325,16 @@ Notes:
 ( 2) IceWM does not report support for _NET_DESKTOP_NAMES but does
      support _WIN_WORKSPACE_NAMES.
 
-( 3) IceWM and Blackbox do not support _NET_DESKTOP_VIEWPORT, but neither
-     support large desktops and this should be an array of (0,0) for each
-     desktop anyway.
+( 3) IceWM does not support _NET_DESKTOP_VIEWPORT [fixed], but neither support
+     large desktops and this should be (0,0) anyway.  Some set (0,0) for each
+     desktop, others just set (0,0).  Either is sufficient.
  
 ( 4) _NET_DESKTOP_LAYOUT is for pagers and does not need to be supported
      by window managers that do not visually represent desktop cycling.
 
-( 5) PeKWM, IceWM and WindowMaker do not support _NET_MOVERESIZE_WINDOW.
-     The fallback used by wmctrl is to move and resize the window using
-     X11 protocol directly without regard to gravity.
+( 5) PeKWM, IceWM and WindowMaker do not support _NET_MOVERESIZE_WINDOW [fixed
+     for IceWM].  The fallback used by wmctrl is to move and resize the window
+     using X11 protocol directly without regard to gravity.
 
 ( 6) IceWM has a show the desktop mode but does not support or report it
      using EWMH.
@@ -311,10 +343,10 @@ Notes:
      and need not be directly supported by the window manager.
 
 ( 8) Some WMs (JWM, PekWM, IceWM, FVWM) report _NET_SUPPORTED in
-     _NET_SUPPORTED.  It is unnecessary.
+     _NET_SUPPORTED.  It is unnecessary, but does not cause problems.
 
 ( 9) Blackbox does not report support for _NET_SUPPORTING_WM_CHECK but
-     it, of course, supports it.
+     it, of course, supports it.  UPDATE: Support has been added.
 
 (10) It is not necessary for window managers to advertize support for
      _NET_SYSTEM_TRAY_OPCODE, it is the responsibility of the tray
@@ -327,10 +359,9 @@ Notes:
 (12) It is not necessary for a window manager to report
      _NET_WM_FULL_PLACEMENT, although Openbox does.
 
-(13) Only WindowMaker and FVWM support icon mini-windows and are the
-     only two that need to report support for _NET_WM_HANDLED_ICONS.
-     Note, however, that FVWM misspells this as _NET_WM_HANDLED_ICON
-     (missing the trailing `S').
+(13) Only IceWM, WindowMaker and FVWM support icon mini-windows and are the only
+     ones that need to report support for _NET_WM_HANDLED_ICONS.  Note, however,
+     that FVWM misspells this as _NET_WM_HANDLED_ICON (missing the trailing `S').
 
 (14) Only window managers that support animation of iconification
      should report support for _NET_WM_ICON_GEOMETRY.
@@ -343,23 +374,28 @@ Notes:
      window nor the check window), but does set _BLACKBOX_PID on the root window
      to the process ID of the window manager.
 
-     IceWM does not advertise support for _NET_WM_PID in _NET_SUPPORTED but
-     propertly sets the _NET_WM_PID on the check window to the PID of the window
-     manager.
+     IceWM does not advertise support for _NET_WM_PID in _NET_SUPPORTED [fixed]
+     but propertly sets the _NET_WM_PID on the check window to the PID of the
+     window manager.
 
 (18) _NET_WM_PING should not be used on the root window, but Openbox does.
 
-(19) _NET_WM_STATE_DEMANDS_ATTENTION is marked as a TODO in IceWM code.
-     Blackbox defines the atom but does not do anything with it.  Simply not
-     supported by FVWM.  WindowMaker does not even define the atom, but should
-     be able to support it (by bouncing app icons).  Note that a taskbar could
-     support this separate from the window manager.
+(19) _NET_WM_STATE_DEMANDS_ATTENTION is marked as a TODO in IceWM code [UPDATE:
+     IceWM now fully supported _NET_WM_STATE_DEMANDS_ATTENTION].  Blackbox
+     defines the atom but does not do anything with it. (UDPATE: Blackbox now
+     fully supports _NET_WM_STATE_DEMANDS_ATTENTION.)  Simply not supported by
+     FVWM.  WindowMaker does not even define the atom, but should be able to
+     support it (by bouncing app icons).  Note that a taskbar could support this
+     separate from the window manager.
 
 (20) FVWM uses both _NET_WM_STATE_MAXIMIZED_HORIZ as well as
-     _NET_WM_STATE_MAXIMIXED_HORZ.  This is a bug.
+     _NET_WM_STATE_MAXIMIXED_HORZ.  This is a bug?  The Win/WM specification
+     had a bit field for WM_STATE_MAXIMIZED_HORIZ.
 
-(21) FVWM supports _NET_WM_STATE_STAYS_ON_TOP which is just a misspelling of
-     _NET_WM_STATE_ABOVE.
+(21) FVWM also supports _NET_WM_STATE_STAYS_ON_TOP which it turns out is an old
+     KDE hack that was the same _NET_WM_STATE_ABOVE, should have had _KDE_ in
+     front of it, and was deprecated in favor of _NET_WM_STATE_ABOVE; see:
+     http://quickgit.kde.org/?p=kde-workspace.git&a=blob&f=kwin%2FCOMPLIANCE
 
 (22) FVWM misspells _NET_WM_VISIBLE_ICON_NAME as _NET_WM_ICON_VISIBLE_NAME.
 
@@ -377,10 +413,10 @@ WMH is FVWM.
 Item				JWM	Fluxbox	PeKWM	IceWM	Bbox	Wmaker	Openbox	FVWM
 ----				---	-------	-----	-----	----	------	-------	----
 _WIN_APP_STATE			-	-	-	N	-	-	-	N
-_WIN_AREA_COUNT			-	-	-	Y	-	-	-	Y
-_WIN_AREA			-	-	-	Y	-	-	-	Y
+_WIN_AREA_COUNT			-	-	-	Y*	-	-	-	Y
+_WIN_AREA			-	-	-	Y*	-	-	-	Y
 _WIN_CLIENT_LIST		-	-	-	Y	-	-	-	Y
-_WIN_DESKTOP_BUTTON_PROXY	-	-	-	Y	-	-	-	Y
+_WIN_DESKTOP_BUTTON_PROXY	-	-	-	Y*	-	-	-	Y
 _WIN_EXPANDED_SIZE		-	-	-	N	-	-	-	N
 _WIN_HINTS			-	-	-	Y	-	-	-	Y
 _WIN_ICONS			-	-	-	Y	-	-	-	N
@@ -398,5 +434,7 @@ Total N				-	-	-	 2 N	-	-	-	 5 N
 Total Y				-	-	-	14 Y	-	-	-	12 Y
 -------------------------	---	---	---	---	---	---	---	---
 Total				-	-	-	17	-	-	-	17
+
+* => supported but not included in _WIN_PROTOCOLS().
 
 vim: ft=README tw=80

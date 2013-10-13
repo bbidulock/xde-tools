@@ -55,6 +55,12 @@ sub _term {
 
 =item $style->B<set_style>(I<@styles>) => $result
 
+Sets the style for the window manager based on the currently running
+window manager and a knowledge of how to set styles/themes for the
+supported list of window managers: L<fluxbox(1)>, L<blackbox(1)>,
+L<icewm(1)>, L<jwm(1)>, L<pekwm(1)>, L<fvwm(1)>, L<wmaker(1)>,
+L<afterstep(1)>, L<metacity(1)>, L<wmx(1)>, none and unknown.
+
 =cut
 
 sub set_style {
@@ -73,9 +79,31 @@ sub set_style {
 
 =item $style->B<set_style_FLUXBOX>(I<@styles>) => $result
 
+When L<fluxbox(1)> changes the style, it writes the path to the new
+style in the C<session.styleFile> resource in the F<~/.fluxbox/init>
+file and then reloads the configuration.  Unlike other window managers,
+it reloads the configuration rather than restarting.  However,
+L<fluxbox(1)> has the problem that simply reloading the configuration
+does not result in a change to the menu styles (in particular just the
+font color), so a restart is likely required.
+
+Sending C<SIGUSR2> to the L<fluxbox(1)> PID provided in the
+C<_BLACKBOX_PID(CARDINAL)> property on the root window will result in a
+reconfigure of L<fluxbox(1)> (which is what L<fluxbox(1)> itself does
+when changing styles); sending C<SIGHUP>, a restart.
+
+Note that when L<fluxbox(1)> restarts, it does not change the
+C<_NET_SUPPORTING_WM_CHECK(WINDOW)> root window property but it does
+change the C<_BLACKBOX_PID(CARDINAL)> root window property, even if it
+is just to replace it with the same value again.
+
 =cut
 
 =item $style->B<set_style_BLACKBOX>(I<@styles>) => $result
+
+When L<blackbox(1)> changes the style, it writes the path to the new
+style in the C<session.styleFile> resource in the F<~/.blackboxrc> file
+and then reloads the configuration.  Unlike
 
 =cut
 
@@ -89,11 +117,90 @@ sub set_style {
 
 =item $style->B<set_style_JWM>(I<@styles>) => $result
 
+When L<jwm(1)> changes its style (the way we have it set up), it writes
+F<~/.jwm/style> to include a new file and restarts.  The L<jwm(1)> style
+file, F<~/.jwm/style> looks like:
+
+ <?xml version="1.0"?>
+ <JWM>
+    <Include>/usr/share/jwm/styles/Squared-blue</Include>
+ </JWM>
+
+The last component of the path is the theme name.  System styles are
+located in F</usr/share/jwm/styles>; user styles are located in
+F<~/.jwm/styles>.
+
+L<jwm(1)> can be reloaded or restarted by sending a C<_JWM_RELOAD> or
+C<_JWM_RESTART> C<ClientMessage> to the root window, or by executing
+C<jwm -reload> or C<jwm -restart>.
+
+L<xde-session(1p)> sets the environment variable C<JWM_CONFIG_FILE> to
+point to the primary configuration file; C<JWM_CONFIG_DIR> to point
+to the system configuration directory (default F</usr/share/jwm>);
+C<JWM_CONFIG_HOME> to point to the user configuration directory (default
+F<~/.jwm> but set under an L<xde-session(1p)> to F<~/.config/jwm>).
+
+Note that older versions of L<jwm(1)> do not provide tilde expansion in
+configuration files.
+
 =cut
+
+sub set_style_JWM {
+    my ($self,@styles) = @_;
+    my $style;
+    foreach (@styles) { if (-f $_) { $style = $_; last; } }
+    return unless $style;
+    my $dir = $ENV{JWM_CONFIG_HOME};
+    $dir = "$ENV{HOME}/.jwm" unless $dir;
+    my $file = "$dir/style";
+    return unless -f $file;
+    open(my $fh, ">", $file) or return;
+    print $fh<<EOF
+<?xml version="1.0"?>
+<JWM>
+   <Include>$style</Include>
+</JWM>
+EOF
+    close $fh;
+    my $X = $self->{X};
+    $X->SendEvent($X->root,0,
+	    $X->pack_event_mask(qw(
+		    SubstructureRedirect
+		    SubstructureNotify)),
+	    $X->pack_event(
+		name=>'ClientMessage',
+		window=>$X->root,
+		format=>32,
+		type=>$X->atom('_JWM_RESTART'),
+		data=>pack('LLLLL',0,0,0,0,0),
+		));
+    $X->flush;
+}
 
 =item $style->B<set_style_PEKWM>(I<@styles>) => $result
 
+When L<pekwm(1)> changes its style, it places the theme directory in the
+F<~/.pekwm/config> file.  This normally has the form:
+
+ Files {
+     Theme = "/usr/share/pekwm/themes/Airforce"
+ }
+
+The last component of the path is the theme name.  System styles are
+located in F</usr/share/pekwm/themes>; user styles are located in
+F<~/.pekwm/themes>.
+
+L<pekwm(1)> can be restarted by sending a C<SIGHUP> signal to the
+L<pekwm(1)> process.  L<pekwm(1)> sets its pid in the
+C<_NET_WM_PID(CARDINAL)> property on the root window (not the check
+window) as well as the fqdn of the host in the
+C<WM_CLIENT_MACHINE(STRING)> property, again on the root window.  The
+L<XDE::EWMH(3pm)> module figures this out.
+
 =cut
+
+sub set_style_PEKWM {
+}
 
 =item $style->B<set_style_FVWM>(I<@styles>) => $result
 
@@ -127,7 +234,7 @@ sub set_style {
 
 =item $style->B<check_style>() => $result
 
-Gets the them according to the current window manager, checks for a
+Gets the theme according to the current window manager, checks for a
 theme change, and coordinates a theme change when necessary.
 
 =cut
@@ -260,7 +367,7 @@ sub check_style_OPENBOX {
 Checks the style reported by the L<icewm(1)> window manager.
 
 When L<icewm(1)> changes its theme it restarts, which results in a new
-C<_NET_SUPPORTING_WM_CHECK> window, which invokes this internal
+C<_NET_SUPPORTING_WM_CHECK(WINDOW)> window, which invokes this internal
 function.  L<icewm(1)> changes the setting for the theme in its
 F<~/.icewm/theme> file (or C<$ICEWM_PRIVCFG/theme>) file.
 

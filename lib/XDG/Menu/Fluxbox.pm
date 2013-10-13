@@ -60,6 +60,7 @@ sub create {
 	$text .= sprintf "%s\n", '    [end]';
 	$text .= sprintf "%s\n", '    [submenu] (User Styles) {Choose a style...}';
 	$text .= sprintf "%s\n", '      [stylesdir] (~/.fluxbox/styles)';
+	$text .= sprintf "%s\n", '      [stylesdir] (~/.config/fluxbox/styles)';
 	$text .= sprintf "%s\n", '    [end]';
 	$text .= sprintf "%s\n", '    [submenu] (Backgrounds) {Set the Background}';
 	$text .= sprintf "%s\n", '      [exec] (Random Background) {fbsetbg -r /usr/share/fluxbox/backgrounds}';

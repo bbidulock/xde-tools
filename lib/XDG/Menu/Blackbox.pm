@@ -58,6 +58,7 @@ sub create {
 	$text .= sprintf "%s\n", '  [submenu] (Styles) {Choose a style...}';
 	$text .= sprintf "%s\n", '    [stylesdir] (/usr/share/blackbox/styles)';
 	$text .= sprintf "%s\n", '    [stylesdir] (~/.blackbox/styles)';
+	$text .= sprintf "%s\n", '    [stylesdir] (~/.config/blackbox/styles)';
 	$text .= sprintf "%s\n", '  [end]';
 	$text .= sprintf "%s\n", '  [submenu] (Window Managers)';
 	$text .= sprintf "%s\n", '    [restart] (Restart)';

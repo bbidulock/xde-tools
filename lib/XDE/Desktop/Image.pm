@@ -119,6 +119,8 @@ sub reread {
 
 1;
 
+__END__
+
 =back
 
 =head1 AUTHOR
@@ -130,7 +132,5 @@ Brian Bidulock <bidulock@cpan.org>
 L<XDE::Desktop(3pm)>, L<XDE::Desktop::Icon(3pm)>
 
 =cut
-
-__END__
 
 # vim: set sw=4 tw=72:

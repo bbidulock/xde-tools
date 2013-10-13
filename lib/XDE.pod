@@ -447,6 +447,19 @@ wide range of popular light-weight stacking window managers as follows:
 
 =over
 
+=item L<blackbox(1)> EWMH(45:22) WMH(0:17) [EWMH(71:6) WMH(0:17)]
+
+Blackbox is a good window manager: it is fast an light.  It has
+excellent EWMH/ICCCM support but has meager theme support.  It provides
+a simplistic panel and supports a I<slit> for dockapps.  It is no longer
+developed, but is stable and has few bugs.
+
+A version with enhanced EWMH support and bug fixes is available upstream
+from L<http://github.com/bbidulock/blackboxwm>.  This is the version
+that is recommended for use with I<XDE>: your mileage may vary on other
+versions of the blackbox window manager.  This recommended version is
+available for Arch Linux using the F<blackbox-git> AUR package.
+
 =item L<metacity(1)> EWMH(66:5) WMH(1:16)
 
 Metacity was the default window manager for I<Gnome2>.  Its has very broad
@@ -464,6 +477,35 @@ EWMH support and has adequate theme support.  It lacks support for a
 panel, but supports a I<dock> for dockapps.
 It is actively developed.
 
+=item L<icewm(1)> EWMH(21:46) WMH(14:2) [EWMH(65:15) WMH(14:2)]
+
+IceWM is a good window manager: it is fast and light and feature rich.
+It has basic EWMH/ICCCM support and good theme support.  It is one of
+the last window managers to fully suport WMH (likely just because it
+hasn't been removed yet)--FVWM is the other.  It provides an integrated
+panel but does not support dockapps.  It is no longer developed, but is
+stable and has few bugs.
+
+A version with greatly enhanced EWMH/ICCCM support and bug fixes is
+available upstream from L<http://github.com/bbidulock/icewm>.  This is
+the version that is recommended for use with I<XDE>: your mileage may vary
+on other version of the icewm window manager.  This recommended version
+is available for Arch Linux using the F<icewm-git> AUR package.
+
+=item L<jwm(1)> EWMH(50:18) WMH(0:17) [EWMH(62:13) WMH(0:17)]
+
+JWM is an excellent window manager.  It has good EWMH support but has
+little theme support.  It provides a basic but useful panel, but does
+not support dockapps.
+It is actively developed, but does not have a large supporting community.
+JWM does not support WMH.
+
+Recent versions provide broader EWMH support and are available from
+upstream at L<http://github.com/joewing/jwm>.  The latest version is
+recommended for use with I<XDE>: your mileage may vary with earlier
+versions of the jwm window manager.  The latest version is available for
+Arch Linux using the F<jwm-git> AUR package.
+
 =item L<pekwm(1)> EWMH(55:16) WMH(0:17)
 
 Pekwm is the default window manager for I<EDE>.  It has broad EWMH
@@ -479,14 +521,6 @@ has excellent theme support.  It provides a simple panel and supports a
 I<slit> for dockapps.
 It is actively developed.
 Fluxbox no longer supports WMH, but did in earlier releases.
-
-=item L<jwm(1)> EWMH(50:18) WMH(0:17)
-
-JWM is an excellent window manager.  It has good EWMH support but has
-little theme support.  It provides a basic but useful panel, but does
-not support dockapps.
-It is actively developed, but does not have a supporting community.
-JWM does not support WMH.
 
 =item L<fvwm(1)> EWMH(52:20) WMH(12:5)
 
@@ -508,13 +542,7 @@ but has meager theme support.  It does not provide a panel, but, instead
 supports a I<clip> and a I<dock>.  Along with FVWM, it is probably the
 best stand-alone sessionless window manager.
 It is actively developed.
-
-=item L<blackbox(1)> EWMH(45:22) WMH(0:17)
-
-Blackbox is a good window manager: it is fast an light.  It has good
-EWMH/ICCCM support but has meager theme support.  It provides a
-simplistic panel and supports a I<slit> for dockapps.
-It is no longer developed, but is stable and has few bugs.
+WindowMaker no longer supports WMH, but did in earlier releases.
 
 =item L<afterstep(1)> EWMH(29:42) WMH(?:17)
 
@@ -523,13 +551,19 @@ good theme support.  It provides a basic panel.  It can support dockapps
 by swallowing them into a I<wharf>.
 It is no longer developed.
 
-=item L<icewm(1)> EWMH(21:46) WMH(14:2)
+=item L<wmx(1)>
 
-IceWM is a good window manager: it is fast and light and feature rich.
-It has basic EWMH/ICCCM support and good theme support.  It is one of
-the last window managers to fully suport WMH. (FVWM is the other.)  It
-provides an integrated panel but does not support dockapps.
-It is no longer developed, but is stable and has few bugs.
+WMX is a light window manager.  It has basic ICCCM/EWMH support and has
+no theme support (just compiled-in preferences).  It does not support
+dockapps and only has meager root menu facilities.
+It appears to be no longer developed.
+
+A version with enhanced EWMH support and bug fixes (64-bit clean
+operation) is available upstream from
+L<http://github.com/bbidulock/wmx>.  This is the version that is
+recommended for use with I<XDE>: your mileage will vary on other
+versions of the wmx window manager.  This recommended version is
+available for Arch Linux using the I<wmx-git> AUR package.
 
 =back
 
@@ -557,3 +591,7 @@ possible.
 Brian Bidulock <bidulock@cpan.org>
 
 =head1 SEE ALSO
+
+=cut
+
+# vim: set tw=72 nocin nosi:

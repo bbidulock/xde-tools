@@ -150,6 +150,9 @@ sub themes {
 	    if (-f "$sdir/$f") {
 		push @sthemes, $f;
 	    }
+	    elsif (-f "$sdir/$f/style") {
+		push @sthemes, "$f/style";
+	    }
 	}
     }
     my @uthemes = ();
@@ -160,6 +163,24 @@ sub themes {
 	    if (-f "$udir/$f") {
 		push @uthemes, $f;
 	    }
+	    elsif (-f "$udir/$f/style") {
+		push @uthemes, "$f/style";
+	    }
+	}
+    }
+    my $conf = $ENV{XDG_CONFIG_HOME};
+    $conf = "$ENV{HOME}/.config" unless $conf;
+    my @xthemes = ();
+    my $xdir = "$conf/jwm/themes";
+    if (opendir (my $fh, $xdir)) {
+	foreach my $f (readdir($fh)) {
+	    next if $f eq '.' or $f eq '..';
+	    if (-f "$xdir/$f") {
+		push @xthemes, $f;
+	    }
+	    elsif (-f "$xdir/$f/style") {
+		push @xthemes, "$f/style";
+	    }
 	}
     }
     my $text = '';
@@ -167,13 +188,22 @@ sub themes {
 	my $icon = $self->icon('style');
 	$text .= "$indent<Menu ${icon}label=\"Themes\">\n";
 	foreach (sort @sthemes) {
-	    $text .= "$indent   <Program ${icon}label=\"".escape($_)."\">$base/setstyle $sdir/$_</Program>\n";
+	    my $label = $_; $label =~ s{/style$}{};
+	    $text .= "$indent   <Program ${icon}label=\"".escape($label)."\">$base/setstyle $sdir/$_</Program>\n";
 	}
 	if (@sthemes and @uthemes) {
 	    $text .= "$indent   <Separator/>\n";
 	}
 	foreach (sort @uthemes) {
-	    $text .= "$indent   <Program ${icon}label=\"".escape($_)."\">$base/setstyle $udir/$_</Program>\n";
+	    my $label = $_; $label =~ s{/style$}{};
+	    $text .= "$indent   <Program ${icon}label=\"".escape($label)."\">$base/setstyle $udir/$_</Program>\n";
+	}
+	if ((@sthemes or @uthemes) and @xthemes) {
+	    $text .= "$indent   <Separator/>\n";
+	}
+	foreach (sort @xthemes) {
+	    my $label = $_; $label =~ s{/style$}{};
+	    $text .= "$indent   <Program ${icon}label=\"".escape($label)."\">$base/setstyle $xdir/$_</Program>\n";
 	}
 	$text .= "$indent</Menu>\n";
     }
@@ -191,6 +221,9 @@ sub styles {
 	    if (-f "$sdir/$f") {
 		push @sstyles, $f;
 	    }
+	    elsif (-f "$sdir/$f/style") {
+		push @sstyles, "$f/style";
+	    }
 	}
     }
     my @ustyles = ();
@@ -201,6 +234,24 @@ sub styles {
 	    if (-f "$udir/$f") {
 		push @ustyles, $f;
 	    }
+	    elsif (-f "$udir/$f/style") {
+		push @ustyles, "$f/style";
+	    }
+	}
+    }
+    my $conf = $ENV{XDG_CONFIG_HOME};
+    $conf = "$ENV{HOME}/.config" unless $conf;
+    my @xstyles = ();
+    my $xdir = "$conf/jwm/styles";
+    if (opendir (my $fh, $xdir)) {
+	foreach my $f (readdir($fh)) {
+	    next if $f eq '.' or $f eq '..';
+	    if (-f "$xdir/$f") {
+		push @xstyles, $f;
+	    }
+	    elsif (-f "$xdir/$f/style") {
+		push @xstyles, "$f/style";
+	    }
 	}
     }
     my $text = '';
@@ -208,13 +259,22 @@ sub styles {
 	my $icon = $self->icon('style');
 	$text .= "$indent<Menu ${icon}label=\"Styles\">\n";
 	foreach (sort @sstyles) {
-	    $text .= "$indent   <Program ${icon}label=\"".escape($_)."\">$base/setstyle $sdir/$_</Program>\n";
+	    my $label = $_; $label =~ s{/style$}{};
+	    $text .= "$indent   <Program ${icon}label=\"".escape($label)."\">$base/setstyle $sdir/$_</Program>\n";
 	}
 	if (@sstyles and @ustyles) {
 	    $text .= "$indent   <Separator/>\n";
 	}
 	foreach (sort @ustyles) {
-	    $text .= "$indent   <Program ${icon}label=\"".escape($_)."\">$base/setstyle $udir/$_</Program>\n";
+	    my $label = $_; $label =~ s{/style$}{};
+	    $text .= "$indent   <Program ${icon}label=\"".escape($label)."\">$base/setstyle $udir/$_</Program>\n";
+	}
+	if ((@sstyles or @ustyles) and @xstyles) {
+	    $text .= "$indent   <Separator/>\n";
+	}
+	foreach (sort @xstyles) {
+	    my $label = $_; $label =~ s{/style$}{};
+	    $text .= "$indent   <Program ${icon}label=\"".escape($label)."\">$base/setstyle $xdir/$_</Program>\n";
 	}
 	$text .= "$indent</Menu>\n";
     }
