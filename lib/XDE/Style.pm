@@ -152,6 +152,7 @@ sub set_style_JWM {
     return unless $style;
     my $dir = $ENV{JWM_CONFIG_HOME};
     $dir = "$ENV{HOME}/.jwm" unless $dir;
+    $dir = "$self->XDG_CONFIG_HOME/jwm" unless -d $dir;
     my $file = "$dir/style";
     return unless -f $file;
     open(my $fh, ">", $file) or return;
