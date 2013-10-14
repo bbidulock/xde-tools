@@ -1,5 +1,5 @@
 package XDE::Style;
-use base qw(XDE::Actions);
+use base qw(XDE::Actions XDE::Dual);
 use Linux::Inotify2;
 use strict;
 use warnings;
@@ -81,11 +81,17 @@ sub set_style {
 
 When L<fluxbox(1)> changes the style, it writes the path to the new
 style in the C<session.styleFile> resource in the F<~/.fluxbox/init>
-file and then reloads the configuration.  Unlike other window managers,
-it reloads the configuration rather than restarting.  However,
-L<fluxbox(1)> has the problem that simply reloading the configuration
-does not result in a change to the menu styles (in particular just the
-font color), so a restart is likely required.
+file and then reloads the configuration.
+
+The C<session.styleFile> entry looks like:
+
+ session.styleFile:	/usr/share/fluxbox/styles/Airforce
+
+Unlike other window managers, it reloads the configuration rather than
+restarting.  However, L<fluxbox(1)> has the problem that simply
+reloading the configuration does not result in a change to the menu
+styles (in particular just the font color), so a restart is likely
+required.
 
 Sending C<SIGUSR2> to the L<fluxbox(1)> PID provided in the
 C<_BLACKBOX_PID(CARDINAL)> property on the root window will result in a
@@ -99,13 +105,86 @@ is just to replace it with the same value again.
 
 =cut
 
+sub set_style_FLUXBOX {
+    my ($self,@styles) = @_;
+    my $style;
+    foreach (@styles) { if (-f $_ or -f "$_/theme.cfg") { $style = $_; last; } }
+    return unless $style;
+    my $dir = $ENV{FLUXBOX_CONFIG_HOME};
+    $dir = "$ENV{HOME}/.fluxbox" unless $dir;
+    $dir = "$self->XDG_CONFIG_HOME/fluxbox" unless -d $dir;
+    my $file = "$dir/init";
+    return unless -f $file;
+    my @lines = ();
+    open(my $fh, "<", $file) or return;
+    while (<$fh>) { chomp;
+	if (/^session\.StyleFile:/) {
+	    push @lines, "session.StyleFile:\t$style";
+	} else {
+	    push @lines, $_;
+	}
+    }
+    close $fh;
+    open($fh, ">", $file) or return;
+    print $fh join("\n", @lines), "\n";
+    close $fh;
+    my $pid = $self->getWMRootPropertyInt('_BLACKBOX_PID');
+    return unless $pid;
+    kill 'USR2', $pid;
+}
+
 =item $style->B<set_style_BLACKBOX>(I<@styles>) => $result
 
 When L<blackbox(1)> changes the style, it writes the path to the new
 style in the C<session.styleFile> resource in the F<~/.blackboxrc> file
-and then reloads the configuration.  Unlike
+and then reloads the configuration.
+
+The C<session.styleFile> entry looks like:
+
+ session.styleFile:	/usr/share/fluxbox/styles/Airforce
+
+Unlike other window managers, it reloads the configuration rather than
+restarting.  Sending C<SIGUSR1> to the L<blackbox(1)> PID provided in
+the C<_NET_WM_PID> property on the C<_NET_SUPPORTING_WM_CHECK> window>
+will effect the reconfiguration that results in rereading of the style
+file.
 
 =cut
+
+sub set_style_BLACKBOX {
+    my ($self,@styles) = @_;
+    my $style;
+    foreach (@styles) { if (-f $_ or -f "$_/theme.cfg") { $style = $_; last; } }
+    return unless $style;
+    my $dir = $ENV{BLACKBOX_CONFIG_HOME};
+    $dir = $ENV{HOME} unless $dir;
+    $dir = "$self->XDG_CONFIG_HOME/blackbox" unless -d $dir;
+    my $file;
+    if ($dir eq $ENV{HOME}) {
+	$file = "$dir/.blackboxrc";
+    } else {
+	$file = "$dir/rc";
+    }
+    return unless -f $file;
+    my @lines = ();
+    open(my $fh, "<", $file) or return;
+    while (<$fh>) { chomp;
+	if (/^session\.StyleFile:/) {
+	    push @lines, "session.StyleFile:\t$style";
+	} else {
+	    push @lines, $_;
+	}
+    }
+    close $fh;
+    open($fh, ">", $file) or return;
+    print $fh join("\n", @lines), "\n";
+    close $fh;
+    my $window = $self->getWMRootPropertyInt('_NET_SUPPORTING_WM_CHECK');
+    return unless $window;
+    my $pid = $self->getWmPropertyInt($window, '_NET_WM_PID');
+    return unless $pid;
+    kill 'USR1', $pid;
+}
 
 =item $style->B<set_style_OPENBOX>(I<@styles>) => $result
 
@@ -113,7 +192,84 @@ and then reloads the configuration.  Unlike
 
 =item $style->B<set_style_ICEWM>(I<@styles>) => $result
 
+When L<icewm(1)> changes the style, it writes the new style to the
+F<~/.icewm/theme> or F<$ICEWM_PRIVCFG/theme> file and then restarts.
+The F<~/.icewm/theme> file looks like:
+
+ Theme="Penguins/default.theme"
+ #Theme="Airforce/default.theme"
+ ##Theme="Penguins/default.theme"
+ ###Theme="Pedestals/default.theme"
+ ####Theme="Penguins/default.theme"
+ #####Theme="Airforce/default.theme"
+ ######Theme="Archlinux/default.theme"
+ #######Theme="Airforce/default.theme"
+ ########Theme="Airforce/default.theme"
+ #########Theme="Airforce/default.theme"
+ ##########Theme="Penguins/default.theme"
+
+L<icewm(1)> cannot distinguish between system an user styles.  The theme
+name specifies a directory in the F</usr/share/icewm/themes>,
+F<~/.icewm/themes> or F<$ICEWM_PRIVCFG/themes> subdirectories.
+
+There are two ways to get L<icewm(1)> to reload the theme, one is to
+send a C<SIGHUP> to the window manager process.  The other is to send an
+C<_ICEWM_ACTION> client message to the root window:
+
 =cut
+
+use constant {
+    ICEWM_ACTION_NOP=>0,
+    ICEWM_ACTION_PING=>1,
+    ICEWM_ACTION_LOGOUT=>2,
+    ICEWM_ACTION_CANCEL_LOGOUT=>3,
+    ICEWM_ACTION_REBOOT=>4,
+    ICEWM_ACTION_SHUTDOWN=>5,
+    ICEWM_ACTION_ABOUT=>6,
+    ICEWM_ACTION_WINDOWLIST=>7,
+    ICEWM_ACTION_RESTARTWM=>8,
+};
+
+sub set_style_ICEWM {
+    my ($self,@styles) = @_;
+    my $style;
+    foreach (@styles) { if (-d $_ and -f "$_/default.theme") { $style = $_; last; } }
+    return unless $style;
+    my $theme = $style; $theme = s{^.*/}{};
+    my $dir = $ENV{ICEWM_PRIVCFG};
+    $dir = "$ENV{HOME}/.icewm" unless $dir;
+    $dir = "$self->XDG_CONFIG_HOME/icewm" unless -d $dir;
+    my $file = "$dir/theme";
+    return unless -f $file;
+    open(my $fh, "<", $file) or return;
+    my @lines = ("Theme=\"$theme/default.theme\"");
+    while (<$fh>) { chomp; push @lines "#$_"; }
+    close $fh;
+    open($fh, ">", $file) or return;
+    print $fh join("\n",@lines), "\n";
+    close $fh;
+    if (1) {
+	my $X = $self->{X};
+	$X->SendEvent($X->root,0,
+	    $X->pack_event_mask(qw(
+		SubstructureRedirect
+		SubstructureNotify)),
+	    $X->pack_event(
+		name=>'ClientMessage',
+		window=>$X->root,
+		format=>32,
+		type=>$X->atom('_ICEWM_ACTION'),
+		data=>pack('LLLLL',&ICEWM_ACTION_RESTARTWM,0,0,0,0),
+	    ));
+	$X->flush;
+    } else {
+	my $window = $self->getWMRootPropertyInt('_NET_SUPPORING_WM_CHECK');
+	return unless $window;
+	my $pid = $self->getWmPropertyInt($window=>_NET_WM_PID);
+	return unless $pid;
+	kill 'HUP', $pid;
+    }
+}
 
 =item $style->B<set_style_JWM>(I<@styles>) => $result
 
@@ -187,8 +343,9 @@ F<~/.pekwm/config> file.  This normally has the form:
      Theme = "/usr/share/pekwm/themes/Airforce"
  }
 
-The last component of the path is the theme name.  System styles are
-located in F</usr/share/pekwm/themes>; user styles are located in
+The last component of the path is the theme name.  The full path is to a
+directory which contains a F<theme> file.  System styles are located in
+F</usr/share/pekwm/themes>; user styles are located in
 F<~/.pekwm/themes>.
 
 L<pekwm(1)> can be restarted by sending a C<SIGHUP> signal to the
@@ -201,6 +358,27 @@ L<XDE::EWMH(3pm)> module figures this out.
 =cut
 
 sub set_style_PEKWM {
+    my ($self,@styles) = @_;
+    my $style;
+    foreach (@styles) { if (-d $_) { $style = $_; last; } }
+    return unless $style;
+    my $pid = $self->getWMRootPropertyInt('_NET_WM_PID');
+    return unless $pid;
+    my $dir = $ENV{PEKWM_CONFIG_HOME};
+    $dir = "$ENV{HOME}/.pekwm" unless $dir;
+    $dir = "$self->XDG_CONFIG_HOME/pekwm" unless -d $dir;
+    my $file = "$dir/config";
+    return unless -f $file;
+    open(my $fh, "<", $file) or return;
+    while (<$fh>) { chomp;
+	s/Theme = "[^"]*"/Theme = "$style"/ if /Theme = "[^"]*"/
+	push @lines, $_;
+    }
+    close $fh;
+    open($fh, ">", $file) or return;
+    print $fh join("\n",@lines), "\n";
+    close $fh;
+    kill 'HUP', $pid;
 }
 
 =item $style->B<set_style_FVWM>(I<@styles>) => $result
