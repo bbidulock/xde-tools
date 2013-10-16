@@ -833,7 +833,7 @@ sub get_NET_SUPPORTING_WM_CHECK {
 	# property on the check window.  fvwm is setting WM_NAME and
 	# WM_CLASS properly on the check window.
 	$self->getWM_CLASS($win);
-	$self->get_NET_WM_PID($win);
+	$self->{wmpid} = $self->get_NET_WM_PID($win);
 	# Note that fluxbox is setting _BLACKBOX_PID on the root window
 	# instead.  PeKWM is setting _NET_WM_PID, but on the root window
 	# instead.  IceWM sets it correctly on the check window.

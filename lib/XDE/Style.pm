@@ -1,5 +1,5 @@
 package XDE::Style;
-use base qw(XDE::Actions XDE::Dual);
+use base qw(XDE::Actions);
 use Linux::Inotify2;
 use strict;
 use warnings;
@@ -103,6 +103,17 @@ C<_NET_SUPPORTING_WM_CHECK(WINDOW)> root window property but it does
 change the C<_BLACKBOX_PID(CARDINAL)> root window property, even if it
 is just to replace it with the same value again.
 
+When L<XDE(3pm)> launches, it sets the C<FLUXBOX_CONFIG_FILE>
+environment variable.  L<XDE(3pm)> and associated tools will always
+launch L<fluxbox(1)> with a command such as:
+
+ fluxbox ${FLUXBOX_CONFIG_FILE:+-rc $FLUXBOX_CONFIG_FILE}
+
+The default configuration file when C<FLUXBOX_CONFIG_FILE> is not
+specified is F<~/.fluxbox/init>.  The locations of all other
+L<fluxbox(1)> configuration files are specified by the initial
+configuration file.
+
 =cut
 
 sub set_style_FLUXBOX {
@@ -110,11 +121,9 @@ sub set_style_FLUXBOX {
     my $style;
     foreach (@styles) { if (-f $_ or -f "$_/theme.cfg") { $style = $_; last; } }
     return unless $style;
-    my $dir = $ENV{FLUXBOX_CONFIG_HOME};
-    $dir = "$ENV{HOME}/.fluxbox" unless $dir;
-    $dir = "$self->XDG_CONFIG_HOME/fluxbox" unless -d $dir;
-    my $file = "$dir/init";
-    return unless -f $file;
+    my $file = $ENV{FLUXBOX_CONFIG_FILE};
+    $file = "$ENV{HOME}/.fluxbox/init" unless $file;
+    return unless $file and -f $file;
     my @lines = ();
     open(my $fh, "<", $file) or return;
     while (<$fh>) { chomp;
@@ -149,6 +158,17 @@ the C<_NET_WM_PID> property on the C<_NET_SUPPORTING_WM_CHECK> window>
 will effect the reconfiguration that results in rereading of the style
 file.
 
+When L<XDE(3pm)> launches, it sets the C<BLACKBOX_CONFIG_FILE>
+environment variable.  L<XDE(3pm)> and associated tools will always
+launch L<blackbox(1)> with a command such as:
+
+ blackbox ${BLACKBOX_CONFIG_FILE:+-rc $BLACKBOX_CONFIG_FILE}
+
+The default configuration file when C<BLACKBOX_CONFIG_FILE> is not
+specified is F<~/.blackboxrc>.  The locations of all other
+L<blackbox(1)> configuration files are specified by the initial
+configuration file.
+
 =cut
 
 sub set_style_BLACKBOX {
@@ -156,16 +176,9 @@ sub set_style_BLACKBOX {
     my $style;
     foreach (@styles) { if (-f $_ or -f "$_/theme.cfg") { $style = $_; last; } }
     return unless $style;
-    my $dir = $ENV{BLACKBOX_CONFIG_HOME};
-    $dir = $ENV{HOME} unless $dir;
-    $dir = "$self->XDG_CONFIG_HOME/blackbox" unless -d $dir;
-    my $file;
-    if ($dir eq $ENV{HOME}) {
-	$file = "$dir/.blackboxrc";
-    } else {
-	$file = "$dir/rc";
-    }
-    return unless -f $file;
+    my $file = $ENV{BLACKBOX_CONFIG_FILE};
+    $file = "$ENV{HOME}/.blackboxrc" unless $file;
+    return unless $file and -f $file;
     my @lines = ();
     open(my $fh, "<", $file) or return;
     while (<$fh>) { chomp;
@@ -188,7 +201,37 @@ sub set_style_BLACKBOX {
 
 =item $style->B<set_style_OPENBOX>(I<@styles>) => $result
 
+When L<openbox(1)> changes its theme, it changes the C<_OB_THEME>
+property on the root window.  L<openbox(1)> also changes the C<theme>
+section in F<~/.config/openbox/rc.xml> and writes the file and performs
+a reconfigure.
+
+L<openbox(1)> sets the C<_OB_CONFIG_FILE> property on the root window
+when the configuration file differs from the default (but not otherwise).
+
+L<openbox(1)> does not provide internal actions for setting the theme:
+it uses an external theme setting program that communicates with the
+window manager.
+
+L<openbox(1)> can be reconfigured by sending an C<_OB_CONTROL> message
+to the root window with a control type in C<data.l[0]>.  The control
+type can be one of:
+
+ OB_CONTROL_RECONFIGURE    1   reconfigure
+ OB_CONTROL_RESTART        2   restart
+ OB_CONTROL_EXIT           3   exit
+
 =cut
+
+use constant {
+    OB_CONTROL_RECONFIGURE=>1,
+    OB_CONTROL_RESTART=>2,
+    OB_CONTROL_EXIT=>3,
+};
+
+sub set_style_OPENBOX {
+    my ($self,@styles) = @_;
+}
 
 =item $style->B<set_style_ICEWM>(I<@styles>) => $result
 
@@ -364,11 +407,14 @@ sub set_style_PEKWM {
     return unless $style;
     my $pid = $self->getWMRootPropertyInt('_NET_WM_PID');
     return unless $pid;
-    my $dir = $ENV{PEKWM_CONFIG_HOME};
-    $dir = "$ENV{HOME}/.pekwm" unless $dir;
-    $dir = "$self->XDG_CONFIG_HOME/pekwm" unless -d $dir;
-    my $file = "$dir/config";
-    return unless -f $file;
+    my $file = $ENV{PEKWM_CONFIG_FILE};
+    unless ($file and -f $file) {
+	my $dir = $ENV{PEKWM_CONFIG_HOME};
+	$dir = "$ENV{HOME}/.pekwm" unless $dir;
+	$dir = "$self->XDG_CONFIG_HOME/pekwm" unless -d $dir;
+	$file = "$dir/config";
+    }
+    return unless $file and -f $file;
     open(my $fh, "<", $file) or return;
     while (<$fh>) { chomp;
 	s/Theme = "[^"]*"/Theme = "$style"/ if /Theme = "[^"]*"/

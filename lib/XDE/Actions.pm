@@ -9,7 +9,7 @@ XDE::Actions -- provides methods for controlling window manager behaviour.
 
 =head1 DESCRIPTION
 
-Provides a modules with methods that can be used to control a window manager.
+Provides a module with methods that can be used to control a window manager.
 This module is meant to be used as a base for other modules.  It
 supports actions performable using either EWMH or WMH specifications.
 
@@ -79,6 +79,180 @@ sub setup {
     } else {
 	warn "==> No support for WMH!";
     }
+}
+
+=back
+
+=head2 Getting the window manager PID
+
+=over
+
+=item $ewmh->B<get_pid>() => $pid
+
+Gets the PID (process identifier) associated with the window manager.
+This should only be called after get_NET_SUPPORTING_WM_CHECK().  It uses
+the window manager name to choose the method to use to determine the
+window manager process id.
+
+=cut
+
+sub get_pid {
+    my $self = shift;
+    my $wmname = $self->{wmname};
+    $wmname = 'unknown' unless $wmname;
+    my $sub = $self->can("get_pid_\U$wmname\E");
+    $self->{wmpid} = undef;
+    $self->{wmpid} = &$sub($self) if $sub;
+    return $self->{wmpid};
+}
+
+=item $ewmh->B<get_pid_FLUXBOX>() => $pid
+
+L<fluxbox(1)> does not set C<_NET_WM_PID> on the support window, but
+does set C<_BLACKBOX_PID(CARDINAL)> on the root window to the pid of the
+window manager process.  C<_BLACKBOX_PID(CARDINAL)> should only be
+checked after a successful call to get_NET_SUPPORTING_WM_CHECK(),
+because, otherwise, the C<_BLACKBOX_PID> property might be hanging
+around from a crashed L<fluxbox(1)> process.
+
+=cut
+
+sub get_pid_FLUXBOX {
+    my $self = shift;
+    return $self->{wmpid} if $self->{wmpid};
+    $self->{wmpid} = $self->getWMRootPropertyInt('_BLACKBOX_PID');
+    return $self->{wmpid};
+}
+
+=item $ewmh->B<get_pid_BLACKBOX>() => $pid
+
+Older versions of L<blackbox(1)> did not set a pid anywhere.  For older
+versions, it would therefore be the session manager's responsible to set
+the child process PID associated with the window manager, either as an
+X-display property or as an environment variable.  Recent versions of
+L<blackbox(1)> set the C<_NET_WM_PID(CARDINAL)> property against the
+C<_NET_SUPPORTING_WM_CHECK(WINDOW)> window.
+
+=cut
+
+sub get_pid_BLACKBOX {
+    return shift->{wmpid};
+}
+
+=item $ewmh->B<get_pid_OPENBOX>() => $pid
+
+L<openbox(1)> does not set C<_NET_WM_PID> on the check window, but does
+set C<_OPENBOX_PID> on the root window.
+
+=cut
+
+sub get_pid_OPENBOX {
+    my $self = shift;
+    return $self->{wmpid} if $self->{wmpid};
+    $self->{wmpid} = $self->getWMRootPropertyInt('_OPENBOX_PID');
+    return $self->{wmpid};
+}
+
+=item $ewmh->B<get_pid_ICEWM>() => $pid
+
+All versions of L<icewm(1)> correctly set C<_NET_WM_PID> on the check
+window.
+
+=cut
+
+sub get_pid_ICEWM {
+    return shift->{wmpid};
+}
+
+=item $ewmh->B<get_pid_JWM>() => $pid
+
+Current versions of L<jwm(1)> set the C<_NET_WM_PID(CARDINAL)> property
+on the check window.  Previous versions did not set the pid anywhere.
+
+=cut
+
+sub get_pid_JWM {
+    return shift->{wmpid};
+}
+
+=item $ewmh->B<get_pid_PEKWM>() => $pid
+
+L<pekwm(1)> is setting C<_NET_WM_PID(CARDINAL)>, but it is setting it on
+the root window instead of the check window.
+
+=cut
+
+sub get_pid_PEKWM {
+    my $self = shift;
+    return $self->{wmpid} if $self->{wmpid};
+    $self->{wmpid} = $self->getWMRootPropertyInt('_NET_WM_PID');
+    return $self->{wmpid};
+}
+
+=item $ewmh->B<get_pid_FVWM>() => $pid
+
+L<fvwm(1)> is not setting its process identifier anywhere: not on the
+root window and not on the check window.
+
+=cut
+
+sub get_pid_FVWM {
+    return undef;
+}
+
+=item $ewmh->B<get_pid_WMAKER>() => $pid
+
+L<wmaker(1)> is not setting its process identifier anywhere: not on the
+root window and not on the check window.
+
+=cut
+
+sub get_pid_WMAKER {
+    return undef;
+}
+
+=item $ewmh->B<get_pid_AFTERSTEP>() => $pid
+
+L<afterstep(1). is not settings its process identifier anywhere: not on
+the root window and not on the check window.
+
+=cut
+
+=item $ewmh->B<get_pid_METACITY>() => $pid
+
+L<metacity(1)> is not setting its process identifier anywhere: not on
+the root window and not on the check window.
+
+=cut
+
+sub get_pid_METACITY {
+    return undef;
+}
+
+=item $ewmh->B<get_pid_WMX>() => $pid
+
+L<wmx(1)> is not setting its process identifier anywhere: not on the
+root window and not on the check window.  Strange, because sending a
+C<SIGTERM> or C<SIGINT> will cause L<wmx(1)> to exit, and sending a
+C<SIGHUP> will cause it to restart.  Not providing any PID is rather odd
+considering that L<wmx(1)> does not accept any root window messages for
+restart or reload and can only be controlled (restarted) with signals.
+
+=cut
+
+sub get_pid_WMX {
+    return undef;
+}
+
+=item $ewmh->B<get_pid_UNKNOWN>() => $pid
+
+Just assume that it might be setting its pid in the
+C<_NET_WM_PID(CARDINAL)> property on the check window.
+
+=cut
+
+sub get_pid_UNKNOWN {
+    return shift->{wmpid};
 }
 
 =back
@@ -1017,6 +1191,301 @@ sub DesktopDownRight {
     $incr = 1 unless $incr and $incr > 0;
     return $self->DesktopMove($time,$incr,$incr,$wrap);
 }
+
+=back
+
+=head2 Window Manager Actions
+
+Most window managers will reload or restart when sent a C<SIGHUP>
+signal.  Most will exit gracefully when sent a C<SIGTERM> or C<SIGINT>
+signal.  Some respond in various ways to C<SIGUSR1> or C<SIGUSR2>
+signals.  Many window managers; however, do not set the PID of the
+resource against any X-display property and therefore cannot be
+signalled by a program that did not start the window manager as a child
+process.
+
+L<fvwm(1)>, L<wmaker(1)>, L<afterstep(1)>, L<metacity(1)> and L<wmx(1)>
+do not set the process id of the window manager on any X-display
+resource.  It is impossible to signal these window managers without them
+having been launched directly as a child of the controlling process.
+
+Some window managers provide client message definitions that allow a
+C<ClientMessage> to be sent to the root window to control the window
+manager.  These messages can normally perform reconfiguration, restart
+and exit.  Some window managers provide more advanced or finer controls.
+
+=over
+
+=item L<fluxbox(1)>
+
+L<fluxbox(1)> provides for client message control; however, the
+fluxbox-remote feature must be enabled.  L<fluxbox(1)> does, however,
+provide good control by sending signals and sets its PID in the
+C<_BLACKBOX_PID(CARDINAL)> property on the root window.
+
+The following client messages are defined:
+
+=over
+
+=back
+
+The following signals are acted upon:
+
+=over
+
+=item C<SIGTERM> or C<SIGINT>
+
+Gracefully exits the window manager.
+
+=item C<SIGHUP>
+
+Restarts the window manager.
+
+=item C<SIGUSR1>
+
+Reloads the configuration file.  The difference from C<SIGUSR2> is that
+C<SIGUSR1> does not overwrite the internal style with that of the
+configuration file; C<SIGUSR2> does.
+
+=item C<SIGUSR2>
+
+Reconfigures the window manager.
+
+=back
+
+=item L<blackbox(1)>
+
+L<blackbox(1)> does not provide client message control; however, it does
+provide good control by sending signals and sets its PID in the
+C<_NET_WM_PID(CARDINAL)> property on the check window.
+
+The following client messages are defined:
+
+=over
+
+=back
+
+The following signals are acted upon:
+
+=over
+
+=item C<SIGTERM> or C<SIGINT>
+
+Gracefully exits the window manager.
+
+=item C<SIGHUP>
+
+Restarts the window manager.
+
+=item C<SIGUSR1>
+
+Reconfigures the window manager.
+
+=item C<SIGUSR2>
+
+=back
+
+=item L<openbox(1)>
+
+L<openbox(1)> provides for client message control; however, it does
+required the feature to be enabled by configuration.  L<openbox(1)>
+does, however, provide good control by sending signals and sets its PID
+in the C<_OPENBOX_PID(CARDINAL)> property on the root window.
+
+The following client messages are defined:
+
+=over
+
+=item C<_OB_CONTROL>
+
+This client message defines one long argument which can have once of the
+following values:
+
+=over
+
+=item C<OB_CONTROL_RECONFIGURE> => 1
+
+Reconfigures the L<openbox(1)> window manager.  This is sufficient for
+altering styles.
+
+=item C<OB_CONTROL_RESTART> => 2
+
+Restarts the L<openbox(1)> window manager.  This too is sufficient for
+altering styles.
+
+=item C<OB_CONTROL_EXIT> => 3
+
+Causes a graceful exit of the window manager.
+
+=back
+
+=back
+
+The following signals are acted upon:
+
+=over
+
+=item C<SIGTERM> or C<SIGINT>
+
+Gracefully exits the window manager.
+
+=item C<SIGHUP>
+
+Restarts the window manager.
+
+=item C<SIGUSR1>
+
+=item C<SIGUSR2>
+
+=back
+
+=item L<icewm(1)>
+
+L<icewm(1)> provides for client message control; however, in some
+versions the controls were broken.  L<icewm(1)> does provide some
+control by sending signals and sets its PID in the
+C<_NET_WM_PID(CARDINAL)> property on the check window.
+
+The following client messages are defined:
+
+=over
+
+=item C<_ICEWM_ACTION>
+
+This client messages has defines one long argument which can have one of
+the following values:
+
+=over
+
+=item C<ICEWM_ACTION_NOP> => 0
+
+Performs no funciton.
+
+=item C<ICEWM_ACTION_PING> => 1
+
+Was used at one time the perform a ping protocol with the window
+manager; ignored now.
+
+=item C<ICEWM_ACTION_LOGOUT> => 2
+
+Initiates a logout from the window manager.
+
+=item C<ICEWM_ACTION_CANCEL_LOGOUT> => 3
+
+Cancels a logout from the window manager.
+
+=item C<ICEWM_ACTION_REBOOT> => 4
+
+Reboots the system.
+
+=item C<ICEWM_ACTION_SHUTDOWN> => 5
+
+Shuts down the system.
+
+=item C<ICEWM_ACTION_ABOUT> => 6
+
+Causes the I<about> window to be displayed by the window manager.
+
+=item C<ICEWM_ACTION_WINDOWLIST> => 7
+
+Causes the I<window list> window to be displayed by the window manager.
+
+=item C<ICEWM_ACTION_RESTARTWM> => 8
+
+Restarts the window manager.
+
+=back
+
+=back
+
+The following signals are acted upon:
+
+=over
+
+=item C<SIGTERM> or C<SIGINT>
+
+Gracefully exits the window manager.
+
+=item C<SIGHUP>
+
+Restarts the window manager.
+
+=item C<SIGUSR1>
+
+=item C<SIGUSR2>
+
+=back
+
+=back
+
+The following methods control the window manager.  These functions are
+specific to the window manager as there are no EWMH defined actions
+associated with them; however, most window managers provide a mechanism
+to perform these functions, either by sending a C<ClientMessage> to the
+root window, or by sending a signal to the window manager process.
+
+=over
+
+=item $ewmh->B<wm_about>
+
+Causes the window manager to display an I<about> window that describes
+the window manager, its software version, and other source information.
+
+=cut
+
+=item $ewmh->B<wm_winlist>
+
+Causes the window manager to display a window that describes the
+available managed client windows and allows the user to select and/or
+perform actions on those windows.
+
+=cut
+
+=item $ewmh->B<wm_reload>
+
+Causes the window manager to reload the root menu and any other menu
+specifications.
+
+=cut
+
+=item $ewmh->B<wm_reconfigure>
+
+Causes the window manager to reconfigure itself from configuration files
+as though it has just started.  In particular, this function affect a
+style change if the style provided in configuration files has changed.
+
+=cut
+
+=item $ewmh->B<wm_restart>
+
+Cauess the window manager to perform all of the actions for a shutdown
+or exit, but restarts the window manager from scratch rather than
+exitting to the calling process.
+
+=cut
+
+=item $ewmh->B<wm_exit>
+
+Causes the window manager to unmanage all client windows and make any
+perperations for shutdown, and then the process exits with a zero exit
+status.
+
+Most window managers will exit gracefully when they receive a C<SIGTERM>
+or C<SIGINT> signal; however, many do not set the PID of the window
+manager against any X-display resource and therefore cannot be signalled
+by a program that did not start them as a child process.
+
+Some window managers provide client message definitions that allow a
+C<ClientMessage> to be sent to the root window to control the window
+manager.  
+=cut
+
+=item $ewmh->B<wm_setstyle>(I<style>)
+
+Causes the window manager to set the new style, I<style>, and then
+reconfigures the window manager.
+
+=cut
 
 1;
 
