@@ -980,17 +980,20 @@ sub update_desktop {
     $self->create_objects;
     print STDERR "==> Creating windows...\n";
     $self->create_windows;
-    print STDERR "==> Rearranging icons...\n";
-    $self->rearrange_icons;
+    print STDERR "==> Calculating cells...\n";
+    $self->calculate_cells;
+    print STDERR "==> Arranging icons...\n";
+    $self->arrange_icons;
     print STDERR "==> Showing icons...\n";
     $self->show_icons;
 }
 
-=item $desktop->B<calculate_cells>()
+=item $desktop->B<calculate_cells>() => $changed
 
 Creates an array of ICON_WIDEx72 cells on the desktop in columns and rows.
 This uses the available area of the desktop as indicated by the
 C<_NET_WORKAREA> or C<_WIN_WORKAREA> properties on the root window.
+Returns a boolean indicating whether the calculation changed.
 
 =cut
 
@@ -1000,15 +1003,13 @@ sub calculate_cells {
     my ($x,$y,$w,$h);
     if ($self->{_NET_WORKAREA}) {
 	 #print STDERR "Have _NET_WORKAREA\n";
-	($x,$y,$w,$h) = @{$self->{_NET_WORKAREA}};
-	if (0) {
-	     # This was fixed in JWM
-	    if ($self->{wmname} eq 'jwm') {
-		 # JWM does not report its panel, normally at the
-		 # bottom, reduce height by 1/2 ICON_HIGH
-		$h -= ICON_HIGH/2;
-	    }
-	}
+	my $n = $self->{_NET_CURRENT_DESKTOP};
+	$n = $self->get_NET_CURRENT_DESKTOP unless defined $n;
+	$n = 0 unless defined $n;
+	my $m = @{$self->{_NET_WORKAREA}};
+	$n = 0 if $n >= $m/4;
+	$n *= 4; $m = $n + 3;
+	($x,$y,$w,$h) = @{$self->{_NET_WORKAREA}}[$n..$m];
     }
     elsif ($self->{_WIN_WORKAREA}) {
 	 #print STDERR "Have _WIN_WORKAREA\n";
@@ -1022,6 +1023,14 @@ sub calculate_cells {
 	($x,$y,$w,$h) =
 	    ((64,64),($X->width_in_pixels-128,$X->height_in_pixels-128));
     }
+    if ($self->{workarea} and
+	    $self->{workarea}[0] == $x and
+	    $self->{workarea}[1] == $y and
+	    $self->{workarea}[2] == $w and
+	    $self->{workarea}[3] == $h) {
+	return 0;
+    }
+    $self->{workarea} = [$x,$y,$w,$h];
     # leave at least 1/2 a cell ((36,42) pixels) around the desktop area to
     # accomodate window managers that do not account for panels.
     my $cols = $self->{cols} = int($w/ICON_WIDE);
@@ -1049,7 +1058,7 @@ sub calculate_cells {
 	$table->set_size_request(ICON_WIDE*$cols,ICON_HIGH*$rows);
 	$table->resize($rows,$cols);
     }
-    return ($xoff, $yoff, $cols, $rows);
+    return 1;
 }
 
 =item $desktop->B<watch_directory>(I<$label>,I<$directory>)
@@ -1327,14 +1336,16 @@ sub arrange_icons {
 
 Recalculate the cell positions given the current work area and
 reposition all existing desktop icons so that they correspond to the
-layout for the given workarea.
+layout for the given workarea.  This method only performs the
+rearrangement when the work area has changed.
 
 =cut
 
 sub rearrange_icons {
     my $self = shift;
-    $self->calculate_cells;
-    $self->arrange_icons;
+    if ($self->calculate_cells) {
+	$self->arrange_icons;
+    }
 }
 
 use constant {
@@ -1868,6 +1879,23 @@ sub event_handler_PropertyNotify_NET_WORKAREA {
     $self->rearrange_icons;
 }
 
+=item $desktop->B<event_handler_PropertyNotify_NET_CURRENT_DESKTOP>(I<$e>,I<$X>,I<$v>)
+
+L<XDE::X11(3pm)> event handler for changes to the
+C<_NET_CURRENT_DESKTOP> property of the root window.  When this property
+changes we may need to adjust the area occupied by desktop icons by
+calling rearrange_icons().
+
+=cut
+
+sub event_handler_PropertyNotify_NET_CURRENT_DESKTOP {
+    my $self = shift;
+    my ($e,$X,$v) = @_;
+    return unless $e->{window} == $X->root;
+    $self->get_NET_CURRENT_DESKTOP;
+    $self->rearrange_icons();
+}
+
 =item $desktop->B<event_handler_PropertyNotify_WIN_WORKAREA>(I<$e>,I<$X>,I<$v>)
 
 L<XDE::X11(3pm)> event handler for changes to the C<_WIN_WORKAREA>
@@ -1882,6 +1910,22 @@ sub event_handler_PropertyNotify_WIN_WORKAREA {
     return unless $e->{window} == $X->root;
     $self->get_WIN_WORKAREA;
     $self->rearrange_icons;
+}
+
+=item $desktop->B<event_handler_PropertyNotify_WIN_WORKSPACE>(I<$e>,I<$X>,I<$v>)
+
+L<XDE::X11(3pm)> event handler for changes to the C<_WIN_WORKSPACE>
+property of the root window.  When this property changes we may need to
+adjust the area occupied by desktop icons by calling rearrange_icons().
+
+=cut
+
+sub event_handler_PropertyNotify_WIN_WORKSPACE {
+    my $self = shift;
+    my ($e,$X,$v) = @_;
+    return unless $e->{window} == $X->root;
+    $self->get_WIN_WORKSPACE;
+    $self->rearrange_icons();
 }
 
 1;
