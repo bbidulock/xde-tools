@@ -80,6 +80,8 @@ sub main {
     my $self = shift;
     unshift @{$self->{retval}}, undef;
     $SIG{TERM} = sub{Gtk2->main_quit};
+    $SIG{INT}  = sub{Gtk2->main_quit};
+    $SIG{QUIT} = sub{Gtk2->main_quit};
     Gtk2->main;
     return shift @{$self->{retval}};
 }
