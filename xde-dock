@@ -84,6 +84,8 @@ my $syntax = GetOptions(
 $xde->default; # reset defaults
 
 $SIG{TERM} = sub{$xde->main_quit};
+$SIG{INT}  = sub{$xde->main_quit};
+$SIG{QUIT} = sub{$xde->main_quit};
 $xde->init;
 $xde->main;
 $xde->term;

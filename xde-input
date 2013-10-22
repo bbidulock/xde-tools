@@ -134,6 +134,8 @@ $unique->signal_connect(message_received=>sub{
 $xde->get_input();
 $xde->set_input();
 $SIG{TERM} = sub{$xde->main_quit};
+$SIG{INT}  = sub{$xde->main_quit};
+$SIG{QUIT} = sub{$xde->main_quit};
 $xde->edit_input() if $ops{editor};
 $xde->main;
 $xde->term;
