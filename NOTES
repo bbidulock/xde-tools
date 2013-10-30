@@ -203,10 +203,35 @@ SUPPORT:
 
 Current ICCCM support is as follows:
 
+.Item				JWM	Fluxbox	PeKWM	IceWM	Bbox	Wmaker	Openbox	FVWM	AStep	Mcity	Notes
+----				---	-------	-----	-----	----	------	-------	----	-----	-----		
+WM_CLIENT_LEADER		N	N	Y	Y	N	Y	Y	Y	N	Y	(1)
+SM_CLIENT_ID			N	N	Y	Y	N	Y	Y	Y	N	Y	(1)
+WM_COMMAND			N	N	N	N	N	Y	N	N	N	N	(2)
+WM_SAVE_YOURSELF		N	N	N	N	N	Y	N	N	N	N	(2)
+------------------------------	---	---	---	---	---	---	---	---	---	---
+Total N				 2N	 2N	 0N	 0N	 2N	 0N	 0N	 0N	 2N	 0N
+Total Y				 0Y	 0Y	 2Y	 2Y	 0Y	 2Y	 2Y	 2Y	 0Y	 2Y
+------------------------------	---	---	---	---	---	---	---	---	---	---
+Total				2 	2 	2 	2 	2 	2 	2 	2 	2 	2 
+
+Notes:
+------
+( 1) JWM, Fluxbox, Blackbox, and Afterstep do not support the X Session
+     Management Protocol.  However, with good ICCCM and EWMH/NetWM
+     support, a window manager sm proxy can be used that saves the
+     necessary window state and uses the other parts of ICCCM and
+     EWMH/NetWM support to perform the function.
+
+( 2) Only WindowMaker directly supports the obsolete WM_SAVE_YOURSELF
+     and WM_COMMAND session management functionality.  The others may
+     use the Xorg smproxy(1) program to provide similar functionality
+     for the other window managers.
+
 Current EWMH support is as follows:
 
 .Item				JWM	Fluxbox	PeKWM	IceWM	Bbox	Wmaker	Openbox	FVWM	AStep	Mcity	Notes
-----				---	-------	-----	-----	----	------	-------	----	-----			
+----				---	-------	-----	-----	----	------	-------	----	-----	-----		
 _NET_ACTIVE_WINDOW		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
 _NET_CLIENT_LIST		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
 _NET_CLIENT_LIST_STACKING	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y

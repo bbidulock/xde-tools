@@ -62,19 +62,25 @@ my %ops = (
     theme	=> '',
     id		=> '',
     setroot	=> 1,
+    user	=> '',
+    system	=> '',
+    winman	=> '',
 );
 
 my $xde - XDE::Style->new(%OVERRIDES,ops=>\%ops);
 $xde->getenv;
 
 my $syntax = GetOptions(
-    'help|h'	    => \$ops{help},
-    'verbose|v'	    => \$ops{verbose},
-    'monitor!'	    => \$ops{monitor},
-    'setroot|s'	    => \$ops{setroot},
-    'grab|g'	    => \$ops{grab},
-    'n'		    => sub{ $ops{monitor} = 0 },
-    'id=s'	    => \$ops{id},
+    'help|h'		=> \$ops{help},
+    'verbose|v'		=> \$ops{verbose},
+    'monitor!'		=> \$ops{monitor},
+    'setroot|s'		=> \$ops{setroot},
+    'grab|g'		=> \$ops{grab},
+    'n'			=> sub{ $ops{monitor} = 0 },
+    'id=s'		=> \$ops{id},
+    'user|u'		=> \$ops{user},
+    'system|s'		=> \$ops{system},
+    'winman|wm=s'	=> \$ops{winman},
 );
 
 my @styles = @ARGV;
@@ -94,7 +100,7 @@ sub show_usage {
     return <<USAGE_EOF;
 
 USAGE:
-    xde-theme2 [OPTIONS] [THEME [THEME ...]]
+    xde-style [OPTIONS] [STYLE [STYLE ...]]
 USAGE_EOF
 }
 
@@ -116,18 +122,24 @@ B<xde-style> is responsible for setting window manager styles for an XDE
 session, modifying configuration files as necessary, and restarting or
 reconfiguring the window manager.
 
+B<xde-style> is intended to be called from a root menu, key binding,
+script or other style setting mechanism.
+
 =head1 ARGUMENTS
 
 B<xde-style> takes the following arguments:
 
 =over
 
-=item [I<STYLE> [I<STYLE> ...]]
+=item I<STYLE> [I<STYLE> ...]
 
 A list of style names that specify which style is to be applied (in
 order of preference).   Each style name can be a simple name which is
 search for in various directories in order of preference, or a full path
 name to a style directory or file.
+
+When specified by name, the B<--user> and B<--system> options can alter
+the selected style.
 
 =back
 
@@ -150,7 +162,7 @@ command options are as follows:
 Do not set the style, but, rather, launch the style selection dialogue.
 When a current instance of B<xde-style> is running, the running instance
 will launch the dialogue; otherwise, a new B<xde-style> instance will be
-started.
+started unless the B<--nomonitor> option is specified (see L</OPTIONS>).
 
 =item B<--quit>, B<-q>
 
@@ -177,18 +189,81 @@ B<xde-style> also recognizes the following general options:
 
 Print debuggin information on standard error while running.
 
+=item B<--winman>, B<-wm> I<WINMAN>
+
+Specifies the window manager for which to set the style.  When
+unspecified, B<xde-style> will detect the window manager on startup.
+This option is intended to be used from a window-manager-specific style
+menu.  The window manager, I<WINMAN>, is case insensitive.  Supported
+window managers, I<WINMAN>, are:
+C<fluxbox>,
+C<blackbox>,
+C<openbox>,
+C<icewm>,
+C<pekwm>,
+C<jwm>,
+C<wmaker>,
+C<fvwm>,
+C<metacity>,
+C<afterstep>,
+C<wmx>.
+(See also L</INVOCATION>.)
+
 =item B<--nomonitor>, B<-n>
 
 Specifies that B<xde-style> should just set the style and should not
 place itself in the background and monitor for changes.  You should just
 use the window manager to set the theme instead of using this option.
 
+=item B<--user>, B<-u>
+
+When setting the style by name (see L</ARGUMENTS>), only apply a user
+style setting (one from a user directory).
+The default behaviour, when setting by name is to apply the user style
+if one exists, and the system style otherwise.
+This option has no effect on styles that are specified using a full
+path.
+
+=item B<--system>, B<-s>
+
+When setting the style by name (see L</ARGUMENTS>), only apply a system
+style setting (one from a system directory).
+The default behaviour, when setting by name is to apply the user style
+if one exists, and the system style otherwise.
+This option has no effect on styles that are specified using a full
+path.
+
 =back
+
+=head1 INVOCATION
+
+The B<xde-style> distribution includes symblolic links for various
+window-manager-specific style setters.  When invoked using a symbolic
+link, the B<--winman> option defaults to the window manager
+specification corresponding to the executable name as follows:
+
+ Executable	Equivalent
+ ----------	----------
+ fbsetstyle	xde-style --winman fluxbox
+ bbsetstyle	xde-style --winman blackbox
+ obsetstyle	xde-style --winman openbox
+ icestyle	xde-style --winman icewm
+ pekstyle	xde-style --winman pekwm
+ jwmstyle	xde-style --winman jwm
+ wmsetstyle	xde-style --winman wmaker
+ fvwmstyle	xde-style --winman fvwm
+ mcsetstyle	xde-style --winman metacity
+ assetstyle	xde-style --winman afterstep
+ wmxstyle	xde-style --winman wmx
 
 =head1 BEHAVIOUR
 
 When B<xde-style> is executed and an existing instance of B<xde-style>
 is running, it passes its arguments to the running program an exits.
+Otherwise, it places itself in the background and performs the requested
+action.  When the B<--nomonitor> option is specified (see L</OPTIONS>),
+B<xde-style> performs the action and then exits, regardless of whether
+there is an existing instance.
 
 On the initial invocation of B<xde-style> for a given X Display,
 B<xde-style> will first await the appearance of an X Window Manager that
@@ -263,7 +338,7 @@ The PID can be found in the C<_BLACKBOX_PID(CARDINAL)> property on the
 root window.
 Note that it is necessary to restart
 L<fluxbox(1)> because a reload does not affect the style used for the
-root menu.
+root menu.  (This is a bug in L<fluxbox(1)>.)
 
 L<fluxbox(1)> accepts the following signals to effect restart, reload,
 or reconfigure:
@@ -287,6 +362,9 @@ and then waits a period of time before proceeding and then alters the
 workspace names on a per-screen basis.
 
 =back
+
+To find the correct F<init> file, B<xde-style> examines some environment
+variables set by L<xde-session(1p)>.  See L</ENVIRONMENT> for details.
 
 =item L<blackbox(1)>
 
@@ -324,6 +402,9 @@ L<blackbox(1)> performs a C<Reread Menu> action.  This simply rereads
 the root menu file.
 
 =back
+
+To find the correct F<rc> file, B<xde-style> examines some environment
+variables set by L<xde-session(1p)>.  See L</ENVIRONMENT> for details.
 
 =item L<openbox(1)>
 
@@ -409,10 +490,125 @@ Causes a graceful shutdown.
 
 =back
 
+=head1 ENVIRONMENT
+
+B<xde-style> uses the following environment variables:
+
+=over
+
+=item B<FLUXBOX_RCFILE>
+
+Specifies the location of the L<fluxbox(1)> F<init> file.  The default
+when unspecified is F<~/.fluxbox/init>.  L<xde-session(1p)> typically
+sets this environment variable to F<$XDG_CONFIG_HOME/blackbox/rc> and
+L<fluxbox(1)> is invoked as:
+
+ $> fluxbox ${FLUXBOX_RCFILE:+-rc $FLUXBOX_RCFILE}
+
+=item B<BLACKBOX_RCFILE>
+
+Specifies the location of the L<blackbox(1)> F<rc> file.  THe default
+when unspecified is F<~/.blackboxrc>.  L<xde-session(1p)> typically sets
+this environment variable to F<$XDG_CONFIG_HOME/fluxbox/init> and
+L<blackbox(1)> is invoked as:
+
+ $> blackbox ${BLACKBOX_RCFILE:+-rc $BLACKBOX_RCFILE}
+
+=item B<OPENBOX_RCFILE>
+
+Specifies the location of the L<openbox(1)> F<rc.xml> file.  The default
+when unspecified is F<$XDG_CONFIG_HOME/openbox/rc.xml>.
+L<xde-session(1p)> typically sets this environment variable to
+F<$XDG_CONFIG_HOME/openbox/xde-rc.xml> and L<openbox(1)> should be
+invoked as:
+
+ $> openbox ${OPENBOX_RCFILE:+--config-file $OPENBOX_RCFILE}
+
+=item B<ICEWM_PRIVCFG>
+
+Specifies the directory when the L<icewm(1)> configuration files reside.
+The default when unspecified is F<~/.icewm>.  L<xde-session(1p)>
+typically sets this environment variable to F<$XDG_CONFIG_HOME/icewm>.
+L<icewm(1)> respects this environment variable and no special
+configuration options are required when invoking L<icewm(1)>.
+
+=item B<PEKWM_RCFILE>
+
+Specifies the location of the L<pekwm(1)> F<config> file.  The default
+when unspecified is F<~/.pekwm/config>.  L<xde-session(1p)> typically
+sets this environment variable to F<$XDG_CONFIG_HOME/pekwm/config> and
+L<pekwm(1)> is invoked as:
+
+ $> pekwm ${PEKWM_RCFILE:+--config $PEKWM_RCFILE}
+
+=item B<JWM_RCFILE>
+
+Specifies the location of the L<jwm(1)> F<rc> file.  The default when
+unspecified is F<~/.jwmrc>.  L<xde-session(1p)> typically sets this
+environment variable to F<$XDG_CONFIG_HOME/jwm/rc> and L<jwm(1)> should
+be invoked as:
+
+ $> jwm ${JWM_RCFILE:+-rc $JWM_RCFILE}
+
+Note that older versions of L<jwm(1)> had no way of specifying an
+alternate configuration file.
+
+=item B<FVWM_USERDIR>
+
+Specifies the user directory for L<fvwm(1)>.  The default when
+unspecified is F<~/.fvwm>.  L<xde-session(1)> typically sets this
+environment variable to F<$XDG_CONFIG_HOME/fvwm>.  L<fvwm(1)> respects
+this environment variable and no special options are required when
+invoking L<fvwm(1)>.
+
+=item B<FVWM_RCFILE>
+
+Specifies the location of the L<fvwm(1)> F<config> file.  The default
+when unspecified is F<~/.fvwm/config>.  L<xde-session(1)> typically sets
+this environment variable to F<$XDG_CONFIG_HOME/fvwm/config> and
+L<fvwm(1)> should be invoked as:
+
+ $> fvwm ${FVWM_RCFILE:+-f $FVWM_RCFILE}
+
+=item B<GNUSTEP_USER_ROOT>
+
+Specifies the user directory for L<wmaker(1)>.  The default when
+unspecified is F<~/GNUstep>.  L<xde-session(1p)> typically sets this
+environment variable to F<$XDG_CONFIG_HOME/GNUstep>.  L<wmaker(1)>
+respects this environment variable and no special options are required
+when invoking L<wmaker(1)>.
+
+=item B<AS_USERDIR>
+
+Specifies the user directory for L<afterstep(1)>.  The default when
+unspecified is F<~/.afterstep>.  L<xde-session(1)> typically sets this
+environment variable to F<$XDG_CONFIG_HOME/afterstep> and
+L<afterstep(1)> is invoked as:
+
+ $> afterstep ${AS_USERDIR:+--user-dirval $AS_USERDIR} \
+              ${AS_RCFILE:+--config-fileval $AS_RCFILE}
+
+=item B<AS_RCFILE>
+
+Speficies the location of the L<afterstep(1)> F<rc> file.  The default
+when unspecified is F<~/.steprc>.  L<xde-session(1)> typcially sets this
+environment variable to F<$XDG_CONFIG_HOME/afterstep/rc> and
+L<afterstep(1)> is invoked as:
+
+ $> afterstep ${AS_USERDIR:+--user-dirval $AS_USERDIR} \
+              ${AS_RCFILE:+--config-fileval $AS_RCFILE}
+
+=back
+
+
 =head1 HISTORY
 
-I wrote B<xde-style> to work with L<xde-setbg(1p)> to support control of
-the themes for the desktop environment from window-manager-specific menus.
+I wrote B<xde-style> to support light-weight window managers that have
+no external script for changing the window manager style.  The primary
+purpose for such a facility is so that a panel, systray or desktop menu
+can control the style settings of various lightweight window managers in
+a manner similar to that performed by the native root menu of those
+window managers.
 
 =head1 AUTHOR
 

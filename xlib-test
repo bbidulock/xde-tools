@@ -1,0 +1,52 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+    if $running_under_some_shell;
+
+BEGIN {
+    use strict;
+    use warnings;
+    my $here = $0; $here =~ s{/[^/]*$}{};
+    if ($here =~ s{^\.}{}) {
+	chomp(my $cwd = `pwd`);
+	$here = "/$here" if $here;
+	$here = "$cwd$here";
+    }
+    print STDERR "here is: '$here'\n";
+    unshift @INC, "$here/lib" unless $here =~ m{/bin/};
+}
+
+use X11::Protocol::Xlib;
+
+my $X = X11::Protocol::Xlib->new();
+
+sub check_window {
+    my($X,$window) = @_;
+    my($root,$parent,@kids) = $X->QueryTree($window);
+    my @windows = ( $window );
+    foreach (@kids) {
+	push @windows, check_window($X,$_);
+    }
+    return @windows;
+}
+
+my @windows = check_window($X,$X->root);
+
+foreach (@windows) {
+    if (my $state = $X->GetWMState($_)) {
+	printf "Client window: 0x%08x\n", $_;
+    }
+}
+
+
+if (my $sizes = $X->GetIconSizes($X->root)) {
+    while (my ($k,$v) = each %$sizes) {
+	printf "%-20s: %d\n", $k, $kv;
+    }
+}
+
+exit(0);
+
+
+# vim: set sw=4 tw=72 fo=tcqlorn:

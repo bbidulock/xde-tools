@@ -12,6 +12,9 @@ XDE::X11::StartupNotification -- perform XDG startup notification
 
 =head1 DESCRIPTION
 
+This module provides similar functionality to that provided by the X11
+startup notification library.
+
 =head1 METHODS
 
 =over

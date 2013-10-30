@@ -1,5 +1,5 @@
 package XDE::Actions;
-use base qw(XDE::WMH XDE::EWMH);
+use base qw(XDE::Manager);
 use strict;
 use warnings;
 
@@ -254,6 +254,174 @@ C<_NET_WM_PID(CARDINAL)> property on the check window.
 sub get_pid_UNKNOWN {
     return shift->{wmpid};
 }
+
+=back
+
+=head2 Getting the window manager config file
+
+=over
+
+=item $ewmh->B<get_config>() => $sys, $usr, $file
+
+Gets the path and filename of the F<rc> (runtime configuration) file for
+the window manager.  This should only be called after
+get_NET_SUPPORTING_WM_CHECK().  It uses the window manager name to
+choose the method to use to determine the window manager rcfile
+location.
+
+C<$sys> is the system configuration directory, or C<undef> when a
+system configuration directory could not be established.  C<$usr> is the
+user configuration directory that defaults to F<~/.fluxbox>.  C<$file>
+is the primary configuration file of the style or theme file when the
+window manager does not have a primary configuration file that
+determines the location of other files.
+
+=cut
+
+sub get_config {
+    my $self = shift;
+    my $wm = "\U$self->{wmname}\E" if $self->{wmname};
+    $wm = 'NONE' unless $wm;
+    print STDERR "Getting rcfile location for $wm\n"
+	if $self->{ops}{verbose};
+    my $getter = "get_config_$wm";
+    my $sub = $self->can($getter);
+    $sub = $self->can('get_config_UNKNOWN') unless $sub;
+    my @result = &$sub($self,@_) if $sub;
+    return @result;
+}
+
+=over
+
+=item $ewmh->B<get_config_FLUXBOX>() => $sys, $usr, $file
+
+The default configuration file for L<fluxbox(1)> is F<~/.fluxbox/init>.
+L<xde-session(1p)> typically sets the C<FLUXBOX_RCFILE> environment
+variable to F<$XDG_CONFIG_HOME/fluxbox/init> and invokes L<fluxbox(1)>
+equivalent to the following:
+
+    fluxbox ${FLUXBOX_RCFILE:+-rc $FLUXBOX_RCFILE}
+
+=cut
+
+sub get_config_FLUXBOX {
+    my $self = shift;
+    my $usr = $ENV{FLUXBOX_USRDIR};
+    $usr = "$ENV{HOME}/.fluxbox" unless $usr and -d $usr;
+    $usr = undef unless $usr and -d $usr;
+    my $file = $ENV{FLUXBOX_RCFILE};
+    $file = "$ENV{HOME}/.fluxbox/init" unless $file and -f $file;
+    $file = undef unless $file and -f $file;
+    my $sys = '/usr/share/fluxbox';
+    $self->{FLUXBOX_SYSDIR} = $sys;
+    $self->{FLUXBOX_USRDIR} = $usr;
+    $self->{FLUXBOX_RCFILE} = $file;
+    return ($sys, $usr, $file);
+}
+
+=item $ewmh->B<get_config_BLACKBOX>() => $sys, $usr, $file
+
+The default configuraiton file for L<blackbox(1)> is F<~/.blackboxrc>.
+L<xde-session(1p)> typically sets the C<BLACKBOX_RCFILE> environment
+variable to F<$XDG_CONFIG_HOME/blackbox/rc> and invokes L<blackbox(1)>
+equivalent to the following:
+
+    blackbox ${BLACKBOX_RCFILE:+-rc $BLACKBOX_RCFILE}
+
+=cut
+
+sub get_config_BLACKBOX {
+    my $self = shift;
+    my $usr = $ENV{BLACKBOX_USRDIR};
+    $usr = "$ENV{HOME}/.blackbox" unless $usr and -d $usr;
+    $usr = undef unless $usr and -d $usr;
+    my $file = $ENV{BLACKBOX_RCFILE};
+    $file = "$ENV{HOME}/.blackboxrc" unless $file and -f $file;
+    $file = undef unless $file and -f $file;
+    my $sys = '/usr/share/blackbox';
+    $self->{BLACKBOX_SYSDIR} = $sys;
+    $self->{BLACKBOX_USRDIR} = $usr;
+    $self->{BLACKBOX_RCFILE} = $file;
+    return ($sys, $usr, $file);
+}
+
+=item $ewmh->B<get_config_OPENBOX>() => $sys, $usr, $file
+
+The default configuration file for L<openbox(1)> is
+F<$XDG_CONFIG_HOME/openbox/rc.xml>.  L<xde-session(1p)> typically sets
+the C<OPENBOX_RCFILE> environment variable to
+F<$XDG_CONFIG_HOME/openbox/xde-rc.xml> and invokes L<openbox(1)>
+equivalent to the following:
+
+    openbox ${OPENBOX_RCFILE:+--config-file $OPENBOX_RCFILE}
+
+=cut
+
+sub get_config_OPENBOX {
+    my $self = shift;
+    my $usr = $ENV{OPENBOX_USRDIR};
+    $usr = "$self->{XDG_CONFIG_HOME}/openbox" unless $usr and -d $usr;
+    $usr = undef unless $usr and -d $usr;
+    my $file = $ENV{OPENBOX_RCFILE} if $ENV{OPENBOX_RCFILE};
+    $file = "$self->{XDG_CONFIG_HOME}/openbox/rc.xml" unless $file and -f $file;
+    $file = undef unless $file and -f $file;
+    my $sys = '/usr/share/openbox';
+    $self->{OPENBOX_SYSDIR} = $sys;
+    $self->{OPENBOX_USRDIR} = $usr;
+    $self->{OPENBOX_RCFILE} = $file;
+    return ($sys, $usr, $file);
+}
+
+=item $ewmh->B<get_config_ICEWM>() => $sys, $usr, $file
+
+The default configuration directory for L<icewm(1)> is F<~/.icewm>.
+L<xde-session(1p)> typcially sets the C<ICEWM_PRIVCFG> environment
+variable to F<$XDG_CONFIG_HOME/icewm> and invokes L<icewm(1)> normally.
+
+=cut
+
+sub get_config_ICEWM {
+    my $self = shift;
+    my $usr = $ENV{ICEWM_PRIVCFG} if $ENV{ICEWM_PRIVCFG};
+    $usr = "$ENV{HOME}/.icewm" unless $usr and -d $usr;
+    $usr = undef unless $usr and -d $usr;
+    my $file = "$usr/preferences" if $usr;
+    my $sys = '/usr/share/icewm';
+    $self->{ICEWM_SYSDIR} = $sys;
+    $self->{ICEWM_USRDIR} = $usr;
+    $self->{ICEWM_RCFILE} = $file;
+    return ($sys, $usr, $file);
+}
+
+=item $ewmh->B<get_config_PEKWM>() => $sys, $usr, $file
+
+=cut
+
+=item $ewmh->B<get_config_JWM>() => $sys, $usr, $file
+
+=cut
+
+=item $ewmh->B<get_config_WMAKER>() => $sys, $usr, $file
+
+=cut
+
+=item $ewmh->B<get_config_FVWM>() => $sys, $usr, $file
+
+=cut
+
+=item $ewmh->B<get_config_AFTERSTEP>() => $sys, $usr, $file
+
+=cut
+
+=item $ewmh->B<get_config_METACITY>() => $sys, $usr, $file
+
+=cut
+
+=item $ewmh->B<get_config_WMX>() => $sys, $usr, $file
+
+=cut
+
+=back
 
 =back
 
@@ -1433,6 +1601,54 @@ the window manager, its software version, and other source information.
 
 =cut
 
+=over
+
+=item $ewmh->B<wm_about_FLUXBOX>()
+
+=cut
+
+=item $ewmh->B<wm_about_BLACKBOX>()
+
+=cut
+
+=item $ewmh->B<wm_about_OPENBOX>()
+
+=cut
+
+=item $ewmh->B<wm_about_ICEWM>()
+
+=cut
+
+=item $ewmh->B<wm_about_PEKWM>()
+
+=cut
+
+=item $ewmh->B<wm_about_JWM>()
+
+=cut
+
+=item $ewmh->B<wm_about_WMAKER>()
+
+=cut
+
+=item $ewmh->B<wm_about_FVWM>()
+
+=cut
+
+=item $ewmh->B<wm_about_AFTERSTEP>()
+
+=cut
+
+=item $ewmh->B<wm_about_METACITY>()
+
+=cut
+
+=item $ewmh->B<wm_about_WMX>()
+
+=cut
+
+=back
+
 =item $ewmh->B<wm_winlist>
 
 Causes the window manager to display a window that describes the
@@ -1441,6 +1657,54 @@ perform actions on those windows.
 
 =cut
 
+=over
+
+=item $ewmh->B<wm_winlist_FLUXBOX>()
+
+=cut
+
+=item $ewmh->B<wm_winlist_BLACKBOX>()
+
+=cut
+
+=item $ewmh->B<wm_winlist_OPENBOX>()
+
+=cut
+
+=item $ewmh->B<wm_winlist_ICEWM>()
+
+=cut
+
+=item $ewmh->B<wm_winlist_PEKWM>()
+
+=cut
+
+=item $ewmh->B<wm_winlist_JWM>()
+
+=cut
+
+=item $ewmh->B<wm_winlist_WMAKER>()
+
+=cut
+
+=item $ewmh->B<wm_winlist_FVWM>()
+
+=cut
+
+=item $ewmh->B<wm_winlist_AFTERSTEP>()
+
+=cut
+
+=item $ewmh->B<wm_winlist_METACITY>()
+
+=cut
+
+=item $ewmh->B<wm_winlist_WMX>()
+
+=cut
+
+=back
+
 =item $ewmh->B<wm_reload>
 
 Causes the window manager to reload the root menu and any other menu
@@ -1448,13 +1712,109 @@ specifications.
 
 =cut
 
-=item $ewmh->B<wm_reconfigure>
+=over
+
+=item $ewmh->B<wm_reload_FLUXBOX>()
+
+=cut
+
+=item $ewmh->B<wm_reload_BLACKBOX>()
+
+=cut
+
+=item $ewmh->B<wm_reload_OPENBOX>()
+
+=cut
+
+=item $ewmh->B<wm_reload_ICEWM>()
+
+=cut
+
+=item $ewmh->B<wm_reload_PEKWM>()
+
+=cut
+
+=item $ewmh->B<wm_reload_JWM>()
+
+=cut
+
+=item $ewmh->B<wm_reload_WMAKER>()
+
+=cut
+
+=item $ewmh->B<wm_reload_FVWM>()
+
+=cut
+
+=item $ewmh->B<wm_reload_AFTERSTEP>()
+
+=cut
+
+=item $ewmh->B<wm_reload_METACITY>()
+
+=cut
+
+=item $ewmh->B<wm_reload_WMX>()
+
+=cut
+
+=back
+
+=item $ewmh->B<wm_reconfig>
 
 Causes the window manager to reconfigure itself from configuration files
 as though it has just started.  In particular, this function affect a
 style change if the style provided in configuration files has changed.
 
 =cut
+
+=over
+
+=item $ewmh->B<wm_reconfig_FLUXBOX>()
+
+=cut
+
+=item $ewmh->B<wm_reconfig_BLACKBOX>()
+
+=cut
+
+=item $ewmh->B<wm_reconfig_OPENBOX>()
+
+=cut
+
+=item $ewmh->B<wm_reconfig_ICEWM>()
+
+=cut
+
+=item $ewmh->B<wm_reconfig_PEKWM>()
+
+=cut
+
+=item $ewmh->B<wm_reconfig_JWM>()
+
+=cut
+
+=item $ewmh->B<wm_reconfig_WMAKER>()
+
+=cut
+
+=item $ewmh->B<wm_reconfig_FVWM>()
+
+=cut
+
+=item $ewmh->B<wm_reconfig_AFTERSTEP>()
+
+=cut
+
+=item $ewmh->B<wm_reconfig_METACITY>()
+
+=cut
+
+=item $ewmh->B<wm_reconfig_WMX>()
+
+=cut
+
+=back
 
 =item $ewmh->B<wm_restart>
 
@@ -1464,7 +1824,55 @@ exitting to the calling process.
 
 =cut
 
-=item $ewmh->B<wm_exit>
+=over
+
+=item $ewmh->B<wm_restart_FLUXBOX>()
+
+=cut
+
+=item $ewmh->B<wm_restart_BLACKBOX>()
+
+=cut
+
+=item $ewmh->B<wm_restart_OPENBOX>()
+
+=cut
+
+=item $ewmh->B<wm_restart_ICEWM>()
+
+=cut
+
+=item $ewmh->B<wm_restart_PEKWM>()
+
+=cut
+
+=item $ewmh->B<wm_restart_JWM>()
+
+=cut
+
+=item $ewmh->B<wm_restart_WMAKER>()
+
+=cut
+
+=item $ewmh->B<wm_restart_FVWM>()
+
+=cut
+
+=item $ewmh->B<wm_restart_AFTERSTEP>()
+
+=cut
+
+=item $ewmh->B<wm_restart_METACITY>()
+
+=cut
+
+=item $ewmh->B<wm_restart_WMX>()
+
+=cut
+
+=back
+
+=item $ewmh->B<wm_exit>()
 
 Causes the window manager to unmanage all client windows and make any
 perperations for shutdown, and then the process exits with a zero exit
@@ -1478,12 +1886,111 @@ by a program that did not start them as a child process.
 Some window managers provide client message definitions that allow a
 C<ClientMessage> to be sent to the root window to control the window
 manager.  
+
 =cut
+
+=over
+
+=item $ewmh->B<wm_exit_FLUXBOX>()
+
+=cut
+
+=item $ewmh->B<wm_exit_BLACKBOX>()
+
+=cut
+
+=item $ewmh->B<wm_exit_OPENBOX>()
+
+=cut
+
+=item $ewmh->B<wm_exit_ICEWM>()
+
+=cut
+
+=item $ewmh->B<wm_exit_PEKWM>()
+
+=cut
+
+=item $ewmh->B<wm_exit_JWM>()
+
+=cut
+
+=item $ewmh->B<wm_exit_WMAKER>()
+
+=cut
+
+=item $ewmh->B<wm_exit_FVWM>()
+
+=cut
+
+=item $ewmh->B<wm_exit_AFTERSTEP>()
+
+=cut
+
+=item $ewmh->B<wm_exit_METACITY>()
+
+=cut
+
+=item $ewmh->B<wm_exit_WMX>()
+
+=cut
+
+=back
 
 =item $ewmh->B<wm_setstyle>(I<style>)
 
 Causes the window manager to set the new style, I<style>, and then
 reconfigures the window manager.
+
+=cut
+
+=over
+
+=item $ewmh->B<wm_setstyle_FLUXBOX>()
+
+=cut
+
+=item $ewmh->B<wm_setstyle_BLACKBOX>()
+
+=cut
+
+=item $ewmh->B<wm_setstyle_OPENBOX>()
+
+=cut
+
+=item $ewmh->B<wm_setstyle_ICEWM>()
+
+=cut
+
+=item $ewmh->B<wm_setstyle_PEKWM>()
+
+=cut
+
+=item $ewmh->B<wm_setstyle_JWM>()
+
+=cut
+
+=item $ewmh->B<wm_setstyle_WMAKER>()
+
+=cut
+
+=item $ewmh->B<wm_setstyle_FVWM>()
+
+=cut
+
+=item $ewmh->B<wm_setstyle_AFTERSTEP>()
+
+=cut
+
+=item $ewmh->B<wm_setstyle_METACITY>()
+
+=cut
+
+=item $ewmh->B<wm_setstyle_WMX>()
+
+=cut
+
+=back
 
 =cut
 

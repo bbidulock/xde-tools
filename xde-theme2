@@ -188,6 +188,10 @@ theme instead of using this option.
 
 When B<xde-theme2> is execute and an existing instance of B<xde-theme2>
 is running, it passes its arguments to the running program and exits.
+Otherwise, it places itself in the background and performs the requested
+action.  When the B<--nomonitor> option is specified (see L</OPTIONS>),
+B<xde-theme2> performs the action and then exits, regardless of whether
+there is an existing instance.
 
 On the initial invocation of B<xde-theme2> for a given X Display,
 B<xde-theme2> will first await the appearance of an X Window Manager
@@ -205,10 +209,10 @@ for further desktop theme changes on the X Display.
 
 B<xde-theme2> also understands the file and style settings for various
 lightweight window managers: L<fluxbox(1)>, L<blackbox(1)>,
-L<openbox(1)>, L<icewm(1)>, L<jwm(1)>, L<pekwm(1)>, L<fvwm(1)> and
-L<wmaker(1)>.  B<xde-theme2> monitors the style files for these window
-managers and coordinates the corresponding Gtk2 theme with L<XDE(3pm)>
-tools that use the XDE theme.
+L<openbox(1)>, L<icewm(1)>, L<jwm(1)>, L<pekwm(1)>, L<fvwm(1)>,
+L<wmaker(1)>, L<metacity(1)> and L<afterstep(1)>.  B<xde-theme2>
+monitors the style files for these window managers and coordinates the
+corresponding Gtk2 theme with L<XDE(3pm)> tools that use the XDE theme.
 
 The user will observer the following when B<xde-theme2> is running:
 

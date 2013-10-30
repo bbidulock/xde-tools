@@ -62,6 +62,8 @@ use constant {
 	windowmaker	 => 'wmaker',
 	lxde		 => 'lxde',
 	'lxde/openbox'	 => 'lxde',
+	pekwm		 => 'pekwm',
+	jwm		 => 'jwm',
     },
     CONFDIR => {
 	fluxbox		 => "~/.fluxbox",
@@ -71,6 +73,8 @@ use constant {
 	fvwm		 => "~/.fvwm",
 	wmaker		 => "~/GNUstep",
 	lxde		 => "~/.config/openbox",
+	pekwm		 => "~/.pekwm",
+	jwm		 => "~/.jwm",
     },
     CONFFILE => {
 	fluxbox		 => 'xde-init',
@@ -80,6 +84,8 @@ use constant {
 	fvwm		 => 'config', # other names too
 	wmaker		 => 'Defaults/WindowMaker',
 	lxde		 => 'lxde-rc.xml',
+	pekwm		 => 'config',
+	jwm		 => 'rc',
     },
     MENUDIR => {
 	fluxbox		 => '~/.fluxbox',
@@ -89,6 +95,8 @@ use constant {
 	fvwm		 => '~/.fvwm',
 	wmaker		 => '~/GNUstep',
 	lxde		 => '~/.config/openbox',
+	pekwm		 => '~/.pekwm',
+	jwm		 => '~/.jwm',
     },
     MENUFILE => {
 	fluxbox		 => 'menu',
@@ -98,6 +106,8 @@ use constant {
 	fvwm		 => 'menus',
 	wmaker		 => 'Library/WindowMaker/menu',
 	lxde		 => 'menu.xml',
+	pekwm		 => 'menu',
+	jwm		 => 'menu',
     },
     SUBDIRS => {
 	fluxbox		 => [qw(backgrounds icons pixmaps splash styles tiles)],
@@ -107,6 +117,8 @@ use constant {
 	fvwm		 => [qw(icons)],
 	wmaker		 => [],
 	lxde		 => [],
+	pekwm		 => [qw(icons scripts themes)],
+	jwm		 => [qw(icons styles themes)],
     },
     CFGFILES => {
 	fluxbox		 => [qw(apps fbdesk fbdesk.icons fbpager keys menuconfig overlay slitlist startup usermenu windowmenu)],
@@ -116,6 +128,8 @@ use constant {
 	fvwm		 => [qw(bindings decorations functions globalfeel iconstyles menus modules startup sytles)],
 	wmaker		 => [],
 	lxde		 => [],
+	pekwm		 => [qw(autoproperties config config_system history keys menu mouse start vars window)],
+	jwm		 => [qw(config desktop groups keys menu root style tray)],
     },
 };
 
@@ -927,6 +941,18 @@ C<bottom>.  When unspecified, it defaults to C<top>.
 
 See L<XDG::Context(3pm)> for additional options recognized by the base
 package.
+
+=head1 HISTORY
+
+XDE::Context use to determine window manager configuration files and
+directories for the window manager being launched.  However, to permit
+the user to switch window managers mid-session, XDE::Context was changed
+to determine window manager configuration files for all supported window
+managers.
+
+Previously XDE::Context was written to support setup of an LXDE session.
+This is now deprecated and has been removed.  XDE::Context still sets
+environment variables necessary to mimic an lxsession to LXDE tools.
 
 =head1 AUTHOR
 

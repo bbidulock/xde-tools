@@ -1,0 +1,198 @@
+#!/usr/bin/perl
+
+1;
+
+__END__
+
+=head1 NAME
+
+sn-launch - a program to launch desktop files
+
+=head1 SYNOPSIS
+
+sn-launch [OPTIONS] [APPID [FILE|URL]]
+
+=head1 DESCRIPTION
+
+B<sn-launch> is an command line L<X11::Protocol(3pm)> application that
+uses the L<X11::SN::Launch(3pm)> module to launch applications based on
+their application identifiers or desktop entry file names.
+
+=head1 ARGUMENTS
+
+B<sn-launch> accepts the following arguments.
+
+=over
+
+=item I<APPID>
+
+Specifies the application identifier of an XDG application program to
+launch.  The application identifier, I<APPID>, can be one of the
+following:
+
+=over
+
+=item 1.
+
+The name of a desktop entry file without the F<.desktop> suffix.  For
+example, C<gvim>.
+
+=item 2.
+
+The name of a desktop entry file with the F<.desktop> suffix.  For
+example, C<gvim.desktop>.
+
+=item 3.
+
+The full path (absolute or relative) and filename of a desktop entry
+file.  For example: C</usr/share/applications/gvim.desktop>.
+
+=back
+
+=item I<FILE>
+
+The full path and filename of a file to supply to the program being
+launched.  The file may also be specified using the B<--file> option
+(see L</OPTIONS>).
+When both are supplied, the argument, I<FILE>, take precedence over the
+B<--file>
+option.
+
+=item I<URL>
+
+A URL to supply to the program being launched.  The URL may also be
+specified using the B<--url> option (see L</OPTIONS>).
+When both are supplied, the argument, I<URL>, take precedence over the
+B<--url>
+option.
+
+=back
+
+=head1 OPTIONS
+
+=over
+
+=item B<--help>, B<-h>
+
+Print a brief usage message to standard output and exit.
+
+=item B<--verbose>, B<-v>
+
+Print diagnostic information to standard error during operation.
+
+=item B<--display>, B<-d> I<DISPLAY>
+
+Use the X display specified by display, I<DISPLAY>, instead of the
+B<DISPLAY> environment variable.
+
+=item B<--screen>, B<-s> I<SCREEN>
+
+Specifies the screen number, I<SCREEN>, on which the XDG application,
+I<APPID>, is to launch.  When unspecified, the default screen for the X
+display is used.
+
+=item B<--workspace>, B<-w> I<WORKSPACE>
+
+Specifies the workspace (aka desktop), I<WORKSPACE>, on which the XDG
+application is to launch.  The default, when unspecified, is the current
+desktop.  This value is placed in the C<DESKTOP> key-value entry in the
+C<new> message.
+
+=item B<--timestamp>, B<-t> I<TIMESTAMP>
+
+Specifies an X server timestamp, I<TIMESTAMP>, that corresponds to the X
+window event that caused the launch to occur.  This is only useful in
+conjunction with specification of an I<APPID> argument.  When no
+timestamp is specified, B<sn-launch> will use the time of the last event
+(or generate an event) for the timestamp.  The resulting timestamp,
+whether specified or not, is used in the C<_TIME> portion of the startup
+notification identifier, as well as in the C<TIMESTAMP> key-value pair
+of the C<new> message.
+
+=item B<--name>, B<-N> I<NAME>
+
+Specify the name of the XDG application.  This overrides the C<Name>
+field from the XDG desktop entry file as well as the C<NAME> key-value
+pair of the C<new> message.
+
+=item B<--icon>, B<-i> I<ICON>
+
+Specify the icon name of the XDG application.  This overrides the
+C<Icon> field from the XDG desktop entry file as well as the C<ICON>
+key-value pair of the C<new> message.
+
+=item B<--binary>, B<-b> I<BINARY>
+
+Specify the name of the binary for the XDG application.  This overrides
+the C<TryExec> field from the XDG desktop entry file as well as the
+B<BIN> key-value pair of the C<new> message.
+
+=item B<--description>, B<-D> I<DESCRIPTION>
+
+Specify the description of the XDG application.  This overrides the
+C<Comment> field of the XDG desktop entry file as well as the
+C<DESCRIPTION> key-value pair of the C<new> message.
+
+=item B<--wmclass>, B<-W> I<NAMEORCLASS>
+
+Specify the windos manager class (name or class) of the window that the
+XDG application is expected to map.  This overrides the
+C<StartupWMClass> field of the XDG desktop entry file as well as the
+C<WMCLASS> key-value pair of the C<new> message.
+
+=item B<--silent>, B<-s> I<SILENT>
+
+Specify a boolean value choosing whether visual feedback should be
+provided for the launching XDG application.  Normally, when unspecified,
+visual feedback would be determined from the presence and value
+of a C<StartupNotify> or C<StartupWMClass> field in the XDG desktop
+entry file.  The argument should be some boolean valud like 0 or 1 or
+C<yes> or C<no> or C<true> or C<false>.
+
+=item B<--appid>, B<-a> I<APPID>
+
+Override the application identifier.  This overrides the name of the XDG
+application file as well as the C<APPLICATION_ID> key-value pair in the
+C<new> message.  When no non-option I<APPID> argument is specified, and
+this option is specified, it will also be used as the non-option
+I<APPID> argument.  Normally this value is derived automatically from th
+non-option argument, I<APPID>.
+
+=item B<--exec>, B<-x> I<COMMAND>
+
+Override the program command.  This overrides the C<Exec> field of the
+XDG desktop entry file.  When this option is specified, it is not
+necessary to specify an XDG application identifier as a non-option
+argument (see L</ARGUMENTS>).
+
+=item B<--file>, B<-f> I<FILE>
+
+Specifies the filename of a file to supply to the launching application.
+This option is overridden by the non-option argument, I<FILE>.
+Only one of the B<--file> or B<--url> options should be provided.  The
+last occurrence takes precedence.
+
+=item B<--url>, B<-u> I<URL>
+
+Specifies the URL to supply to the launching application.  This option
+is overridden by the non-option argument, I<URL>.
+Only one of the B<--file> or B<--url> options should be provided.  The
+last occurrence takes precedence.
+
+=back
+
+=head1 BEHAVIOR
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
+
+L<X11::SN(3pm)>,
+L<X11::SN::Launcher(3pm)>,
+L<X11::Protocol(3pm)>.
+
+=cut
+
+# vim: set sw=4 tw=72 fo=tcqlorn:

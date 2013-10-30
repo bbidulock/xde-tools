@@ -1,0 +1,556 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+    if $running_under_some_shell;
+
+exec {'xde-monitor'} 'xde-monitor', @ARGV or die $?;
+
+BEGIN {
+    use strict;
+    use warnings;
+    my $here = $0; $here =~ s{/[^/]*$}{};
+    if ($here =~ s{^\.}{}) {
+	chomp(my $cwd = `pwd`);
+	$here = "/$here" if $here;
+	$here = "$cwd$here";
+    }
+    unshift @INC, "$here/lib" unless $here =~ m{^/usr/bin};
+}
+
+use Getopt::Long;
+use Encode;
+use Storable qw(freeze thaw);
+use I18N::Langinfo qw(langinfo CODESET);
+use POSIX qw(locale_h);
+use Gtk2;
+use Gtk2::Unique;
+use XDE::Launch;
+use strict;
+use warnings;
+
+my %OVERRIDES = ();
+my $here = $0; $here =~ s{/[^/]*$}{};
+if ($here =~ s{^\.}{}) {
+    chomp(my $cwd = `pwd`);
+    $here = "/$here" if $here;
+    $here = "$cwd$here";
+}
+unless ($here =~ m{^/usr/bin}) {
+    %OVERRIDES = (
+	HERE               => "$here",
+	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
+	XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
+	XDG_ICON_APPEND    => "$here/share/icons:$here/share/pixmaps",
+    );
+    my %path = (map{$_=>1}split(/:/,$ENV{PATH}));
+    $ENV{PATH} = "$here:$ENV{PATH}" unless exists $path{$here};
+}
+
+my $program = $0; $program =~ s{^.*/}{};
+
+my %ops = (
+    help	=> '',
+    verbose	=> '',
+    prompt	=> '',
+    banner	=> '',
+    noask	=> '',
+    charset	=> langinfo(CODESET),
+    language	=> setlocale(LC_MESSAGES),
+    setdflt	=> '',
+    default	=> '',
+    current	=> '',
+    choice	=> '',
+    vendor	=> '',
+    monitor	=> 1,
+    grab	=> 1,
+    theme	=> '',
+    id		=> '',
+    setroot	=> 1,
+    display	=> $ENV{DISPLAY},
+    timestamp	=> 0,
+    screen	=> '',
+    workspace	=> '',
+    name	=> '',
+    icon	=> '',
+    binary	=> '',
+    description	=> '',
+    wmclass	=> '',
+    silent	=> '',
+    appid	=> '',
+    exec	=> '',
+    file	=> '',
+    url		=> '',
+    argv	=> '',
+);
+
+my $xde - XDE::Launch->new(%OVERRIDES,ops=>\%ops);
+$xde->getenv;
+
+my $syntax = GetOptions(
+    'help|h'		=> \$ops{help},
+    'verbose|v'		=> \$ops{verbose},
+    'charset|c=s'	=> \$ops{charset},
+    'language|L=s'	=> \$ops{language},
+    'monitor!'		=> \$ops{monitor},
+    'n'			=> sub{$ops{monitor} = 0},
+    'display|d=s'	=> \$ops{display},
+    'timestamp|t=i'	=> \$ops{timestamp},
+    'screen|s=i'	=> \$ops{screen},
+    'workspace|w=s'	=> \$ops{workspace},
+    'name|N=s'		=> \$ops{name},
+    'icon|i=s'		=> \$ops{icon},
+    'binary|b=s'	=> \$ops{binary},
+    'description|D=s'	=> \$ops{description},
+    'wmclass|W=s'	=> \$ops{wmclass},
+    'silent|s!'		=> \$ops{silent},
+    'appid|a=s'		=> \$ops{appid},
+    'exec|x=s'		=> \$ops{exec},
+    'file|f=s'		=> \$ops{file},
+    'url|u=s'		=> \$ops{url},
+);
+
+
+$xde->default; # reset defaults
+
+if ($ops{help}) {
+    print STDOUT show_usage;
+    exit(0);
+}
+
+if (@ARGV > 1) {
+    print STDERR "ERROR: too many non-option arguments\n";
+    print STDERR show_usage;
+    exit(2);
+}
+
+$ops{argv} = shift @ARGV if @ARGV > 0;
+
+unless ($syntax) {
+    print STDERR "ERROR: syntax error\n";
+    print STDERR show_usage;
+    exit(2);
+}
+
+$xde->init;
+
+$xde->{DESKTOP_STARTUP_ID} = $ENV{DESKTOP_STARTUP_ID}
+    unless $xde->{DESKTOP_STARTUP_ID};
+delete $ENV{DESKTOP_STARTUP_ID};
+
+my $unique = Gtk2::UniqueApp->new(
+	'com.unexicon.xde-launch',
+	$xde->{DESKTOP_STARTUP_ID},
+	'xde-launch' => 1);
+
+unless ($ops{monitor}) {
+    # when we are not supposed to monitor, we launch the application
+    # directly
+    $xde->launch(%;  # should not return
+    die "Cannot direct launch!";
+}
+
+if ($ops{monitor}) {
+
+    if ($unique->is_running) {
+	my $args = freeze(\%ops);
+	$unique->send_message_by_name($program=>data=>$args);
+	print STDERR "Another instance of $program is already running\n"
+	    if $ops{verbose};
+	exit(0);
+    }
+
+    my $window = Gtk2::Window->new('toplevel');
+    $unique->watch_window($window);
+    $unique->signal_connect(message_received=>sub{
+	my($unique,$command,$message,$timestamp) = @_;
+	my $data = $message->get;
+	my %args = %{thaw($data)};
+	my $screen = $message->get_screen;
+	$args{screen} = $screen if $args{screen} eq '';
+	my $workspace = $message->get_workpace;
+	$args{workspace} = $workspace if $args{workspace} eq '';
+	$args{timestamp} = $timestamp unless $args{timestamp};
+	my $startup_id = $message->get_startup_id;
+	if ($ops{verbose} or $args{verbose}) {
+	    print STDERR "$command command received\n";
+	    print STDERR "\tscreen is $screen\n";
+	    print STDERR "\tworkspace is $workspace\n";
+	    print STDERR "\ttimestamp is $timestamp\n";
+	    print STDERR "\tstartup id is $startup_id\n";
+	}
+	if ($command = 1 or $command eq 'xde-launch') {
+	    $xde->launch(%args);
+	}
+	return 'ok';
+    });
+
+}
+
+$xde->launch(%ops);
+
+$SIG{TERM} = sub{$xde->main_quit};
+$SIG{INT}  = sub{$xde->main_quit};
+$SIG{QUIT} = sub{$xde->main_quit};
+
+$xde->main;
+$xde->term;
+
+exit(0);
+
+1;
+
+__END__
+
+=head1 NAME
+
+xde-launch -- launch an XDG desktop entry
+
+=head1 SYNOPSIS
+
+xde-launch [OPTIONS] APPID [APPID ...]
+
+=head1 DESCRIPTION
+
+B<xde-launch> is an L<X11::Protocol(3pm)> application that can be used
+to launch XDG application programs using startup notification and to
+monitor launching and assist light-weight window manager with completion
+of startup notification.
+
+=head1 ARGUMENTS
+
+=over
+
+=item [I<APPID> [I<APPID> I<...>]]
+
+Specifies the application identifier of an XDG application program to
+launch.  The application identifier, I<APPID>, can be one of the
+following:
+
+=over
+
+=item 1.
+
+The name of a desktop entry file without the F<.desktop> suffix.  For
+example, F<gvim>.
+
+=item 2.
+
+The name of a desktop entry file with the F<.desktop> suffix.  For
+example, F<gvim.desktop>.
+
+=item 3.
+
+The full path (absolute or relative) and filename of a desktop entry
+file.  For example: F</usr/share/applications/gvim.desktop>.
+
+=back
+
+Multiple application identifiers, I<APPID>, may be supplied, in which
+case each application will be launched.
+
+When invoked without non-option arguments, B<xde-launch> places itself
+in the background and monitors startup notification and provides
+assistance to light-weight window managers.  See L</BEHAVIOUR>
+
+=back
+
+=head1 OPTIONS
+
+=over
+
+=item B<--help>, B<-h>
+
+Print usage information to standard output and exit.
+
+=item B<--verbose>, B<-v>
+
+Print diagnostic information to standard error during operation.
+
+=item B<--display>, B<-d> I<DISPLAY>
+
+Use the specified display, I<DISPLAY>, instead of the value of the
+C<DISPLAY> environment variable.
+
+=item B<--screen>, B<-s> I<SCREEN>
+
+Specifies the screen, I<SCREEN>, on which the XDG application, I<APPID>,
+is to launch.  When unspecified, the default screen is used.
+
+=item B<--workspace>, B<-w> I<WORKSPACE>
+
+Specifies the workspace on which the XDG application is to launch.  The
+default, when unspecified, is the current desktop.  This value is placed
+in the C<DESKTOP> key-value entry in the C<new> message.
+
+=item B<--timestamp>, B<-t> I<TIMESTAMP>
+
+Specifies an X Server timestamp that corresponds to the X Window event
+that cause the launch to occur.  This is only useful in conjunction with
+sepcification of an I<APPID> argument.
+
+When no timestamp is specified, B<xde-launch> will use the time of the
+last event (or generate an event) for the timestamp.
+
+The resulting timestamp (whether specified or not) is used in the
+C<_TIME> portion of the startup notification identifier, as well as in
+the C<TIMESTAMP> key-value pair of the C<new> message.
+
+=item B<--name>, B<-N> I<NAME>
+
+Specifiy the name of the XDG application.  This overrides the C<Name>
+field from the XDG desktop entry file as well as the C<NAME> key-value
+pair in the C<new> message.
+
+=item B<--icon>, B<-i> I<ICON>
+
+Specify the icon name of the XDG application.  This overrides the
+C<Icon> field from the XDG desktop entry file as well as the C<ICON>
+key-value pair in the C<new> message.
+
+=item B<--binary>, B<-b> I<BINARY>
+
+Specify the name of the binary for the XDG application.  This overrides
+the C<TryExec> field from the XDG desktop entry file as well as the
+C<BIN> key-value pair in the C<new> message.
+
+=item B<--description>, B<-D> I<DESCRIPTION>
+
+Specify the description of the XDG application.  This overrides the
+C<Comment> field from the XDG desktop entry file as well as the
+C<DESCRIPTION> key-value pair in the C<new> message.
+
+=item B<--wmclass>, B<-W> I<NAMEORCLASS>
+
+Specify the window manager class (name or class) of the window that the
+XDG application is expected to map.  This overrides the
+C<StartupWMClass> field of the XDG desktop entry file as well as the
+C<WMCLASS> key-value pair in the C<new> message.
+
+=item B<--silent>, B<-s> I<SILENT>
+
+Specify a boolean value choosing whether visual feedback should be
+provided for the launching XDG application.  Normally, when unspecified,
+visual feedback would be detetrmined from the presence and value of a
+C<StartupNotify> or C<StartupWMClass> field in the XDG desktop entry
+file.  The argument should be some boolean value like C<0> or C<1> or
+C<yes> or C<no> or C<true> or C<false>.
+
+=item B<--appid>, B<-a> I<APPID>
+
+Override the application identifier.  This overrides the name of the XDG
+application file as well as the C<APPLICATION_ID> key-value pair in the
+C<new> message.  When no non-option I<APPID> argument is specified, and
+this option is specified, it will also be used as the non-option
+I<APPID> argument.  Normally this value is derived automatically from
+the non-option argument, I<APPID>.
+
+=item B<--exec>, B<-x> I<COMMAND>
+
+Override the program command.  This overrides the C<Exec> field of the
+XDG desktop entry file.  When this option is specified, it is not
+necessary to specify an XDG application identifier as a non-option
+argument (see L</ARGUMENTS>).
+
+=item B<--charset>, B<-c> I<CHARSET>
+
+Specifies the character set that is to be used to display messages
+concerning the startup notification.  The (usually adequate) default is
+to use the locale settings of the launching process.
+
+=item B<--language>, B<-L> I<LANGUAGE>
+
+Specifies the language that is to be used to display messages concerning
+startup notification.  The (usually adequate) default is to use the
+settings of the launching process.
+
+=item B<--nomonitor>, B<-n>
+
+Instructs B<xde-launch> to not create a background process and to not
+signal a background process to invoke the XDG application, but to simply
+send a C<new> message and directly execute the XDG application.  This
+option can be used when some other startup notification monitor performs
+the necessary functions for the desktop.
+
+=back
+
+=head1 BEHAVIOUR
+
+B<xde-launch> has two modes of operation, acheived with
+L<Gtk2::Unique(3pm)>:
+
+=over
+
+=item 1.
+
+When no other instance is running in the background for the current
+desktop, B<xde-launch> places itself in the background, launches an XDG
+application in a child process (if specified) and continues to monitor
+startup notification and provides sequence completion.
+
+=item 2.
+
+When a background instance exists for the current desktop, B<xde-launch>
+requests that the background instance execute the XDG application in a
+new child process using L<Gtk2::Unique(3pm)> signals.
+
+=back
+
+While running in the background, the B<xde-launch> instance performs the
+following:
+
+=over
+
+=item 1.
+
+Monitors for signals from newly invoked instances of B<xde-launch>
+requesting that an XDG application program be launched as follows:
+
+=over
+
+=item a.
+
+When a signal arrives, B<xde-launch> uses the specified desktop entry
+file to determine what form of startup notification to perform.
+
+=item b.
+
+The background process then initiates a new startup notification
+sequence by generating a startup notification identifier and broadcasts
+a C<new> message to the X Server.
+
+=item c.
+
+It then creates a new child process for the application, populates the
+C<DESKTOP_STARTUP_ID> environment variable and executes the XDG
+application in the child process.
+
+=item d.
+
+It monitors for exit of the XDG application, whether normal or abnormal,
+and performs sequence completion when the application exits, unless the
+sequence has already been completed.
+
+=back
+
+=item 2.
+
+Monitors for startup notification messages.  These messages consist of
+C<_NET_STARTUP_INFO_BEGIN> and C<_NET_STARTUP_INFO> messages sent to the
+root window.  It monitors startup notification sequences as follows:
+
+=over
+
+=item a.
+
+When a new startup notification sequence is initiated, that was not
+performed by itself, B<xde-launch> examines the C<new> message for the
+presence of the C<APPLICATION_ID> key value field.  When one is present
+(such as when XDG applications are launched by L<openbox(1)> or a
+launcher conforming to the startup notification procedures or using the
+F<libsn> library), additional startup notification sequence information
+is obtained from the corresponding desktop file.
+
+=item b.
+
+C<new> messages are also checked for a C<WMCLASS> key-value entry.  When
+such an entry is present, it is assumed that the XDG application will
+not provide startup notification completion, but will map a window with
+a C<WM_CLASS> resource or class that matches the key-value entry.  When
+Bxxde-launch> detects the addition of a new client to the
+C<_NET_CLIENT_LIST> of a EWMH/NetWM compliant window manager, it
+performs startup notification completion.
+
+=back
+
+=item 3.
+
+B<xde-launch> may (at some time) optionally provide visual indications
+of starting programs.
+
+=back
+
+=head2 TIME STAMPS
+
+B<xde-launch> is intended on being invoked directly from a user
+interface, such as the root menu of a light-weight window manager, or an
+X Windows application such as a systray menu.  To perform property
+startup notification, B<xde-lauch> determines the X Server timestamp of
+the invocation as follows:
+
+=over
+
+=item
+
+When B<xde-launch> is invoked directly (executed) from an application
+that has access to the X Server event that invoked the launch, it can
+supply the X Display timestamp directly to B<xde-launch> using the
+B<--timestamp> option (see L</OPTIONS>).  B<xde-launch> will use this
+time stamp in the generation of the C<DESKTOP_STARTUP_ID> as well as in
+the C<TIMESTAMP> key-value pair in the startup notification C<new>
+message.
+
+=item
+
+When B<xde-launch> is invoked by an application that does not have
+access to the X Event that invoked the launch, the background
+B<xde-launch> process will use the timestamp associated with the
+L<Gtk2::Unique(3pm)> signal from foreground process as the timestamp.
+In this way, B<xde-launch> can simply be executed using the execute
+mechanism of a light-weight window manager root menu or key binding.
+
+=back
+
+=head1 WINDOW MANAGERS
+
+B<xde-launch> interacts with light-weight window managers in the
+following ways:
+
+=over
+
+=item
+
+B<xde-launch> creates startup notification identifiers using the
+technique from the F<libsn> library.  This consists of the following:
+
+ $launcher = s{/}{|}g;
+ $launchee = s{/}{|}g;
+ $id = sprintf('%s/%s/%d-%d-%s_TIME%lu',
+	 $launcher, $launchee, getpid, sequence_number,
+	 $timestamp);
+
+Compliant applications will place the startup notification identfier
+from the C<DESKTOP_STARTUP_ID> environment variable in the
+C<_NET_STARTUP_ID> property on its group leader top-level window before
+it is mapped.  The window manager can use the '_TIME%lu' portion of the
+startup id to determine the X Server timestamp for the event that
+launched the application.  When the client does not set an initial
+C<_NET_WM_uSER_TIME>, this timestamp can be used in its stead.
+
+=item
+
+B<xde-launch> completes non-compliant or partially compliant application
+by generating the C<remove> message once a client window appears with the
+correct name or class in the C<WM_CLASS> property.
+
+=back
+
+=head1 HISTORY
+
+I wrote B<xde-launch> because no other simple invocation command existed
+and I was looking for a mechanism that supported startup notification
+that could be run from a light-weight window manager root menu or
+systray menu that would perform proper startup notificaiton.
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
+
+L<XDE::Launch(3pm)>,
+L<Gtk2::Unique(3pm)>.
+
+=cut
+
+# vim: set sw=4 tw=72 fo=tcqlorn:

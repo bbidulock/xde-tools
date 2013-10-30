@@ -145,9 +145,8 @@ the event loop.
 sub main {
     my $self = shift;
     if (my $X = $self->{X}) {
-	$X->flush;
-	$X->xde_process_errors;
-	$X->xde_process_events;
+	$X->GetScreenSaver;
+	$X->xde_process_queue;
     }
     return $self->SUPER::main;
 }
@@ -314,4 +313,4 @@ L<X11::Protocol(3pm)>
 
 =cut
 
-# vim: sw=4 tw=72
+# vim: set sw=4 tw=72 fo=tcqlorn:

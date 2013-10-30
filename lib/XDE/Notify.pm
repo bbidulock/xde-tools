@@ -9,7 +9,7 @@ XDE::Notify - XDE wrapper module for Linux::Inotify
 
 =head1 SYNOPSIS
 
-my $X = XDE::Notify->new;
+my $N = XDE::Notify->new;
 
 =head1 DESCRIPTION
 
@@ -36,7 +36,7 @@ sub new {
 
 Initializes the XDE::Notify object.  This sets handlers and initializes
 the L<Glib::Mainloop(3pm)> watchers for event-loop operation.
-Initialization is no done automatically, because the owner of this
+Initialization is not done automatically, because the owner of this
 instance might want to set other things up before initializing the
 main loop.
 

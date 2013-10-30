@@ -49,6 +49,263 @@ sub _term {
 
 =back
 
+=head2 Configuration file location
+
+=over
+
+=item $style->B<get_config_file>() => $filename or undef
+
+Locates the file in which the style needs to be changed.  This depends
+on the window manager: L<fluxbox(1)>, L<blackbox(1)>, L<openbox(1)>,
+L<icewm(1)>, L<pekwm(1)>, L<jwm(1)>, L<wmaker(1)>, L<fvwm(1)>,
+L<afterstep(1)>, L<metacity(1)>, L<wmx(1)>, none and unknown.
+
+=cut
+
+sub get_config_file {
+    my $self = shift;
+    my $v = $self->{ops}{verbose};
+    print STDERR "Getting config file\n" if $v;
+    my $wm = "\U$self->{wmname}\E" if $self->{wmname};
+    $wm = 'NONE' unless $wm;
+    my $getter = "get_config_file_$wm";
+    my $sub = $self->can($getter);
+    $sub = $self->can('get_config_file_UNKNOWN') unless $sub;
+    my $result = &$sub($self,@_) if $sub;
+    return $result;
+}
+
+=item $style->B<get_config_file_FLUXBOX>() => $filename or undef
+
+When L<xde-session(1p)> runs, it sets the C<FLUXBOX_RCFILE> environment
+variable.  L<xde-session(1p)> and associated tools always launch
+L<fluxbox(1)> with a command such as:
+
+  fluxbox ${FLUXBOX_RCFILE:+-rc $FLUXBOX_RCFILE}
+
+The default configuration file when C<FLUXBOX_RCFILE> is not specified is
+F<~/.fluxbox/init>.  The locations of other L<fluxbox(1)> configuration
+files are specified by the initial configuration file.
+L<xde-session(1p)> typically sets C<FLUXBOX_RCFILE> to
+F<$XDG_CONFIG_HOME/fluxbox/init>.
+
+=cut
+
+sub get_config_file_FLUXBOX {
+    my $self = shift;
+    my $file = $ENV{FLUXBOX_RCFILE};
+    $file = "$ENV{HOME}/.fluxbox/init" unless $file and -f $file;
+    return undef unless $file and -f $file;
+    return $file;
+}
+
+=item $style->B<get_config_file_BLACKBOX>() => $filename or undef
+
+When L<xde-session(1p)> runs, it sets the C<BLACKBOX_RCFILE> environment
+variable.  L<xde-session(1p)> and associated tools always launch
+L<blackbox(1)> with a command such as:
+
+  blackbox ${BLACKBOX_RCFILE:+-rc $BLACKBOX_RCFILE}
+
+The default configuration file when C<$BLACKBOX_RCFILE> is not specified is
+F<~/.blackboxrc>.  The locations of other L<blackbox(1)> configuration
+files are specified by the initial configuration file.
+L<xde-session(1p)> typically sets C<$BLACKBOX_RCFILE> to
+F<$XDG_CONFIG_HOME/blackbox/rc>.
+
+=cut
+
+sub get_config_file_BLACKBOX {
+    my $self = shift;
+    my $file = $ENV{BLACKBOX_RCFILE};
+    $file = "$ENV{HOME}/.blackboxrc" unless $file and -f $file;
+    return undef unless $file and -f $file;
+    return $file;
+}
+
+=item $style->B<get_config_file_OPENBOX>() => $filename or undef
+
+When L<xde-session(1p)> runs, it sets the C<OPENBOX_RCFILE> environment
+variable.  L<xde-session(1p)> and associated tools always launch
+L<openbox(1)> with a command such as:
+
+  openbox ${OPENBOX_RCFILE:+--config-file $OPENBOX_RCFILE}
+
+The default caonfiguration file when C<OPENBOX_RCFILE> is not specified is
+F<$XDG_CONFIG_HOME/openbox/rc.xml>.  The locations of other
+L<openbox(1)> configuration files are specified by the initial
+configuration file.  L<xde-session(1p)> typically sets C<OPENBOX_RCFILE> to
+F<$XDG_CONFIG_HOME/openbox/xde-rc.xml>.
+
+=cut
+
+sub get_config_file_OPENBOX {
+    my $self = shift;
+    my $file = $ENV{OPENBOX_RCFILE};
+    $file = "$self->{XDG_CONFIG_HOME}/openbox/rc.xml" unless $file;
+    return undef unless $file and -f $file;
+    return $file;
+}
+
+=item $style->B<get_config_file_ICEWM>() => $filename or undef
+
+When L<xde-session(1p)> runs, it sets the C<ICEWM_PRIVCFG> environment
+variable.  L<xde-session(1p)> and associated tools always launch
+L<icewm(1)> with this environment variable set.  L<icewm(1)> respects
+the environment variable, so no special options are required when
+launching L<icewm(1)>.
+
+The default configuraiton file when C<ICEWM_PRIVCFG> is not specified is
+F<~/.icewm/theme>.  The locations of all L<icewm(1)> configuration files
+are the same directory.  L<xde-session(1p)> typically sets
+C<ICEWM_PRIVCFG> to F<$XDG_CONFIG_HOME/icewm>.
+
+=cut
+
+sub get_config_file_ICEWM {
+    my $self = shift;
+    my $file = "$ENV{ICEWM_PRIVCFG}/theme" if $ENV{ICEWM_PRIVCFG};
+    $file = "$ENV{HOME}/.icewm/theme" unless $file and -f $file;
+    return undef unless $file and -f $file;
+    return $file;
+}
+
+=item $style->B<get_config_file_PEKWM>() => $filename or undef
+
+When L<xde-session(1p)> runs, it sets the C<PEKWM_RCFILE> environment
+variable.  L<xde-session(1p)> and associated tools always launch
+L<pekwm(1)> with a command such as:
+
+  pekwm ${PEKWM_RCFILE:+--config $PEKWM_RCFILE}
+
+The default configuration file when C<PEKWM_RCFILE> is not specified is
+F<~/.pekwm/config>.  The locations of other L<pekwm(1)> configuration
+files are specified by the initial configuration file.
+L<xde-session(1p)> typically sets C<PEKWM_RCFILE> to
+F<$XDG_CONFIG_HOME/pekwm/config>.
+
+=cut
+
+sub get_config_file_PEKWM {
+    my $self = shift;
+    my $file = $ENV{PEKWM_RCFILE} if $ENV{PEKWM_RCFILE};
+    $file = "$ENV{HOME}/.pekwm/config" unless $file and -f $file;
+    return undef unless $file and -f $file;
+    return $file;
+}
+
+=item $style->B<get_config_file_JWM>() => $filename or undef
+
+When L<xde-session(1p)> runs, it sets the C<JWM_RCFILE> environment
+variable.  L<xde-session(1p)> and associated tools always launch
+L<jwm(1)> with a command such as:
+
+  jwm ${JWM_RCFILE:+-rc $JWM_RCFILE}
+
+The default configuration file when C<JWM_RCFILE> is not specified is
+F<~/.jwmrc>.  The locations of other L<jwm(1)> configuraiton files are
+specified by the initial configuraiton file.  L<xde-session(1p)>
+typically sets C<JWM_RCFILE> to F<$XDG_CONFIG_HOME/jwm/rc>.
+
+=cut
+
+sub get_config_file_JWM {
+    my $self = shift;
+    my $file = $ENV{JWM_RCFILE} if $ENV{JWM_RCFILE};
+    $file = "$ENV{HOME}/.jwmrc" unless $file and -f $file;
+    return undef unless $file and -f $file;
+    return $file;
+}
+
+=back
+
+=item $style->B<get_config_file_WMAKER>() => $filename or undef
+
+When L<xde-session(1p)> runs, it sets the C<GNUSTEP_USER_ROOT>
+environment variable.  L<xde-session(1p)> and associated tools always
+lanuch L<wmaker(1)> with this environment variable set.  L<wmaker(1)>
+respects the environment variable, so no special options are required
+when launching L<wmaker(1)>.
+
+The default configuration file when C<GNUSTEP_USER_ROOT> is not
+specified is F<~/GNUstep/Defaults/WindowMaker>.  The locations of all
+L<wmaker(1)> configuration files are under the same directory.
+L<xde-session(1p)> typically sets C<GNUSTEP_USER_ROOT> to
+F<$XDG_CONFIG_HOME/GNUstep>.
+
+=cut
+
+sub get_config_file_WMAKER {
+    my $self = shift;
+    my $file = $ENV{GNUSTEP_USER_ROOT};
+    $file = "$ENV{HOME}/$file" if $file and not $file =~ m{/};
+    $file = "$ENV{HOME}/GNUstep" unless $file and -d $file;
+    $file = "$file/Defaults/WindowMaker" if $file and -d $file;
+    return undef unless $file and -f $file;
+    return $file;
+}
+
+=item $style->B<get_config_file_FVWM>() => $filename or undef
+
+When L<xde-session(1p)> runs, it sets the C<FVWM_USRDIR> and
+C<FVWM_RCFILE> environment variables.  L<fvwm(1)> observes the
+C<FVWM_USRDIR> environment variable.  Nevertheless, L<xde-session(1p)>
+and associated tools always sets the C<FVWM_USRDIR> environment
+variable and launches L<fvwm(1)> with a command such as:
+
+  fvwm ${FVWM_RCFILE:+-f $FVWM_RCFILE}
+
+The default configuration file when the C<FVWM_USRDIR> and
+C<FVWM_RCFILE> environment variables are not set is F<~/.fvwm/config>.
+When only C<FVWM_USRDIR> is set, the default configuration file is
+F<$FVWM_USRDIR/config>.  The locations of all L<fvwm(1)> configuration
+files are under F<$FVWM_USRDIR> which defaults to F<~/.fvwm>.
+L<xde-session(1p)> typically sets C<FVWM_USRDIR> to
+F<$XDG_CONFIG_HOME/fvwm> and C<FVWM_RCFILE> to
+F<$XDG_CONFIG_HOME/fvwm/config>.
+
+=cut
+
+sub get_config_file_FVWM {
+    my $self = shift;
+    my $dir = $ENV{FVWM_USRDIR} if $ENV{FVWM_USRDIR};
+    $dir = "$ENV{HOME}/.fvwm" unless $dir and -d $dir;
+    my $file= $ENV{FVWM_RCFILE} if $ENV{FVWM_RCFILE};
+    $file = "$dir/config" unless $file and -f $file;
+    return undef unless $file and -f $file;
+    return $file;
+}
+
+=item $style->B<get_config_file_AFTERSTEP>() => $filename or undef
+
+Not yet implemented, just returns C<undef>.
+
+=cut
+
+sub get_config_file_AFTERSTEP {
+    return undef;
+}
+
+=item $style->B<get_config_file_METACITY>() => $filename or undef
+
+Not yet implemented, just returns C<undef>.
+
+=cut
+
+sub get_config_file_METACITY {
+    return undef;
+}
+
+=item $style->B<get_config_file_WMX>() => $filename or undef
+
+Not yet implemented, just returns C<undef>.
+
+=cut
+
+sub get_config_file_WMX {
+    return undef;
+}
+
 =head2 Style setting
 
 =over
@@ -80,8 +337,9 @@ sub set_style {
 =item $style->B<set_style_FLUXBOX>(I<@styles>) => $result
 
 When L<fluxbox(1)> changes the style, it writes the path to the new
-style in the C<session.styleFile> resource in the F<~/.fluxbox/init>
-file and then reloads the configuration.
+style in the C<session.styleFile> resource in the file
+F<$FLUXBOX_RCFILE> (default F<~/.fluxbox/init>) and then reloads the
+configuration.
 
 The C<session.styleFile> entry looks like:
 
@@ -103,17 +361,6 @@ C<_NET_SUPPORTING_WM_CHECK(WINDOW)> root window property but it does
 change the C<_BLACKBOX_PID(CARDINAL)> root window property, even if it
 is just to replace it with the same value again.
 
-When L<XDE(3pm)> launches, it sets the C<FLUXBOX_CONFIG_FILE>
-environment variable.  L<XDE(3pm)> and associated tools will always
-launch L<fluxbox(1)> with a command such as:
-
- fluxbox ${FLUXBOX_CONFIG_FILE:+-rc $FLUXBOX_CONFIG_FILE}
-
-The default configuration file when C<FLUXBOX_CONFIG_FILE> is not
-specified is F<~/.fluxbox/init>.  The locations of all other
-L<fluxbox(1)> configuration files are specified by the initial
-configuration file.
-
 =cut
 
 sub set_style_FLUXBOX {
@@ -121,8 +368,7 @@ sub set_style_FLUXBOX {
     my $style;
     foreach (@styles) { if (-f $_ or -f "$_/theme.cfg") { $style = $_; last; } }
     return unless $style;
-    my $file = $ENV{FLUXBOX_CONFIG_FILE};
-    $file = "$ENV{HOME}/.fluxbox/init" unless $file;
+    my $file = $self->get_config_file_FLUXBOX;
     return unless $file and -f $file;
     my @lines = ();
     open(my $fh, "<", $file) or return;
@@ -158,17 +404,6 @@ the C<_NET_WM_PID> property on the C<_NET_SUPPORTING_WM_CHECK> window>
 will effect the reconfiguration that results in rereading of the style
 file.
 
-When L<XDE(3pm)> launches, it sets the C<BLACKBOX_CONFIG_FILE>
-environment variable.  L<XDE(3pm)> and associated tools will always
-launch L<blackbox(1)> with a command such as:
-
- blackbox ${BLACKBOX_CONFIG_FILE:+-rc $BLACKBOX_CONFIG_FILE}
-
-The default configuration file when C<BLACKBOX_CONFIG_FILE> is not
-specified is F<~/.blackboxrc>.  The locations of all other
-L<blackbox(1)> configuration files are specified by the initial
-configuration file.
-
 =cut
 
 sub set_style_BLACKBOX {
@@ -176,8 +411,7 @@ sub set_style_BLACKBOX {
     my $style;
     foreach (@styles) { if (-f $_ or -f "$_/theme.cfg") { $style = $_; last; } }
     return unless $style;
-    my $file = $ENV{BLACKBOX_CONFIG_FILE};
-    $file = "$ENV{HOME}/.blackboxrc" unless $file;
+    my $file = $self->get_config_file_BLACKBOX;
     return unless $file and -f $file;
     my @lines = ();
     open(my $fh, "<", $file) or return;
@@ -221,6 +455,18 @@ type can be one of:
  OB_CONTROL_RESTART        2   restart
  OB_CONTROL_EXIT           3   exit
 
+When L<xde-session(1p)> runs, it sets the C<OPENBOX_RCFILE> environment
+variable.  L<xde-session(1p)> and associated tools will always launch
+L<openbox(1)> with a command such as:
+
+ openbox ${OPENBOX_RCFILE:+--config-file $OPENBOX_RCFILE}
+
+The default configuration file when C<OPENBOX_RCFILE> is not specified is
+F<$XDG_CONFIG_HOME/openbox/rc.xml>.  The location of other L<openbox(1)>
+configuration files are specified by the initial configuration file.
+L<xde-session(1p)> typically sets C<OPENBOX_RCFILE> to
+F<$XDG_CONFIG_HOME/openbox/xde-rc.xml>.
+
 =cut
 
 use constant {
@@ -257,7 +503,18 @@ F<~/.icewm/themes> or F<$ICEWM_PRIVCFG/themes> subdirectories.
 
 There are two ways to get L<icewm(1)> to reload the theme, one is to
 send a C<SIGHUP> to the window manager process.  The other is to send an
-C<_ICEWM_ACTION> client message to the root window:
+C<_ICEWM_ACTION> client message to the root window.
+
+When L<xde-session(1p)> runs, it sets the C<ICEWM_PRIVCFG> environment
+variable.  L<xde-session(1p)> and associated tools will always set this
+environment variable before launching L<icewm(1)>.  L<icewm(1)> respects
+this environment variable and no special options are necessary when
+launching L<icewm(1)>.
+
+The default configuration directory when C<ICEWM_PRIVCFG> is not
+specified is F<~/.icewm>.  The location of all other L<icewm(1)>
+configuration files are in this directory.  L<xde-session(1p)> typically
+sets C<ICEWM_PRIVCFG> to F<$XDG_CONFIG_HOME/icewm>.
 
 =cut
 
@@ -398,6 +655,18 @@ window) as well as the fqdn of the host in the
 C<WM_CLIENT_MACHINE(STRING)> property, again on the root window.  The
 L<XDE::EWMH(3pm)> module figures this out.
 
+When L<xde-session(1p)> runs, it sets the C<PEKWM_RCFILE> environment
+variable.  L<xde-session(1p)> and associated tools always launch
+L<pekwm(1)> with a command such as:
+
+ pekwm ${PEKWM_RCFILE:+--config $PEKWM_RCFILE}
+
+The default configuration file when C<PEKWM_RCFILE> is not specified is
+F<~/.pekwm/config>.  The locations of other L<pekwm(1)> configuration
+files are specified in the initial configuration file.
+L<xde-session(1p)> typically sets C<PEKWM_RCFILE> to
+F<$XDG_CONFIG_HOME/pekwm/config>.
+
 =cut
 
 sub set_style_PEKWM {
@@ -407,7 +676,7 @@ sub set_style_PEKWM {
     return unless $style;
     my $pid = $self->getWMRootPropertyInt('_NET_WM_PID');
     return unless $pid;
-    my $file = $ENV{PEKWM_CONFIG_FILE};
+    my $file = $ENV{PEKWM_RCFILE};
     unless ($file and -f $file) {
 	my $dir = $ENV{PEKWM_CONFIG_HOME};
 	$dir = "$ENV{HOME}/.pekwm" unless $dir;

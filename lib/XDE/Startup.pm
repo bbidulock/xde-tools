@@ -242,7 +242,7 @@ See also L<XDE::Context(3pm)> for options recognized by the base module.
 =head1 BEHAVIOUR
 
 The XDE::Startup module is responsible for starting up an entire X
-Desktop Environment.  I has a number of options and many of the options
+Desktop Environment.  It has a number of options and many of the options
 simply default to XDG/XDE environment variables when unspecified.  The
 sequence of startup is as follows:
 

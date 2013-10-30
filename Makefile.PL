@@ -3,6 +3,8 @@ WriteMakefile(
 	NAME => 'xde-tools',
 	VERSION => '0.01',
 	EXE_FILES => [qw(
+		sn-launch
+		sn-monitor
 		xde-autostart
 		xde-chooser
 		xde-clock
@@ -12,11 +14,12 @@ WriteMakefile(
 		xde-icon
 		xde-init
 		xde-input
-		xde-input-edit
 		xde-keys
+		xde-launch
 		xde-logout
 		xde-menu
 		xde-menugen
+		xde-monitor
 		xde-pager
 		xde-panel
 		xde-run
@@ -33,10 +36,19 @@ WriteMakefile(
 		xde-setup
 		xde-startup
 		xde-style
+		xde-test
+		xde-test2
+		xde-test3
+		xde-test4
+		xde-test5
+		xde-test7
+		xde-test8
 		xde-theme
 		xde-theme2
+		xde-theme3
 		xde-traymenu
 		xde-xset
+		xlib-test
 	)],
 	PREREQ_PM => {
 		'Carp' => 0,			# perl
@@ -61,7 +73,7 @@ WriteMakefile(
 		'X11::Keysyms' => 0,		# perl-x11-protocol
 		'X11::Protocol' => 0,		# perl-x11-protocol
 						# perl-x11-protocol-other
-						# perl-x11-protocol-more
+		'X11::Protocol::Enhanced' => 0,	# perl-x11-protocol-more
 		'XML::SAX::ParserFactory' => 0,	# perl-xml-sax
 	},
 	# basically strip the pod out of the .pm file and squeeze blank lines

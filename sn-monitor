@@ -1,0 +1,118 @@
+#!/usr/bin/perl
+
+1;
+
+__END__
+
+=head1 NAME
+
+sn-monitor - monitor and complete startup notification sequences
+
+=head1 SYNOPSIS
+
+sn-monitor [OPTIONS]
+
+=head1 DESCRIPTION
+
+B<sn-monitor> is a command line L<X11::Protocol(3pm)> application that
+uses the L<X11::SN::Monitor(3pm)> module to monitor the launching of
+applications and perform automatic sequence completion for an ICCCM
+compliant window manager.
+
+=head1 OPTIONS
+
+As B<sn-monitor> uses L<Getopt::Long(3pm)>, abbreviated options may be
+supplied provided that they are non-abiguous.
+
+=over
+
+=item B<--help>, B<-h>
+
+Print a brief usage message to standard output and exit.
+
+=item B<--verbose>, B<-v>
+
+Print diagnostic information to standard error during operation.
+
+=item B<--noreplace>, B<-nr>
+
+By default, B<sn-monitor> will replace an existing instance of the
+program.  This option suppresses that behaviour and B<sn-monitor> will
+exit when an existing instance is detected.
+
+=item B<--display>, B<-d> I<DISPLAY>
+
+Use the X display specified by display, I<DISPLAY>, instead of the
+B<DISPLAY> environment variable.
+
+=item B<--single>, B<-S>
+
+By default, B<sn-monitor> will monitor all screen on the X display.
+This option restricts it to the default screen.
+
+=item B<--screen>, B<-s> I<SCREEN>
+
+By default, B<sn-monitor> will monitor all screens on the X display.
+This option restricts it to on screen by number, I<SCREEN>.
+
+=back
+
+=head1 BEHAVIOUR
+
+B<sn-monitor> uses manager selections to ensure that a single instance
+is running for a given X Display.  It uses the C<_SN_MONITOR_S%d>
+manager selection for this purpose.
+
+When option B<--completion> is set (the default), B<sn-monitor> starts,
+it takes ownership of the C<_SN_MONITOR_S%d> selection for each screen
+on the display, causing all existing instances B<sn-monitor> to exit.
+After taking ownership of the selection, B<sn-monitor> selects for input
+on C<SelectionClear> notifications and exits gracefully when another
+manager take ownership of the selection.
+
+During operation, B<sn-monitor> responds to several events:
+
+=over
+
+=item
+
+C<ClientMessage> events with an event mask of C<PropertyNotifyMask> of
+type C<_NET_STARTUP_INFO_BEGIN> and C<_NET_STARTUP_INFO> in accordance
+with startup notification specifications.
+
+=item
+
+C<CreateWindow> and C<DestroyWindow> events with an event mask of
+C<SubstructureNotify> on the root window of each screen of the display.
+
+=item
+
+C<PropertyNotify> events with an event mask of C<PropertyNotifyMask> for
+each window for which a C<CreateWindow> event was received.  The
+property of interest is the ICCCM C<WM_STATE> property which indicates
+that a window is under the control of an ICCCM compliant window manager.
+
+=back
+
+When B<sn-monitor> detects that the window manager has begun to manage a
+top-level and group leader window for a given C<WM_CLASS>, and a C<new>
+message has been received indicating that the application will not
+perform startup notification completion, yet the name or class of the
+C<WM_CLASS> property have been identified, the monitor will perform
+completion by sending a C<remove> message to the root window on behalf
+of the window manager and application.
+
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
+
+L<X11::SN(3pm)>,
+L<X11::SN::Monitor(3pm)>,
+L<X11::Protocol(3pm)>.
+
+=cut
+
+# vim: set sw=4 tw=72 fo=tcqlorn:
