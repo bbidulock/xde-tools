@@ -1,5 +1,9 @@
 package X11::Protocol::Xlib;
 use base qw(X11::Protocol);
+use Encode;
+use Encode::Unicode;
+use Encode::X11;
+use X11::Protocol;
 use X11::Protocol::Enhanced;
 use X11::AtomConstants;
 use strict;
@@ -40,6 +44,79 @@ both L<X11::Protpcol::Enhanced(3pm)> and L<X11::AtomConstants(3pm)>.
 =head1 METHODS
 
 The following methods are provided.
+
+=cut
+
+sub new {
+    my $self = X11::Protocol::new(@_);
+    if ($self) {
+	$self->{ext_const}{WMHints} = [qw(
+		InputHint
+		StateHint
+		IconPixmapHint
+		IconWindowHint
+		IconPositionHint
+		IconMaskHint
+		WindowGroupHint
+		MessageHint
+		UrgencyHint)];
+	$self->{ext_const}{WMState} = [qw(
+		WithdrawnState
+		NormalState
+		ZoomState
+		IconicState
+		InactiveState)];
+	$self->{ext_const}{WMSizeHints} = [qw(
+		USPosition
+		USSize
+		PPosition
+		PSize
+		PMinSize
+		PMaxSize
+		PResizeInc
+		PAspect
+		PBaseSize
+		PWinGravity)];
+	$self->{ext_const}{IceWMTray} = [qw(
+		Ignore
+		Minimized
+		Exclusive)];
+    }
+    return $self;
+}
+
+=head2 BASIC UTILITIES
+
+=over
+
+=item $X->B<SelectInput>(I<$window>,I<$event_mask>)
+
+I<$event_mask> defaults to an empty mask.  When specified, I<$event_mask>
+may be an array reference to an array of event mask bit names or numbers;
+a hash reference to with bit name or bit number keys and boolean values;
+or a integer bit mask.
+
+=cut
+
+sub SelectInput {
+    my($X,$window,$mask) = @_;
+    $mask = 0 unless $mask;
+    my $events;
+    if (ref $events eq 'ARRAY') {
+	$events = $X->pack_mask('EventMask',@$events);
+    } 
+    elsif (ref $events eq 'HASH') {
+	$events = $X->pack_mask('EventMask',
+		map{$events->{$_}?$_:()} keys %$events);
+    }
+    else {
+	$events = $mask;
+    }
+    $X->ChangeWindowAttributes($window,event_mask=>$events);
+}
+
+=back
+
 
 =head2 TEXT PROPERTIES
 
@@ -185,36 +262,27 @@ or C<WM_NAME>.
 sub GetTextProperty {
     my($X,$window,$prop,$type) = @_;
     $type = 0 unless $type;
-    my($value,$res);
-    my $atom = $prop =~ m{^\d+$} ? $prop : $X->atom($prop);
-    ($res) = $X->robust_req(
+    my $atom = ($prop =~ m{^\d+$}) ? $prop : $X->atom($prop);
+    my ($res) = $X->robust_req(
 	    GetProperty=>$window,
 	    $atom,$type,0,1);
-    if (ref $res) {
-	my($val,$rtype,$format,$after) = @$res;
-	if ($format) {
-	    if ($after) {
-		($res) = $X->robust_req(
-			GetProperty=>$window,
-			$atom,$type,1,(($after+3)>>2));
-		if (ref $res) {
-		    ($after,$rtype,$format,$after) = @$res;
-		    $value = $val.$after;
-		}
-	    } else {
-		$value = $val;
-	    }
-	    if (defined $value) {
-		return {
-		    value=>$value,
-		    format=>$format,
-		    encoding=>$rtype,
-		    nitems=>length($value),
-		};
-	    }
-	}
+    return undef unless ref $res;
+    my($value,$rtype,$format,$after) = @$res;
+    return undef unless $format;
+    if ($after) {
+	($res) = $X->robust_req(
+		GetProperty=>$window,
+		$atom,$type,1,(($after+3)>>2));
+	return undef unless ref $res;
+	return undef unless $res->[2]; # $format
+	$value .= $res->[0];
     }
-    return undef;
+    return {
+	value=>$value,
+	format=>$format,
+	encoding=>$X->atom_name($rtype),
+	nitems=>length($value),
+    };
 }
 
 =item $X->B<SetTextProperty>(I<$window>,I<$text>,I<$prop>)
@@ -497,21 +565,43 @@ checking that the aspect ration falls in range.  If a base size is not
 provided, nothing should be subtracted from the window size.  (The minimum
 size is not to be used in place of the base size for this purpose.)
 
+=head3 Methods
+
 In the methods that follow, I<$hints>, when defined, is a reference to a
 hash containing the following keys:
 
+    supplied                  supplied fields
     user_position             user-specified initial position
-    user_size                 user-specified size
+    user_size                 user-specified initial size
     program_position          program-specified initial position
-    program_size              program-specified size
+    program_size              program-specified initial size
     x, y                      position (obsolete)
     width, height             size (obsolete)
     min_width, min_height     program-specified minimum size
     max_width, max_height     program-specified maximum size
-    width_inc, height_inc     program-specified size increment
+    width_inc, height_inc     program-specified resize increments
     min_aspect, max_aspect    program-specified aspect
     base_width, base_height   program-specified base size
     win_gravity               program-specified window gravity
+
+C<win_gravity> is an interpreted field of type C<WinGravity>
+and takes one of the values defined in the core protocol
+(L<X11::Protocol(3pm)>).
+
+C<supplied> is an interpreted bit field and is a reference to an array
+that can contain the following symbolic bit numbers:
+
+   'USPosition'   WM_NORMAL_HINTS_USPOSITION	=> (1<<0)
+   'USSize'       WM_NORMAL_HINTS_USSIZE	=> (1<<1)
+   'PPosition'    WM_NORMAL_HINTS_PPOSITION	=> (1<<2)
+   'PSize'        WM_NORMAL_HINTS_PSIZE		=> (1<<3)
+   'PMinSize'     WM_NORMAL_HINTS_PMINSIZE	=> (1<<4)
+   'PMaxSize'     WM_NORMAL_HINTS_PMAXSIZE	=> (1<<5)
+   'PResizeInc'   WM_NORMAL_HINTS_PRESIZEINC	=> (1<<6)
+   'PAspect'      WM_NORMAL_HINTS_PASPECT	=> (1<<7)
+
+   'PBaseSize'    WM_NORMAL_HINTS_PBASESIZE	=> (1<<8)
+   'PWinGravity'  WM_NORMAL_HINTS_PWINGRAVITY	=> (1<<9)
 
 The C<min_aspect> and C<max_aspect> fields, when defined, contain a
 reference to a hash containing the following keys:
@@ -521,7 +611,8 @@ reference to a hash containing the following keys:
 
 =cut
 
-$X11::Protocol::Const{WMSizeHints} = [qw(
+use constant {
+    WMSizeHints=>[qw(
 	USPosition
 	USSize
 	PPosition
@@ -531,7 +622,21 @@ $X11::Protocol::Const{WMSizeHints} = [qw(
 	PResizeInc
 	PAspect
 	PBaseSize
-	PWinGravity)];
+	PWinGravity)],
+};
+
+use constant {
+    WM_NORMAL_HINTS_USPOSITION	=> (1<<0),
+    WM_NORMAL_HINTS_USSIZE	=> (1<<1),
+    WM_NORMAL_HINTS_PPOSITION	=> (1<<2),
+    WM_NORMAL_HINTS_PSIZE	=> (1<<3),
+    WM_NORMAL_HINTS_PMINSIZE	=> (1<<4),
+    WM_NORMAL_HINTS_PMAXSIZE	=> (1<<5),
+    WM_NORMAL_HINTS_PRESIZEINC	=> (1<<6),
+    WM_NORMAL_HINTS_PASPECT	=> (1<<7),
+    WM_NORMAL_HINTS_PBASESIZE	=> (1<<8),
+    WM_NORMAL_HINTS_PWINGRAVITY	=> (1<<9),
+};
 
 =over
 
@@ -563,6 +668,7 @@ sub GetWMSizeHints {
     $fields[17] = 0 unless defined $fields[17];
     my %hints;
     my %flags = $X->unpack_mask('WMSizeHints',$flag);
+    $hints{supplied} = \@supplied;
     $hints{user_position} = 1
 	if $flags{USPosition};
     $hints{user_size} = 1
@@ -601,7 +707,7 @@ sub GetWMSizeHints {
 	if $flags{PBaseSize};
     $hints{win_gravity} = $X->interp('WinGravity', $fields[16])
 	if $flags{PWinGravity};
-    return \%hints, \@supplied;
+    return \%hints;
 }
 
 =item $X->B<SetWMSizeHints>(I<$window>,I<$hints>,I<$prop>)
@@ -699,7 +805,7 @@ sub SetWMSizeHints {
 	    Replace=>pack('LLLLLlllllllllllll',$flag,@fields));
 }
 
-=item $X->B<GetWMNormalHints>(I<$window>) => I<$hints>,I<$supplied> or undef
+=item $X->B<GetWMNormalHints>(I<$window>) => I<$hints> or undef
 
 This method is equivalent to:
 
@@ -897,6 +1003,8 @@ is iconic) or by raising it to the top of the stack.
 
 =back
 
+=head3 Methods
+
 In the methods that follow, I<$hints>, when defined, is a reference to a
 hash that contains the following keys:
 
@@ -911,6 +1019,36 @@ hash that contains the following keys:
     message          message hint: boolean
     urgency          urgency hint: boolean
 
+C<initial_state> is an interpreted field of type I<WMState>, as
+described under L</WM_STATE>.
+
+=cut
+
+use constant {
+    WMHints => [qw(
+	InputHint
+	StateHint
+	IconPixmapHint
+	IconWindowHint
+	IconPositionHint
+	IconMaskHint
+	WindowGroupHint
+	MessageHint
+	UrgencyHint)],
+};
+
+use constant {
+    WM_HINTS_INPUTHINT		    => (1<<0),
+    WM_HINTS_STATEHINT		    => (1<<1),
+    WM_HINTS_ICONPIXMAPHINT	    => (1<<2),
+    WM_HINTS_ICONWINDOWHINT	    => (1<<3),
+    WM_HINTS_ICONPOSITIONHINT	    => (1<<4),
+    WM_HINTS_ICONMASKHINT	    => (1<<5),
+    WM_HINTS_WINDOWGROUPHINT	    => (1<<6),
+    WM_HINTS_MESSAGEHINT	    => (1<<7),
+    WM_HINTS_URGENCYHINT	    => (1<<8),
+};
+
 =over
 
 =item $X->B<GetWMHints>(I<$window>) => I<$hints> or undef
@@ -921,24 +1059,6 @@ I<$window>.
 I<$hints>, when defined, is a reference to a hints hash: see L</WM_HINTS>.
 
 =cut
-
-$X11::Protocol::Const{WMHints} = [qw(
-	InputHint
-	StateHint
-	IconPixmapHint
-	IconWindowHint
-	IconPositionHint
-	IconMaskHint
-	WindowGroupHint
-	MessageHint
-	UrgencyHint)];
-
-$X11::Protocol::Const{WMState} = [qw(
-	WithdrawnState
-	NormalState
-	ZoomState
-	IconicState
-	InactiveState)];
 
 sub GetWMHints {
     my($X,$window) = @_;
@@ -951,10 +1071,10 @@ sub GetWMHints {
     return undef unless $format;
     my($flag,@fields) = unpack('LLLLLllLL',$value);
     my %hints;
-    my %flags = $X->unpack_mask('WMHints',$flag);
+    my %flags = $X->unpack_mask(WMHints=>$flag);
     $hints{input} = $X->interp('Bool',$fields[0])
 	if $flags{InputHint};
-    $hints{initial_state} = $X->interp('WMState',$fields[1])
+    $hints{initial_state} = $X->interp(WMState=>$fields[1])
 	if $flags{StateHint};
     $hints{icon_pixmap} = $fields[2] ? $fields[2] : 'None'
 	if $flags{IconPixmapHint};
@@ -996,7 +1116,7 @@ sub SetWMHints {
     }
     if (defined $hints->{initial_state}) {
 	push @flags, 'StateHint';
-	$fields[1] = $X->num('WMState',$hints->{initial_state});
+	$fields[1] = $X->num(WMState=>$hints->{initial_state});
     }
     if (defined $hints->{icon_pixmap}) {
 	push @flags, 'IconPixmapHint';
@@ -1029,7 +1149,7 @@ sub SetWMHints {
     if ($hints->{urgency}) {
 	push @flags, 'UrgencyHint';
     }
-    my $flag = $X->pack_mask('WMHints',\@flags);
+    my $flag = $X->pack_mask(WMHints=>\@flags);
     $X->ChangeProperty($window,
 	    X11::AtomConstants::WM_HINTS(),
 	    X11::AtomConstants::WM_HINTS(),32,
@@ -1096,6 +1216,7 @@ Note that WM_CLASS strings are null-terminated and, thus, differ from the
 general conventions that STRING properties are null-separated. This
 inconsistency is necessary for backwards compatibility.
 
+=head3 Methods
 
 In the method that follows, I<$hints> is a reference to a hash that
 contains the following keys:
@@ -1121,7 +1242,7 @@ sub GetClassHint {
     my($X,$window) = @_;
     my $text = $X->GetTextProperty($window,X11::AtomConstants::WM_CLASS()=>0);
     return undef unless $text;
-    if (substr($text->{value},-1,1) == "\x00") {
+    if (substr($text->{value},-1,1) eq "\x00") {
 	$text->{value} = substr($text->{value},0,length($text->{value})-1);
 	$text->{nitems} -= 1;
     }
@@ -1190,7 +1311,7 @@ I<$owner>, when defined, contains the XID of the owner window.
 
 =cut
 
-sub GetTransientFor {
+sub GetTransientForHint {
     my($X,$window) = @_;
     my($res) = $X->robust_req(
 	    GetProperty=>$window,
@@ -1265,7 +1386,7 @@ sub GetWMProtocols {
     my($X,$window) = @_;
     my($res) = $X->robust_req(
 	    GetProperty=>$window,
-	    X11::AtomConstants::WM_PROTOCOLS(),
+	    $X->atom('WM_PROTOCOLS'),
 	    0,0,1);
     return undef unless ref $res;
     my($value,$rtype,$format,$after) = @$res;
@@ -1393,7 +1514,43 @@ sub SetWMClientMachine {
     return $_[0]->SetTextProperty($_[1],X11::AtomConstants::WM_CLIENT_MACHINE()=>$_[2]);
 }
 
+=item $X->B<GetClientMachine>(I<$window>) => $hostname
+
+Returns the C<WM_CLIENT_MACHINE> property hostname, I<$hostname>, for the
+window, I<$window>, or C<undef> when the C<WM_CLIENT_MACHINE> property
+does not exist for I<$window>.  I<$hostname>, when defined, is a perl
+character string.
+
+=cut
+
+sub GetClientMachine {
+    my($X,$window) = @_;
+    my $list = TextPropertyToTextList($X->GetWMClientMachine($window));
+    return $list->[0] if $list;
+    return undef;
+}
+
+=item $X->B<SetClientMachine>(I<$window>,I<$hostname>)
+
+Sets the C<WM_CLIENT_MACHINE> property hostname, I<$hostname>, on the
+window, I<$window>; or, when I<$hostname> is C<undef>, deletes the
+C<WM_CLIENT_MACHINE> property from I<$window>.  When defined, I<$hostname>
+is a perl character string.
+
+=cut
+
+sub SetClientMachine {
+    $_[0]->SetWMClientMachine($_[1],TextListToTextProperty($_[2],'StdICCStyle'));
+}
+
 =back
+
+=head1 WINDOW MANAGER PROPERTIES
+
+Window manager properties are properties that the window manager is
+responsible for maintaining on top-level windows.  This section describes
+the properties that the window manager places on the client's top-level
+windows and on the root.
 
 =head2 WM_COMMAND
 
@@ -1452,7 +1609,7 @@ sub GetCommand {
     my($X,$window) = @_;
     my $text = $X->GetTextProperty($window,X11::AtomConstants::WM_COMMAND()=>0);
     return undef unless $text;
-    if (substr($text->{value},-1,1) == "\x00") {
+    if (substr($text->{value},-1,1) eq "\x00") {
 	$text->{value} = substr($text->{value},0,length($text->{value})-1);
 	$text->{nitems} -= 1;
     }
@@ -1479,13 +1636,6 @@ sub SetCommand {
 }
 
 =back
-
-=head1 WINDOW MANAGER PROPERTIES
-
-Window manager properties are properties that the window manager is
-responsible for maintaining on top-level windows.  This section describes
-the properties that the window manager places on the client's top-level
-windows and on the root.
 
 =head2 WM_STATE
 
@@ -1716,6 +1866,8 @@ window, clients are advised to withdraw transients for the window.
 
 =back
 
+=head3 Methods
+
 In the methods that follow, I<$state>, when defined, is a reference to a
 hash containing the following keys:
 
@@ -1724,11 +1876,30 @@ hash containing the following keys:
 
 The state names are as follows:
 
- WithdrawnState  (0)
- NormalState     (1)
- ZoomState       (2)
- IconicState     (3)
- InactiveState   (4)
+ WithdrawnState  WM_STATE_WITHDRAWNSTATE => 0
+ NormalState     WM_STATE_NORMALSTATE    => 1
+ ZoomState       WM_STATE_ZOOMSTATE      => 2
+ IconicState     WM_STATE_ICONICSTATE    => 3
+ InactiveState   WM_STATE_INACTiVESTATE  => 4
+
+=cut
+
+use constant {
+    WMState => [qw(
+	WithdrawnState
+	NormalState
+	ZoomState
+	IconicState
+	InactiveState)],
+};
+
+use constant {
+    WM_STATE_WITHDRAWNSTATE	=> 0,
+    WM_STATE_NORMALSTATE	=> 1,
+    WM_STATE_ZOOMSTATE		=> 2,
+    WM_STATE_ICONICSTATE	=> 3,
+    WM_STATE_INACTIVESTATE	=> 4,
+};
 
 =over
 
@@ -1751,7 +1922,7 @@ sub GetWMState {
     my($value,$rtype,$format,$after) = @$res;
     return undef unless $format;
     my($state,$icon) = unpack('LL',$value);
-    $state = $X->interp('WMState',$state);
+    $state = $X->interp(WMState=>$state);
     $icon = 'None' unless $icon;
     return {state=>$state,icon=>$icon};
 }
@@ -1771,7 +1942,7 @@ sub SetWMState {
 	unless $wmstate;
     my($state,$icon) = ($wmstate->{state},$wmstate->{icon});
     $state = 0 unless $state;
-    $state = $X->num('WMState',$state);
+    $state = $X->num(WMState=>$state);
     $icon = 0 unless $icon;
     $icon = 0 if $icon eq 'None';
     $X->ChangeProperty($window,
@@ -1780,13 +1951,46 @@ sub SetWMState {
 	    Replace=>pack('LL',$state,$icon));
 }
 
+=item $X->B<ChangeWMState>(I<$window>,I<$state>)
+
+=cut
+
+sub ChangeWMState {
+    my($X,$window,$state) = @_;
+    $state = 0 unless $state;
+    $state = $X->do_interp(WMState=>$state) if $state =~ m{^\d+$};
+    if ($state eq 'WithdrawnState') {
+	$X->WithdrawWindow($window);
+    }
+    elsif ($state eq 'IconicState') {
+	$X->IconifyWindow($window);
+    }
+    elsif ($state eq 'NormalState') {
+	$X->MapWindow($window);
+    }
+    else {
+	$X->SendEvent($X->root, 0,
+		$X->pack_event_mask(qw(
+			SubstructureRedirect
+			SubstructureNotify)),
+		$X->pack_event(
+		    name=>'ClientMessage',
+		    window=>$window,
+		    type=>$X->atom('WM_CHANGE_STATE'),
+		    format=>32,
+		    data=>pack('Lxxxxxxxxxxxxxxxx',
+			$X->num(WMState=>$state))));
+    }
+}
+
 =back
 
 =head2 WM_ICON_SIZE
 
 A window manager that wishes to place constraints on the sizes of icon
-pixmaps and/or windows should place a property called WM_ICON_SIZE on the
-root. The contents of this property are listed in the following table.
+pixmaps or icon windows should place a property called C<WM_ICON_SIZE>
+on the root. The contents of this property are listed in the following
+table:
 
  min_width	CARD32	    The data for the icon size series
  min_heigth	CARD32
@@ -1809,20 +2013,23 @@ hash with the following keys:
 
 =over
 
-=item $X->B<GetIconSizes>(I<$window>) => I<$sizes> or undef
+=item $X->B<GetIconSizes>(I<$root>) => I<$sizes> or undef
 
 Returns the C<WM_ICON_SIZE> property icon sizes, I<$sizes>, for the
-window, I<$window>, or C<undef> when the C<WM_ICON_SIZE> property does not
-exist for I<$window>.
+window, I<$root>, or C<undef> when the C<WM_ICON_SIZE> property does not
+exist for I<$root>.
 I<$sizes>, when defined, is a reference to a size hints hash: see
 L</WM_ICON_SIZE>.
+
+When unspecified, null or zero, I<$root> defaults to C<$X-E<gt>root>.
 
 =cut
 
 sub GetIconSizes {
-    my($X,$window) = @_;
+    my($X,$root) = @_;
+    $root = $X->root unless $root;
     my ($res) = $X->robust_req(
-	    GetProperty=>$window,
+	    GetProperty=>$root,
 	    X11::AtomConstants::WM_ICON_SIZE(),
 	    0,0,6);
     return undef unless ref $res;
@@ -1837,26 +2044,28 @@ sub GetIconSizes {
     return \%sizes;
 }
 
-=item $X->B<SetIconSizes>(I<$window>,I<$sizes>)
+=item $X->B<SetIconSizes>(I<$root>,I<$sizes>)
 
 Sets the C<WM_ICON_SIZE> property icon sizes, I<$sizes>, on the window,
-I<$window>; or, when I<$sizes> is C<undef>, deletes the C<WM_ICON_SIZE>
-property from I<$window>.
-I<$sizes>, when defined, is a refernce to a size hints hash: see
-L</WM_ICON_SIZE>.
+I<$root>; or, when I<$sizes> is C<undef>, deletes the C<WM_ICON_SIZE>
+property from I<$root>.  I<$sizes>, when defined, is a refernce to a
+size hints hash: see L</WM_ICON_SIZE>.
+
+When unspecified, null or zero, I<$root> defaults to C<$X-E<gt>root>.
 
 =cut
 
 sub SetIconSizes {
-    my($X,$window,$sizes) = @_;
-    return $X->DeleteProperty($window,X11::AtomConstants::CARDINAL())
+    my($X,$root,$sizes) = @_;
+    $root = $X->root unless $root;
+    return $X->DeleteProperty($root,X11::AtomConstants::CARDINAL())
 	unless $sizes;
     my @cards = (0,0,0,0,0,0);
     my $i = 0;
     foreach (qw(min_width min_height max_width max_height width_inc height_inc)) {
 	$cards[$i] = $sizes->{$_} if $sizes->{$_}; $i += 1;
     }
-    $X->ChangeProperty($window,
+    $X->ChangeProperty($root,
 	    X11::AtomConstants::WM_ICON_SIZE(),
 	    X11::AtomConstants::CARDINAL(),32,
 	    Replace=>pack('LLLLLL',@cards));
@@ -2057,111 +2266,6 @@ step
 Receiving WM_SAVE_YOURSELF on a window is, conceptually, a command to save
 the entire client state.
 
-=head1 Changing window attributes
-
-The attributes that may be supplied when a window is created may be
-changed by using the C<ChangeWindowAttributes> request.  The window
-attributes are listed in the following table:
-
- Attribute		Private to client
- ---------		-----------------
- background pixmap	yes
- background pixel	yes
- border pixmap		yes
- border pixel		yes
- bit gravity		yes
- window gravity		no
- backing-store hint	yes
- save-under hint	no
- event-mask		no
- do-not-propagate mask	yes
- override-redirect flag	no
- colormap		yes
- cursor			yes
-
-Most attributes are private to the client and will never by interfered
-with by the window manager.  For the attributes that are not private to
-the client:
-
-=over
-
-=item *
-
-The window manager is free to override the window gravity; a reparenting
-window manager may want to set the top-level window's window gravity for
-its own purposes.
-
-=item *
-
-Clients are free to set the save-under hint on their top-level windows,
-but they must be aware that the hint may be overridden by the window
-manager.
-
-=item *
-
-Windows, in effect, have per-client event masks, and so, clients may
-select for whatever events are convenient irrespective of any events the
-window manager is selecting for.  There are some events for which only one
-client at a time may select, but the window manage should not select for
-them on any of the client's windows.
-
-=item *
-
-Clients can set override-redirect on top-level windows but are encouranged
-not to do so except as described in pop-up windows and redirecting
-requests. 
-
-=back
-
-=cut
-
-=head1 CONVENIENCE METHODS
-
-=over
-
-=item $X->B<SetWMProperties>(I<$window>,I<$name>,I<$icon>,I<$argv>,I<$size>,I<$hints>,I<$class>)
-
-Provides a single programming interface for setting those essential window
-properties that are used for communicating with other clients
-(particularly window and session managers).
-
-When I<$name> is defined, SetWMName() is called to set the C<WM_NAME>
-property.  When I<$icon> is defined, SetWMIconName() is called to set the
-C<WM_ICON_NAME> property.  When I<$argv> is defined, SetCommand() is called
-to set the C<WM_COMMAND> property.  When I<$size> is defined,
-SetWMNormalHints() is called to set the C<WM_NORMAL_HINTS> property.  When
-I<$hints> is defined, SetWMHints() is called to set the C<WM_HINTS>
-property.  When I<$class> is defined, SetClassHint() is called to set the
-C<WM_CLASS> property.  If the C<$class-E<gt>{res_name}> is undefined,
-C<$ENV{RESOURCE_NAME}> will be used in its stead; when
-C<$ENV{RESOURCE_NAME}> is undefined, C<$argv-E<gt>[0]> will be used in
-its stead, stripped of directory path prefixes.
-
-=cut
-
-sub SetWMProperties {
-    my($X,$window,$name,$icon,$argv,$size,$hints,$class) = @_;
-    $X->StoreName($window,$name) if defined $name;
-    $X->SetIconName($window,$icon) if defined $icon;
-    $X->SetCommand($window,$argv) if defined $argv;
-    $X->SetWMNormalHints($window,$hints) if defined $hints;
-    if (defined $class) {
-	$class->{res_name}  = '' unless $class->{res_name};
-	$class->{res_class} = '' unless $class->{res_class};
-	$class->{res_name} = $ENV{RESOURCE_NAME} unless $class->{res_name};
-	unless ($class->{res_name} or not $argv) {
-	    my $command = $argv->[0];
-	    $command = '' unless $command;
-	    $command =~ s{^.*/}{};
-	    $class->{res_name} = $command;
-	}
-	$class->{res_name} = '' unless $class->{res_name};
-	$X->SetClassHint($window,$class);
-    }
-}
-
-=back
-
 =head2 Configuring the window
 
 Clients can resize and reposition their top-level windows by using the
@@ -2324,6 +2428,111 @@ they see fit, and so clients should not rely on receiving the stacking
 order they have requested.  Clients should ignore the above-sibling field
 of both real and synthetic C<ConfigureNotify> events received on their
 top-level windows because this field may not contain useful information.
+
+=head1 Changing window attributes
+
+The attributes that may be supplied when a window is created may be
+changed by using the C<ChangeWindowAttributes> request.  The window
+attributes are listed in the following table:
+
+ Attribute		Private to client
+ ---------		-----------------
+ background pixmap	yes
+ background pixel	yes
+ border pixmap		yes
+ border pixel		yes
+ bit gravity		yes
+ window gravity		no
+ backing-store hint	yes
+ save-under hint	no
+ event-mask		no
+ do-not-propagate mask	yes
+ override-redirect flag	no
+ colormap		yes
+ cursor			yes
+
+Most attributes are private to the client and will never by interfered
+with by the window manager.  For the attributes that are not private to
+the client:
+
+=over
+
+=item *
+
+The window manager is free to override the window gravity; a reparenting
+window manager may want to set the top-level window's window gravity for
+its own purposes.
+
+=item *
+
+Clients are free to set the save-under hint on their top-level windows,
+but they must be aware that the hint may be overridden by the window
+manager.
+
+=item *
+
+Windows, in effect, have per-client event masks, and so, clients may
+select for whatever events are convenient irrespective of any events the
+window manager is selecting for.  There are some events for which only one
+client at a time may select, but the window manage should not select for
+them on any of the client's windows.
+
+=item *
+
+Clients can set override-redirect on top-level windows but are encouranged
+not to do so except as described in pop-up windows and redirecting
+requests. 
+
+=back
+
+=cut
+
+=head1 CONVENIENCE METHODS
+
+=over
+
+=item $X->B<SetWMProperties>(I<$window>,I<$name>,I<$icon>,I<$argv>,I<$size>,I<$hints>,I<$class>)
+
+Provides a single programming interface for setting those essential window
+properties that are used for communicating with other clients
+(particularly window and session managers).
+
+When I<$name> is defined, SetWMName() is called to set the C<WM_NAME>
+property.  When I<$icon> is defined, SetWMIconName() is called to set the
+C<WM_ICON_NAME> property.  When I<$argv> is defined, SetCommand() is called
+to set the C<WM_COMMAND> property.  When I<$size> is defined,
+SetWMNormalHints() is called to set the C<WM_NORMAL_HINTS> property.  When
+I<$hints> is defined, SetWMHints() is called to set the C<WM_HINTS>
+property.  When I<$class> is defined, SetClassHint() is called to set the
+C<WM_CLASS> property.  If the C<$class-E<gt>{res_name}> is undefined,
+C<$ENV{RESOURCE_NAME}> will be used in its stead; when
+C<$ENV{RESOURCE_NAME}> is undefined, C<$argv-E<gt>[0]> will be used in
+its stead, stripped of directory path prefixes.
+
+=cut
+
+sub SetWMProperties {
+    my($X,$window,$name,$icon,$argv,$size,$hints,$class) = @_;
+    $X->StoreName($window,$name) if defined $name;
+    $X->SetIconName($window,$icon) if defined $icon;
+    $X->SetCommand($window,$argv) if defined $argv;
+    $X->SetWMNormalHints($window,$hints) if defined $hints;
+    if (defined $class) {
+	$class->{res_name}  = '' unless $class->{res_name};
+	$class->{res_class} = '' unless $class->{res_class};
+	$class->{res_name} = $ENV{RESOURCE_NAME} unless $class->{res_name};
+	unless ($class->{res_name} or not $argv) {
+	    my $command = $argv->[0];
+	    $command = '' unless $command;
+	    $command =~ s{^.*/}{};
+	    $class->{res_name} = $command;
+	}
+	$class->{res_name} = '' unless $class->{res_name};
+	$X->SetClassHint($window,$class);
+    }
+}
+
+=back
 
 =over
 
@@ -2552,4 +2761,4 @@ Brian Bidulock <bidulock@cpan.org>
 L<X11::Protocol(3pm)>,
 L<X11::Protocol::AnyEvent(3pm)>.
 
-# vim: set sw=4 tw=74 fo=tcqlorn:
+# vim: set sw=4 tw=72 fo=tcqlorn:

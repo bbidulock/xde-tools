@@ -4,10 +4,161 @@ use X11::Protocol;
 use Encode;
 use Encode::Unicode;
 use Encode::X11;
+use Exporter;
 use strict;
 use warnings;
-use vars '$VERSION';
+use vars '$VERSION', '@ISA', '@EXPORT_OK', '%EXPORT_TAGS';
 $VERSION = 0.01;
+@ISA = ('Exporter');
+
+@EXPORT_OK = qw(
+        :encdec
+        :string
+        :text
+        :uint
+        :int
+        :atom
+        :bits
+        :all
+
+        getWMRootPropertyDecode
+        getWMRootPropertyString
+        getWMRootPropertyStrings
+        getWMRootPropertyTermString
+        getWMRootPropertyTermStrings
+        getWMRootPropertyUint
+        getWMRootPropertyUints
+        getWMRootPropertyInt
+        getWMRootPropertyInts
+        getWMRootPropertyAtom
+        getWMRootPropertyAtoms
+
+        getWMPropertyDecode
+        getWMPropertyString
+        getWMPropertyStrings
+        getWMPropertyTermString
+        getWMPropertyTermStrings
+        getWMPropertyUint
+        getWMPropertyUints
+        getWMPropertyInt
+        getWMPropertyInts
+        getWMPropertyAtom
+        getWMPropertyAtoms
+        getWMPropertyBits
+
+        setWMRootPropertyEncode
+        setWMRootPropertyText
+        setWMRootPropertyTexts
+        setWMRootPropertyTermText
+        setWMRootPropertyTermTexts
+        setWMRootPropertyString
+        setWMRootPropertyStrings
+        setWMRootPropertyTermString
+        setWMRootPropertyTermStrings
+        setWMRootPropertyUint
+        setWMRootPropertyUints
+        setWMRootPropertyInt
+        setWMRootPropertyInts
+        setWMRootPropertyAtom
+        setWMRootPropertyAtoms
+
+        setWMPropertyEncode
+        setWMPropertyText
+        setWMPropertyTexts
+        setWMPropertyTermText
+        setWMPropertyTermTexts
+        setWMPropertyString
+        setWMPropertyStrings
+        setWMPropertyTermString
+        setWMPropertyTermStrings
+        setWMPropertyUint
+        setWMPropertyUints
+        setWMPropertyInt
+        setWMPropertyInts
+        setWMPropertyAtom
+        setWMPropertyAtoms
+);
+
+%EXPORT_TAGS = (
+        ':encdec' => [qw(
+                getWMRootPropertyDecode
+                getWMPropertyDecode
+                setWMRootPropertyEncode
+                setWMPropertyEncode
+            )],
+        ':string' => [qw(
+                getWMRootPropertyString
+                getWMRootPropertyStrings
+                getWMRootPropertyTermString
+                getWMRootPropertyTermStrings
+                getWMPropertyString
+                getWMPropertyStrings
+                getWMPropertyTermString
+                getWMPropertyTermStrings
+                setWMRootPropertyString
+                setWMRootPropertyStrings
+                setWMRootPropertyTermString
+                setWMRootPropertyTermStrings
+                setWMPropertyString
+                setWMPropertyStrings
+                setWMPropertyTermString
+                setWMPropertyTermStrings
+            )],
+        ':text' => [qw(
+                setWMRootPropertyText
+                setWMRootPropertyTexts
+                setWMRootPropertyTermText
+                setWMRootPropertyTermTexts
+                setWMPropertyText
+                setWMPropertyTexts
+                setWMPropertyTermText
+                setWMPropertyTermTexts
+            )],
+        ':uint' => [qw(
+                getWMRootPropertyUint
+                getWMRootPropertyUints
+                getWMPropertyUint
+                getWMPropertyUints
+                setWMRootPropertyUint
+                setWMRootPropertyUints
+                setWMPropertyUint
+                setWMPropertyUints
+            )],
+        ':int' => [qw(
+                getWMRootPropertyInt
+                getWMRootPropertyInts
+                getWMPropertyInt
+                getWMPropertyInts
+                setWMRootPropertyInt
+                setWMRootPropertyInts
+                setWMPropertyInt
+                setWMPropertyInts
+            )],
+        ':atom' => [qw(
+                getWMRootPropertyAtom
+                getWMRootPropertyAtoms
+                getWMPropertyAtom
+                getWMPropertyAtoms
+                setWMRootPropertyAtom
+                setWMRootPropertyAtoms
+                setWMPropertyAtom
+                setWMPropertyAtoms
+            )],
+        ':bits' => [qw(
+                getWMPropertyBits
+            )],
+        ':all' => [qw(
+                :encdec
+                :string
+                :text
+                :uint
+                :int
+                :atom
+                :bits
+            )],
+);
+
+
 
 =head1 NAME
 
@@ -33,42 +184,38 @@ The following methods are used to get properties from windows:
 
 =over
 
-=item $X->B<getProperty>(I<$win>,I<$prop>,I<$type>,I<$format>) => I<$type>, I<$data>
+=item B<getRootProperty>(I<$X>,I<$root>,I<$prop>,I<$type>) => I<$data>, I<$rtype>, I<$format>
 
-Get a property from a window and return its full-length packed data
-representation.  Returns C<undef> if the property does not exist.
+Gets a property, I<$prop>, of type, I<$type>, from a root window,
+I<$root>, and returns its full-length packed data representation,
+I<$data>, type atom name, I<$rtype>, and format, I<$format>.  Returns an
+empty list when the property does not exist on the root window, I<$root>.
+When zero or unspecified, I<$root> defaults to C<$X-E<gt>root>.  When
+unspecified, I<$type> defaults to C<None>.
 
 =cut
 
-sub getProperty {
-    my($X,$win,$prop,$type) = @_;
-    $win = $X->root unless $win;
+sub getRootProperty {
+    my($X,$root,$prop,$type) = @_;
+    $root = $X->root unless $root;
     my $atom = $X->atom($prop);
     $type = 0 unless $type;
-    my($data,$error);
-    $error = $X->robust_req(GetProperty=>$win, $atom, $type, 0, 1);
-    if (ref $error eq 'ARRAY') {
-	my ($val,$rtype,$format,$after) = @$error;
-	if ($val) {
-	    if ($after) {
-		my $part = $val;
-		$error = $X->robust_request(GetProperty=>
-			$win, $atom, $type, 1, (($after+3)>>2));
-		if (ref $error eq 'ARRAY') {
-		    ($val) = @$error;
-		    return ($part.$val, $self->atom_name($rtype));
-		}
-	    } else {
-		return ($val, $self->atom_name($rtype));
-	    }
-	}
+    $type = 0 if $type eq 'None';
+    $type = $X->atom($type) unless $type =~ m{^\d+$};
+    my($data,$rtype,$format,$after) = $X->GetProperty($root,$atom,$type,0,1);
+    return () unless $format;
+    if ($after) {
+        my $first = $data;
+        ($data,$rtype,$format,$after) = $X->GetProperty($root,$atom,$type,1,($after+3)>>2);
+        return () unless $format;
+        $data = $first.$data;
     }
-    warn sprintf "Could not get property %s for window 0x%x", $prop, $win
-	if $X->{ops}{verbose};
-    return ();
+    return ($data, $rtype, $format);
 }
 
-=item $X->B<getWMRootPropertyDecode>(I<$prop>,I<$decode>) => I<$value>
+=over
+
+=item B<getWMRootPropertyDecode>(I<$X>,I<$prop>,I<$decode>,I<$root>) => I<$value>
 
 Provides a method for obtaining a decoded property from the root window.
 The property has atom name, I<$prop>, and decoder, I<$decode> is a C<CODE>
@@ -78,19 +225,17 @@ decoded data.  This method is used by subsequent methods below:
 =cut
 
 sub getWMRootPropertyDecode {
-    my ($self,$prop,$decode) = @_;
-    if (my($data,$rtype) = $self->getProperty(0,$prop)) {
-	$self->{$prop} = &{$decode}($data,$rtype);
-    } else {
-	warn "Could not retrieve property $prop!";
-	delete $self->{$prop};
+    my ($X,$prop,$decode,$root) = @_;
+    if (my($data,$rtype,$format) = getRootProperty($X,$root,$prop)) {
+	return &{$decode}($data,$rtype,$format);
     }
-    return $self->{$prop};
+    warn "Could not retrieve property $prop!";
+    return undef;
 }
 
 =over
 
-=item $X->B<getWMRootPropertyString>(I<$prop>) => I<$value>
+=item B<getWMRootPropertyString>(I<$X>,I<$prop>,I<$root>) => I<$value>
 
 Returns I<$value> as a single scalar string value.  This method handles
 C<STRING>, C<COMPOUND_TEXT> and C<UTF8_STRING> properties.  Any property
@@ -100,20 +245,20 @@ handles null terminated strings.
 =cut
 
 sub getWMRootPropertyString {
-    my ($self,$prop) = @_;
-    return $self->getWMRootPropertyDecode($prop,sub{
-	    my($data,$type) = @_;
-	    return Encode::decode('iso-8859-1',unpack('Z*',$data))
+    my ($X,$prop,$root) = @_;
+    return getWMRootPropertyDecode($X,$prop,sub{
+	    my($data,$type,$format) = @_;
+	    return Encode::decode('iso-8859-1',unpack('Z*',$data."\x00"))
 		if $type eq 'STRING';
-	    return Encode::decode('x11-compound-text',unpack('Z*',$data))
+	    return Encode::decode('x11-compound-text',unpack('Z*',$data."\x00"))
 		if $type eq 'COMPOUND_TEXT';
 	    warn "type '$type' defaults to UTF8_STRING"
 		if $type ne 'UTF8_STRING';
-	    return Encode::decode('UTF-8',unpack('Z*',$data));
-    });
+	    return Encode::decode('UTF-8',unpack('Z*',$data."\x00"));
+    },$root);
 }
 
-=item $X->B<getWMRootPropertyStrings>(I<$prop>) => I<$value>
+=item B<getWMRootPropertyStrings>(I<$X>,I<$prop>,I<$root>) => I<$value>
 
 Returns I<$value> as a reference to an array of strings.  This method
 handles C<STRING>, C<COMPOUND_TEXT> and C<UTF8_STRING> properties.  Any
@@ -125,8 +270,50 @@ last element in the list, it will be truncated from the I<$value> array.
 =cut
 
 sub getWMRootPropertyStrings {
-    my ($self,$prop) = @_;
-    return $self->getWMRootPropertyDecode($prop,sub{
+    my ($X,$prop,$root) = @_;
+    return getWMRootPropertyDecode($X,$prop,sub{
+	    my($data,$type) = @_;
+	    return [ map{Encode::decode('iso-8859-1',$_)} unpack('(Z*)*',$data."\x00") ]
+		if $type eq 'STRING';
+	    return [ map{Encode::decode('x11-compound-text',$_)} unpack('(Z*)*',$data."\x00") ]
+		if $type eq 'COMPOUND_TEXT';
+	    warn "type '$type' defaults to UTF8_STRING"
+		if $type ne 'UTF8_STRING';
+	    return [ map{Encode::decode('UTF-8',$_)} unpack('(Z*)*',$data."\x00") ];
+    },$root);
+}
+
+=item B<getWMRootPropertyTermString>(I<$X>,I<$prop>,I<$root>) => I<$value>
+
+Like getWMRootPropertyString() but for null-terminated strings instead of
+null-separated strings.
+
+=cut
+
+sub getWMRootPropertyTermString {
+    my ($X,$prop,$root) = @_;
+    return getWMRootPropertyDecode($X,$prop,sub{
+	    my($data,$type,$format) = @_;
+	    return Encode::decode('iso-8859-1',unpack('Z*',$data))
+		if $type eq 'STRING';
+	    return Encode::decode('x11-compound-text',unpack('Z*',$data))
+		if $type eq 'COMPOUND_TEXT';
+	    warn "type '$type' defaults to UTF8_STRING"
+		if $type ne 'UTF8_STRING';
+	    return Encode::decode('UTF-8',unpack('Z*',$data));
+    },$root);
+}
+
+=item B<getWMRootPropertyTermStrings>(I<$X>,I<$prop>,I<$root>) => I<$value>
+
+Like getWMRootPropertyStrings() but for null-terminated strings instead of
+null-separated strings.
+
+=cut
+
+sub getWMRootPropertyTermStrings {
+    my ($X,$prop,$root) = @_;
+    return getWMRootPropertyDecode($X,$prop,sub{
 	    my($data,$type) = @_;
 	    return [ map{Encode::decode('iso-8859-1',$_)} unpack('(Z*)*',$data) ]
 		if $type eq 'STRING';
@@ -135,60 +322,125 @@ sub getWMRootPropertyStrings {
 	    warn "type '$type' defaults to UTF8_STRING"
 		if $type ne 'UTF8_STRING';
 	    return [ map{Encode::decode('UTF-8',$_)} unpack('(Z*)*',$data) ];
-    });
+    },$root);
 }
 
-=item $X->B<getWMRootPropertyInt>(I<$prop>) => I<$value>
+=item B<getWMRootPropertyUint>(I<$X>,I<$prop>,I<$root>) => I<$value>
+
+Returns I<$value> as a single scalar unsigned integer value.
+
+=cut
+
+sub getWMRootPropertyUint {
+    my ($X,$prop,$root) = @_;
+    return getWMRootPropertyDecode($X,$prop,
+	sub{ return unpack('L',shift); }, $root);
+}
+
+=item B<getWMRootPropertyUints>(I<$X>,I<$prop>,I<$root>) => I<$value>
+
+Returns I<$value> as an reference to an array of unsigned integer values.
+
+=cut
+
+sub getWMRootPropertyUints {
+    my ($X,$prop,$root) = @_;
+    return getWMRootPropertyDecode($X,$prop,
+	sub{ return [ unpack('L*',shift) ]; },$root);
+}
+
+=item B<getWMRootPropertyInt>(I<$X>,I<$prop>,I<$root>) => I<$value>
 
 Returns I<$value> as a single scalar integer value.
 
 =cut
 
 sub getWMRootPropertyInt {
-    my ($self,$prop) = @_;
-    return $self->getWMRootPropertyDecode($prop,
-	sub{ return unpack('L',shift); });
+    my ($X,$prop,$root) = @_;
+    return getWMRootPropertyDecode($X,$prop,
+	sub{ return unpack('l',shift); }, $root);
 }
 
-=item $X->B<getWMRootPropertyInts>(I<$prop>) => I<$value>
+=item B<getWMRootPropertyInts>(I<$X>,I<$prop>,I<$root>) => I<$value>
 
 Returns I<$value> as an reference to an array of integer values.
 
 =cut
 
 sub getWMRootPropertyInts {
-    my ($self,$prop) = @_;
-    return $self->getWMRootPropertyDecode($prop,
-	sub{ return [ unpack('L*',shift) ]; });
+    my ($X,$prop,$root) = @_;
+    return getWMRootPropertyDecode($X,$prop,
+	sub{ return [ unpack('l*',shift) ]; },$root);
 }
 
-=item $X->B<getWMRootPropertyAtom>(I<$prop>) => I<$value>
+=item B<getWMRootPropertyAtom>(I<$X>,I<$prop>,I<$root>) => I<$value>
 
 Returns I<$value> as a single scalar atom name.
 
 =cut
 
 sub getWMRootPropertyAtom {
-    my ($self,$prop) = @_;
-    return $self->getWMRootPropertyDecode($prop,
-	sub{ return $self->atom_name(unpack('L',shift)); });
+    my ($X,$prop,$root) = @_;
+    return getWMRootPropertyDecode($X,$prop,
+	sub{ return $X->atom_name(unpack('L',shift)); },$root);
 }
 
-=item $X->B<getWMRootPropertyAtoms>(I<$prop>) => I<$value>
+=item B<getWMRootPropertyAtoms>(I<$X>,I<$prop>,I<$root>) => I<$value>
 
-Returns I<$value> as a reference to an array of atom names.
+Returns I<$value> as a reference to a hash of atom names.  Where
+I<@atoms> is the list of returned atoms, the hash reference is:
+
+ map{$X->atom_name($_)=>1} @atoms
+
 
 =cut
 
 sub getWMRootPropertyAtoms {
-    my ($self,$prop) = @_;
-    return $self->getWMRootPropertyDecode($prop,
-	sub{ return { map{$self->atom_name($_)=>1} unpack('L',shift) }; });
+    my ($X,$prop,$root) = @_;
+    return getWMRootPropertyDecode($X,$prop,
+	sub{ return { map{$X->atom_name($_)=>1} unpack('L',shift) }; },$root);
 }
 
 =back
 
-=item $X->B<getWMPropertyDecode>(I<$window>,I<$prop>,I<$decode>)
+=back
+
+=item B<getProperty>(I<$X>,I<$win>,I<$prop>,I<$type>) => I<$data>, I<$rtype>, I<$format>
+
+Get a property from a window and return its full-length packed data
+representation.  Returns C<undef> if the property does not exist.
+
+Gets a property, I<$prop>, of type, I<$type>, from a window,
+I<$window>, and returns its full-length packed data representation,
+I<$data>, type atom name, I<$rtype>, and format, I<$format>.  Returns an
+empty list when the property does not exist on the window, or when an
+error occurs (e.g. I<$window> has been destroyed).  When zero or
+unspecified, I<$window> defaults to C<$X-E<gt>root>.  When unspecified,
+I<$type> defaults to C<None>.
+
+=cut
+
+sub getProperty {
+    my($X,$window,$prop,$type) = @_;
+    return () unless $window;
+    my $atom = $X->atom($prop);
+    $type = 0 unless $type;
+    $type = 0 if $type eq 'None';
+    $type = $X->atom_($type) unless $type =~ m{^\d+$};
+    my($res) = $X->robust_req(GetProperty=>$window,$atom,$type,0,1);
+    return () unless ref $res and $res->[2];
+    my($data,$rtype,$format,$after) = @$res;
+    if ($after) {
+        ($res) = $X->robust_req(GetProperty=>$window,$atom,$type,1,($after+3)>>2);
+        return () unless ref $res and $res->[2];
+        $data .= $ref->[0];
+    }
+    return ($data, $rtype, $format);
+}
+
+=over
+
+=item B<getWMPropertyDecode>(I<$X>,I<$window>,I<$prop>,I<$decode>)
 
 Provides a method for obtaining a decoded property from a specified
 window, I<$window>.  When undefined or zero, I<$window> defaults to the
@@ -200,21 +452,21 @@ methods below:
 =cut
 
 sub getWMPropertyDecode {
-    my ($self,$window,$prop,$decode) = @_;
-    $window = $self->{_NET_ACTIVE_WINDOW} unless $window;
-    $window = $self->root unless $window;
-    if (my($data,$rtype) = $self->getProperty($window, $prop)) {
-	$self->{windows}{$window}{$prop} = &{$decode}($data,$rtype);
+    my ($X,$window,$prop,$decode) = @_;
+    $window = $X->{_NET_ACTIVE_WINDOW} unless $window;
+    $window = $X->root unless $window;
+    if (my($data,$rtype) = getProperty($X,$window, $prop)) {
+	$X->{windows}{$window}{$prop} = &{$decode}($data,$rtype);
     } else {
-	delete $self->{windows}{$window}{$prop};
+	delete $X->{windows}{$window}{$prop};
     }
-    return $self->{windows}{$window}{$prop};
+    return $X->{windows}{$window}{$prop};
 
 }
 
 =over
 
-=item $X->B<getWMPropertyString>(I<$window>,I<$prop>) => I<$value>
+=item B<getWMPropertyString>(I<$X>,I<$window>,I<$prop>) => I<$value>
 
 Returns I<$value> as a single scalar string value.  This method handles
 C<STRING>, C<COMPOUND_TEXT> and C<UTF8_STRING> properties.  Any property
@@ -224,20 +476,20 @@ handles null terminated strings.
 =cut
 
 sub getWMPropertyString {
-    my ($self,$window,$prop) = @_;
-    return $self->getWMPropertyDecode($window,$prop,sub{
+    my ($X,$window,$prop) = @_;
+    return getWMPropertyDecode($X,$window,$prop,sub{
 	    my($data,$type) = @_;
-	    return Encode::decode('iso-8859-1',unpack('Z*',$data))
+	    return Encode::decode('iso-8859-1',unpack('Z*',$data."\x00"))
 		if $type eq 'STRING';
-	    return Encode::decode('x11-compound-text',unpack('Z*',$data))
+	    return Encode::decode('x11-compound-text',unpack('Z*',$data."\x00"))
 		if $type eq 'COMPOUND_TEXT';
 	    warn "type '$type' defaults to UTF8_STRING"
 		if $type ne 'UTF8_STRING';
-	    return Encode::decode('UTF-8',unpack('Z*',$data));
+	    return Encode::decode('UTF-8',unpack('Z*',$data."\x00"));
     });
 }
 
-=item $X->B<getWMPropertyStrings>(I<$window>,I<$prop>) => I<$value>
+=item B<getWMPropertyStrings>(I<$X>,I<$window>,I<$prop>) => I<$value>
 
 Returns I<$value> as a reference to an array of strings.  This method
 handles C<STRING>, C<COMPOUND_TEXT> and C<UTF8_STRING> properties.  Any
@@ -249,8 +501,50 @@ last element in the list, it will be truncated from the I<$value> array.
 =cut
 
 sub getWMPropertyStrings {
-    my ($self,$window,$prop) = @_;
-    return $self->getWMPropertyDecode($window,$prop,sub{
+    my ($X,$window,$prop) = @_;
+    return getWMPropertyDecode($X,$window,$prop,sub{
+	    my($data,$type) = @_;
+	    return [ map{Encode::decode('iso-8859-1',$_)} unpack('(Z*)*',$data."\x00") ]
+		if $type eq 'STRING';
+	    return [ map{Encode::decode('x11-compound-text',$_)} unpack('(Z*)*',$data."\x00") ]
+		if $type eq 'COMPOUND_TEXT';
+	    warn "type '$type' defaults to UTF8_STRING"
+		if $type ne 'UTF8_STRING';
+	    return [ map{Encode::decode('UTF-8',$_)} unpack('(Z*)*',$data."\x00") ];
+    });
+}
+
+=item B<getWMPropertyTermString>(I<$X>,I<$prop>,I<$root>) => I<$value>
+
+Like getWMPropertyString() but for null-terminated strings instead of
+null-separated strings.
+
+=cut
+
+sub getWMPropertyTermString {
+    my ($X,$window,$prop) = @_;
+    return getWMPropertyDecode($X,$window,$prop,sub{
+	    my($data,$type) = @_;
+	    return Encode::decode('iso-8859-1',unpack('Z*',$data))
+		if $type eq 'STRING';
+	    return Encode::decode('x11-compound-text',unpack('Z*',$data))
+		if $type eq 'COMPOUND_TEXT';
+	    warn "type '$type' defaults to UTF8_STRING"
+		if $type ne 'UTF8_STRING';
+	    return Encode::decode('UTF-8',unpack('Z*',$data));
+    });
+}
+
+=item B<getWMPropertyTermStrings>(I<$X>,I<$prop>,I<$root>) => I<$value>
+
+Like getWMPropertyStrings() but for null-terminated strings instead of
+null-separated strings.
+
+=cut
+
+sub getWMPropertyTermStrings {
+    my ($X,$window,$prop) = @_;
+    return getWMPropertyDecode($X,$window,$prop,sub{
 	    my($data,$type) = @_;
 	    return [ map{Encode::decode('iso-8859-1',$_)} unpack('(Z*)*',$data) ]
 		if $type eq 'STRING';
@@ -262,55 +556,82 @@ sub getWMPropertyStrings {
     });
 }
 
-=item $X->B<getWMPropertyInt>(I<$window>,I<$prop>) => I<$value>
+=item B<getWMPropertyUint>(I<$X>,I<$window>,I<$prop>) => I<$value>
+
+Returns I<$value> as a single scalar unsigned integer value.
+
+=cut
+
+sub getWMPropertyUint {
+    my ($X,$window,$prop) = @_;
+    return getWMPropertyDecode($X,$window,$prop,
+	sub{ return unpack('L',shift); });
+}
+
+=item B<getWMPropertyUints>(I<$X>,I<$window>,I<$prop>) => I<$value>
+
+Returns I<$value> as an reference to an array of unsigned integer values.
+
+=cut
+
+sub getWMPropertyUints {
+    my ($X,$window,$prop) = @_;
+    return getWMPropertyDecode($X,$window,$prop,
+	sub{ return [ unpack('L*',shift) ]; });
+}
+
+=item B<getWMPropertyInt>(I<$X>,I<$window>,I<$prop>) => I<$value>
 
 Returns I<$value> as a single scalar integer value.
 
 =cut
 
 sub getWMPropertyInt {
-    my ($self,$window,$prop) = @_;
-    return $self->getWMPropertyDecode($window,$prop,
-	sub{ return unpack('L',shift); });
+    my ($X,$window,$prop) = @_;
+    return getWMPropertyDecode($X,$window,$prop,
+	sub{ return unpack('l',shift); });
 }
 
-=item $X->B<getWMPropertyInts>(I<$window>,I<$prop>) => I<$value>
+=item B<getWMPropertyInts>(I<$X>,I<$window>,I<$prop>) => I<$value>
 
 Returns I<$value> as an reference to an array of integer values.
 
 =cut
 
 sub getWMPropertyInts {
-    my ($self,$window,$prop) = @_;
-    return $self->getWMPropertyDecode($window,$prop,
-	sub{ return [ unpack('L*',shift) ]; });
+    my ($X,$window,$prop) = @_;
+    return getWMPropertyDecode($X,$window,$prop,
+	sub{ return [ unpack('l*',shift) ]; });
 }
 
-=item $X->B<getWMPropertyAtom>(I<$window>,I<$prop>) => I<$value>
+=item B<getWMPropertyAtom>(I<$X>,I<$window>,I<$prop>) => I<$value>
 
 Returns I<$value> as a single scalar atom name.
 
 =cut
 
 sub getWMPropertyAtom {
-    my ($self,$window,$prop) = @_;
-    return $self->getWMPropertyDecode($window,$prop,
-	sub{ return $self->atom_name(unpack('L',shift)); });
+    my ($X,$window,$prop) = @_;
+    return getWMPropertyDecode($X,$window,$prop,
+	sub{ return $X->atom_name(unpack('L',shift)); });
 }
 
-=item $X->B<getWMPropertyAtoms>(I<$window>,I<$prop>) => I<$value>
+=item B<getWMPropertyAtoms>(I<$X>,I<$window>,I<$prop>) => I<$value>
 
-Returns I<$value> as a reference to an array of atom names.
+Returns I<$value> as a reference to a hash of atom names.  Where
+I<@atoms> is the list of returned atoms, the hash reference is:
+
+ map{$X->atom_name($_)=>1} @atoms
 
 =cut
 
 sub getWMPropertyAtoms {
-    my ($self,$window,$prop) = @_;
-    return $self->getWMPropertyDecode($window,$prop,
-	sub{ return { map{$self->atom_name($_)=>1} unpack('L',shift) }; });
+    my ($X,$window,$prop) = @_;
+    return getWMPropertyDecode($X,$window,$prop,
+	sub{ return { map{$X->atom_name($_)=>1} unpack('L',shift) }; });
 }
 
-=item $X->B<getWMPropertyBits>(I<$window>,I<$prop>) => I<$value>
+=item B<getWMPropertyBits>(I<$X>,I<$window>,I<$prop>) => I<$value>
 
 Returns I<$value> as a reference to an array of bit values or C<undef>
 when the property, I<$prop>, does not exist on I<$window>.
@@ -318,10 +639,12 @@ when the property, I<$prop>, does not exist on I<$window>.
 =cut
 
 sub getWMPropertyBits {
-    my ($self,$window,$prop) = @_;
-    return $self->getWMPropertyDecode($window,$prop,
+    my ($X,$window,$prop) = @_;
+    return getWMPropertyDecode($X,$window,$prop,
 	sub{ return [ map{unpack('b*',pack('V',$_))} unpack('L*',shift) ]; });
 }
+
+=back
 
 =back
 
@@ -333,41 +656,39 @@ The following methods are used to set properties on windows:
 
 =over
 
-=item $X->B<setProperty>(I<$win>,I<$prop>,I<$type>,I<$format>,I<$data>)
+=item B<setRootProperty>(I<$X>,I<$prop>,I<$type>,I<$format>,I<$data>)
 
-Set a property on a window.  I<$win> is the window on which to set the
-property; defaults to the default root window when zero or C<undef>.
-I<$prop> is the name of the property.  I<$type> is the name of the
-property type.  I<$format> is 8, 16 or 32 specifying the format of the
-property.  I<$data> is the packed data for the property.
-
-=cut
-
-sub setProperty {
-    my($X,$win,$prop,$type,$format,$data) = @_;
-    $win = $X->root unless $win;
-    $X->ChangeProperty($win,
-	    $X->atom($prop),
-	    $X->atom($type),
-	    $format, Replace=>$data);
-    $X->flush;
-}
-
-=item $X->B<deleteProperty>(I<$win>,I<$prop>)
-
-Deletes the property named I<$prop> from the window, I<$win>.  I<$win>
-defaults to the default root window when zero or C<undef>.
+Set a property on a root window.  C<$X-E<gt>root> is the root window on
+which to set the property.
+I<$prop> is the name or atom of the property.  I<$type> is the name or
+atom of the property type.  I<$format> is 8, 16 or 32 specifying the
+format of the property.  I<$data> is the packed data for the property.
 
 =cut
 
-sub deleteProperty {
-    my($X,$win,$prop) = @_;
-    $win = $X->root unless $win;
-    $X->DeleteProperty($win,$X->atom($prop));
-    $X->flush;
+sub setRootProperty {
+    my($X,$prop,$type,$format,$data) = @_;
+    $prop = $X->atom($prop) unless $prop =~ m{^\d+$};
+    $type = $X->atom($type) unless $type =~ m{^\d+$};
+    $X->ChangeProperty($X->root,$prop,$type,$format,Replace=>$data);
 }
 
-=item $X->B<setWMRootPropertyEncode>(I<$prop>,I<$format>,I<$encode>,I<@args>)
+=item B<deleteProperty>(I<$X>,I<$prop>)
+
+Deletes the property with name or atom I<$prop> from the root window,
+C<$X-E<gt>root>.
+
+=cut
+
+sub deleteRootProperty {
+    my($X,$prop) = @_;
+    $prop = $X->atom($prop) unless $prop =~ m{^\d+$};
+    $X->DeleteProperty($X->root,$prop);
+}
+
+=over
+
+=item B<setWMRootPropertyEncode>(I<$X>,I<$prop>,I<$encode>,I<@args>)
 
 Provides a method for setting an encoded property to the root window.  The
 property has atom name, I<$prop>, format, I<$format>, and encoder,
@@ -378,23 +699,23 @@ methods below:
 =cut
 
 sub setWMRootPropertyEncode {
-    my($self,$prop,$format,$encode,@args) =  @_;
+    my($X,$prop,$encode,@args) =  @_;
     if (@args) {
-	my ($type,$data) = &{$encode}(@args);
-	$self->setProperty(0,$prop,$type,$format,$data);
+	my ($type,$format,$data) = &{$encode}(@args);
+	setRootProperty($X,$prop,$type,$format,$data);
     } else {
-	$self->deleteProperty(0,$prop);
+	deleteRootProperty($X,$prop);
     }
 }
 
 =over
 
-=item $X->B<setWMRootPropertyString>(I<$prop>,I<$type>,I<$string>)
+=item B<setWMRootPropertyText>(I<$X>,I<$prop>,I<$style>,I<$string>)
 
-Set set property, I<$prop>, to the string value, I<$string>.
-I<$type> must be one of C<STRING>, C<COMPOUND_TEXT> or C<UTF8_STRING>.
-When the resulting property must be null terminated, it may be necessary
-to append the null character to the end of the string, I<$string>.
+Set the property, I<$prop>, to the string value, I<$string>.
+I<$style> must be one of C<StringStyle>, C<StdICCStyle>,
+C<CompoundTextStyle> or C<Utf8StringStyle>.
+The resulting property will be null-separated.
 
 =cut
 
@@ -404,28 +725,27 @@ sub _string_OK {
     return (length($string) == 0);
 }
 
-sub setWMRootPropertyString {
-    my($self,$prop,$type,$string) = @_;
-    $self->setWMRootPropertyEncode($prop,8,sub{
-	    my($type,$string) = @_;
-	    return STRING=>Encode::encode('iso-8859-1',$string)
-		if $type eq 'STRING' or
-		  ($type eq 'COMPOUND_TEXT' and _string_OK($string));
-	    return $type=>Encode::encode('x11-compound-text',$string)
-		if $type eq 'COMPOUND_TEXT';
-	    warn "type '$type' defaults to UTF8_STRING"
-		if $type ne 'UTF8_STRING';
-	    return UTF8_STRING=>Encode::encode('UTF-8',$string);
-    },$type,$string);
+sub setWMRootPropertyText {
+    my($X,$prop,$style,$string) = @_;
+    setWMRootPropertyEncode($X,$prop,sub{
+	    my($style,$string) = @_;
+	    return STRING=>8,Encode::encode('iso-8859-1',$string)
+		if $style eq 'StringStyle' or
+		  ($style eq 'StdICCStyle' and _string_OK($string));
+	    return COMPOUND_TEXT=>8,Encode::encode('x11-compound-text',$string)
+		if $style eq 'StdICCStyle' or $style eq 'CompoundTextStyle';
+	    warn "style '$style' defaults to Utf8StringStyle"
+		if $style ne 'Utf8StringStyle';
+	    return UTF8_STRING=>8,Encode::encode('UTF-8',$string);
+    },$style,$string);
 }
 
-=item $X->B<setWMRootPropertyStrings>(I<$prop>,I<$type>,I<$strings>)
+=item B<setWMRootPropertyTexts>(I<$X>,I<$prop>,I<$style>,I<$strings>)
 
-Set set property, I<$prop>, to the string values, I<$strings>.
-I<$type> must be one of C<STRING>, C<COMPOUND_TEXT> or C<UTF8_STRING>.
-When the resulting property must be null terminated rather than null
-separated, it may be necessary to add '' to the end of the list of
-strings.
+Set the property, I<$prop>, to the string values, I<$strings>.
+I<$style> must be one of C<StringStyle>, C<StdICCStyle>,
+C<CompoundTextStyle> or C<Utf8StringStyle>.
+The resulting property will be null-separated.
 
 =cut
 
@@ -435,22 +755,171 @@ sub _strings_OK {
     return 1;
 }
 
-sub setWMRootPropertyStrings {
-    my($self,$prop,$type,$strings) = @_;
-    $self->setWMRootPropertyEncode($prop,8,sub{
-	    my($type,$strings) = @_;
-	    return STRING=>join(pack('C',0),map{Encode::encode('iso-8859-1',$_)} @$strings)
-		if $type eq 'STRING' or
-		  ($type eq 'COMPOUND_TEXT' and _strings_OK($strings));
-	    return $type=>join(pack('C',0),map{Encode::encode('x11-compound-text',$_)} @$strings)
-		if $type eq 'COMPOUND_TEXT';
-	    warn "type '$type' defaults to UTF8_STRING"
-		if $type ne 'UTF8_STRING';
-	    return UTF8_STRING=>join(pack('C',0),map{Encode::encode('UTF-8',$_)} @$strings);
-    },$type,$strings);
+sub setWMRootPropertyTexts {
+    my($X,$prop,$style,$strings) = @_;
+    setWMRootPropertyEncode($X,$prop,sub{
+	    my($style,$strings) = @_;
+	    return STRING=>8,join(pack('C',0),map{Encode::encode('iso-8859-1',$_)} @$strings)
+		if $style eq 'StringStyle' or
+		  ($style eq 'StdICCStyle' and _strings_OK($strings));
+	    return $style=>8,join(pack('C',0),map{Encode::encode('x11-compound-text',$_)} @$strings)
+		if $style eq 'StdICCStyle' or $style eq 'CompoundTextStyle';
+	    warn "style '$style' defaults to Utf8StringStyle"
+		if $style ne 'Utf8StringStyle';
+	    return UTF8_STRING=>8,join(pack('C',0),map{Encode::encode('UTF-8',$_)} @$strings);
+    },$style,$strings);
 }
 
-=item $X->B<setWMRootPropertyInt>(I<$prop>,I<$type>,I<$integer>)
+=item B<setWMRootPropertyTermText>(I<$X>,I<$prop>,I<$style>,I<$string>)
+
+Set the property, I<$prop>, to the string value, I<$string>.
+I<$style> must be one of C<StringStyle>, C<StdICCStyle>,
+C<CompoundTextStyle> or C<Utf8StringStyle>.
+The resulting property will be null-terminated.
+
+=cut
+
+sub setWMRootPropertyTermText {
+    my($X,$prop,$style,$string) = @_;
+    setWMRootPropertyEncode($X,$prop,sub{
+	    my($style,$string) = @_;
+	    return STRING=>8,Encode::encode('iso-8859-1',$string)."\x00"
+		if $style eq 'StringStyle' or
+		  ($style eq 'StdICCStyle' and _string_OK($string));
+	    return COMPOUND_TEXT=>8,Encode::encode('x11-compound-text',$string)."\x00"
+		if $style eq 'StdICCStyle' or $style eq 'CompoundTextStyle';
+	    warn "style '$style' defaults to Utf8StringStyle"
+		if $style ne 'Utf8StringStyle';
+	    return UTF8_STRING=>8,Encode::encode('UTF-8',$string)."\x00";
+    },$style,$string);
+}
+
+=item B<setWMRootPropertyTermTexts>(I<$X>,I<$prop>,I<$style>,I<$strings>)
+
+Set the property, I<$prop>, to the string values, I<$strings>.
+I<$style> must be one of C<StringStyle>, C<StdICCStyle>,
+C<CompoundTextStyle> or C<Utf8StringStyle>.
+The resulting property will be null-terminated.
+
+=cut
+
+sub setWMRootPropertyTermTexts {
+    my($X,$prop,$style,$strings) = @_;
+    setWMRootPropertyEncode($X,$prop,sub{
+	    my($style,$strings) = @_;
+	    return STRING=>8,join(pack('C',0),map{Encode::encode('iso-8859-1',$_)} @$strings)."\x00"
+		if $style eq 'StringStyle' or
+		  ($style eq 'StdICCStyle' and _strings_OK($strings));
+	    return $style=>8,join(pack('C',0),map{Encode::encode('x11-compound-text',$_)} @$strings)."\x00"
+		if $style eq 'StdICCStyle' or $style eq 'CompoundTextStyle';
+	    warn "style '$style' defaults to Utf8StringStyle"
+		if $style ne 'Utf8StringStyle';
+	    return UTF8_STRING=>8,join(pack('C',0),map{Encode::encode('UTF-8',$_)} @$strings)."\x00";
+    },$style,$strings);
+}
+
+=item B<setWMRootPropertyString>(I<$X>,I<$prop>,I<$type>,I<$string>)
+
+Set set property, I<$prop>, to the string value, I<$string>.
+I<$type> must be one of C<STRING>, C<COMPOUND_TEXT> or C<UTF8_STRING>.
+When the resulting property must be null terminated, it may be necessary
+to append the null character to the end of the string, I<$string>.
+
+=cut
+
+use constant {
+    StyleMapping => {
+        STRING=>'StringStyle',
+        COMPOUND_TEXT=>'StdICCStyle',
+        UTF8_STRING=>'Utf8StringStyle',
+    },
+};
+
+sub _map_style {
+    my $type = shift;
+    $type = '' unless $type;
+    my $style = StyleMapping()->{$type};
+    $style = 'Utf8StringStyle' unless $style;
+    return $style;
+}
+
+sub setWMRootPropertyString {
+    my @args = @_; $arsg[2] = _map_style($args[2]);
+    return setWMRootPropertyText(@args);
+}
+
+=item B<setWMRootPropertyStrings>(I<$X>,I<$prop>,I<$type>,I<$strings>)
+
+Set set property, I<$prop>, to the string values, I<$strings>.
+I<$type> must be one of C<STRING>, C<COMPOUND_TEXT> or C<UTF8_STRING>.
+When the resulting property must be null terminated rather than null
+separated, it may be necessary to add '' to the end of the list of
+strings.
+
+=cut
+
+sub setWMRootPropertyStrings {
+    my @args = @_; $arsg[2] = _map_style($args[2]);
+    return setWMRootPropertyTexts(@args);
+}
+
+=item B<setWMRootPropertyTermString>(I<$X>,I<$prop>,I<$type>,I<$string>)
+
+Like setWMRootPropertyString() except for null-terminated strings instead
+of null-separated strings.
+
+=cut
+
+sub setWMRootPropertyTermString {
+    my @args = @_; $arsg[2] = _map_style($args[2]);
+    return setWMRootPropertyTermText(@args);
+}
+
+=item B<setWMRootPropertyTermStrings>(I<$X>,I<$prop>,I<$type>,I<$strings>)
+
+Like setWMRootPropertyStrings() except for null-terminated strings instead
+of null-separated strings.
+
+=cut
+
+sub setWMRootPropertyTermStrings {
+    my @args = @_; $arsg[2] = _map_style($args[2]);
+    return setWMRootPropertyTermTexts(@args);
+}
+
+=item B<setWMRootPropertyUint>(I<$X>,I<$prop>,I<$type>,I<$integer>)
+
+Sets the property, I<$prop>, to the integer value, I<$integer>, of type,
+I<$type>.  I<$prop> and I<$type> are atom names as a scalar string.  This
+results in a property of type, I<$type>.
+
+=cut
+
+sub setWMRootPropertyUint {
+    my($X,$prop,$type,$integer) = @_;
+    setWMRootPropertyEncode($X,$prop,sub{
+	    my($type,$integer) = @_;
+	    return $type, 32, pack('L',$integer);
+    },$type,$integer);
+}
+
+=item B<setWMRootPropertyUints>(I<$X>,I<$prop>,I<$type>,I<@integers>)
+
+Sets the property, I<$prop>, to the integer values, I<@integers>, of type,
+I<$type>.  I<$prop> and I<$type> are atom names as a scalar string.  This
+results in a property of type, I<$type>.
+
+=cut
+
+sub setWMRootPropertyUints {
+    my($X,$prop,$type,$integers) = @_;
+    setWMRootPropertyEncode($X,$prop,sub{
+	    my($type,$integers) = @_;
+	    return $type, 32, pack('L*',@$integers);
+    },$type,$integer);
+}
+
+=item B<setWMRootPropertyInt>(I<$X>,I<$prop>,I<$type>,I<$integer>)
 
 Sets the property, I<$prop>, to the integer value, I<$integer>, of type,
 I<$type>.  I<$prop> and I<$type> are atom names as a scalar string.  This
@@ -459,14 +928,14 @@ results in a property of type, I<$type>.
 =cut
 
 sub setWMRootPropertyInt {
-    my($self,$prop,$type,$integer) = @_;
-    $self->setWMRootPropertyEncode($prop,32,sub{
+    my($X,$prop,$type,$integer) = @_;
+    setWMRootPropertyEncode($X,$prop,sub{
 	    my($type,$integer) = @_;
-	    return $type, pack('L',$integer);
+	    return $type, 32, pack('l',$integer);
     },$type,$integer);
 }
 
-=item $X->B<setWMRootPropertyInts>(I<$prop>,I<$type>,I<@integers>)
+=item B<setWMRootPropertyInts>(I<$X>,I<$prop>,I<$type>,I<@integers>)
 
 Sets the property, I<$prop>, to the integer values, I<@integers>, of type,
 I<$type>.  I<$prop> and I<$type> are atom names as a scalar string.  This
@@ -475,14 +944,14 @@ results in a property of type, I<$type>.
 =cut
 
 sub setWMRootPropertyInts {
-    my($self,$prop,$type,$integers) = @_;
-    $self->setWMRootPropertyEncode($prop,32,sub{
+    my($X,$prop,$type,$integers) = @_;
+    setWMRootPropertyEncode($X,$prop,sub{
 	    my($type,$integers) = @_;
-	    return $type, pack('L*',@$integers);
+	    return $type, 32, pack('l*',@$integers);
     },$type,$integer);
 }
 
-=item $X->B<setWMRootPropertyAtom>(I<$prop>,I<$atom>)
+=item B<setWMRootPropertyAtom>(I<$X>,I<$prop>,I<$atom>)
 
 Sets the property, I<$prop>, to the atom named I<$atom>.
 This results in a C<ATOM> type property.
@@ -490,29 +959,68 @@ This results in a C<ATOM> type property.
 =cut
 
 sub setWMRootPropertyAtom {
-    my($self,$prop,$atom) = @_;
-    $self->setWMRootPropertyEncode($prop,32,sub{
-	    return ATOM=>pack('L',$self->atom(shift));
+    my($X,$prop,$atom) = @_;
+    setWMRootPropertyEncode($X,$prop,sub{
+	    return ATOM=>32, pack('L',$X->atom(shift));
     },$atom);
 }
 
-=item $X->B<setWMRootPropertyAtoms>(I<$prop>,I<@atoms>)
+=item B<setWMRootPropertyAtoms>(I<$X>,I<$prop>,I<@atoms>)
 
 Sets the property, I<$prop>, to the list of atoms named by I<@atoms>.
 This results in a C<ATOM> type property.
 
 =cut
 
-sub setWMPropertyAtoms {
-    my($self,$prop,$atoms) = @_;
-    $self->setWMRootPropertyEncode($prop,32,sub{
-	    return ATOM=>pack('L*',map{$self->atom($_)}@{$_[0]});
+sub setWMRootPropertyAtoms {
+    my($X,$prop,$atoms) = @_;
+    setWMRootPropertyEncode($X,$prop,sub{
+	    return ATOM=>32, pack('L*',map{$X->atom($_)}@{$_[0]});
     },$atoms);
 }
 
 =back
 
-=item $X->B<setWMPropertyEncode>(I<$prop>,I<$format>,I<$encode>,I<@args>)
+=back
+
+=item B<setProperty>(I<$X>,I<$window>,I<$prop>,I<$type>,I<$format>,I<$data>)
+
+Set a property on a window.  I<$window> is the window on which to set the
+property; defaults to the default root window when zero or C<undef>.
+I<$prop> is the name of the property.  I<$type> is the name of the
+property type.  I<$format> is 8, 16 or 32 specifying the format of the
+property.  I<$data> is the packed data for the property.
+
+=cut
+
+sub setProperty {
+    my($X,$window,$prop,$type,$format,$data) = @_;
+    $window = $X->root unless $window;
+    $prop = $X->atom($prop) unless $prop =~ m{^\d+$};
+    $type = $X->atom($type) unless $type =~ m{^\d+$};
+    my($res) = $X->robust_req(ChangeProperty=>$window,$prop,$type,$format,Replace=>$data);
+    return ref $res ? 1 : 0;
+}
+
+=item B<deleteProperty>(I<$X>,I<$window>,I<$prop>)
+
+Deletes the property named I<$prop> from the window, I<$window>.
+I<$window>
+defaults to the default root window when zero or C<undef>.
+
+=cut
+
+sub deleteProperty {
+    my($X,$window,$prop) = @_;
+    $window = $X->root unless $window;
+    $prop = $X->atom($prop) unless $prop =~ m{^\d+$};
+    my($res) = $X->robust_req(DeleteProperty=>$window,$prop);
+    return ref $res ? 1 : 0;
+}
+
+=over
+
+=item B<setWMPropertyEncode>(I<$X>,I<$window>,I<$prop>,I<$encode>,I<@args>)
 
 Provides a method for setting an encoded property to the root window.  The
 property has atom name, I<$prop>, format, I<$format>, and encoder,
@@ -523,18 +1031,114 @@ methods below:
 =cut
 
 sub setWMPropertyEncode {
-    my($self,$window,$prop,$format,$encode,@args) = @_;
+    my($X,$window,$prop,$encode,@args) = @_;
     if (@args) {
-	my($type,$data) = &{$encode}(@args);
-	$self->setProperty($window,$prop,$type,$format,$data);
+	my($type,$format,$data) = &{$encode}(@args);
+	setProperty($X,$window,$prop,$type,$format,$data);
     } else {
-	$self->deleteProperty($window,$prop);
+	deleteProperty($X,$window,$prop);
     }
 }
 
 =over
 
-=item $X->B<setWMPropertyString>(I<$window>,I<$prop>,I<$type>,I<$string>)
+=item B<setWMPropertyText>(I<$X>,I<$window>,I<$prop>,I<$style>,I<$string>)
+
+Set the property, I<$prop>, to the string value, I<$string>.
+I<$style> must be one of C<StringStyle>, C<StdICCStyle>,
+C<CompoundTextStyle> or C<Utf8StringStyle>.
+The resulting property will be null-separated.
+
+=cut
+
+sub setWMPropertyText {
+    my($X,$window,$prop,$style,$string) = @_;
+    setWMPropertyEncode($X,$window,$prop,sub{
+            my($style,$string) = @_;
+            return STRING=>8,Encode::encode('iso-8859-1',$string)
+                if $style eq 'StringStyle' or
+                  ($style eq 'StdICCStyle' and _string_OK($string));
+            return COMPOUND_TEXT=>8,Encode::encode('x11-compound-text',$string)
+                if $style eq 'StdICCStyle' or $style eq 'CompoundTextStyle';
+            warn "style '$style' defaults to Utf8StringStyle"
+                if $style ne 'Utf8StringStyle';
+            return UTF8_STRING=>8,Encode::encode('UTF-8',$string);
+    },$style,$string);
+}
+
+=item B<setWMPropertyTexts>(I<$X>,I<$window>,I<$prop>,I<$style>,I<$string>)
+
+Set the property, I<$prop>, to the string values, I<$strings>.
+I<$style> must be one of C<StringStyle>, C<StdICCStyle>,
+C<CompoundTextStyle> or C<Utf8StringStyle>.
+The resulting property will be null-separated.
+
+=cut
+
+sub setWMPropertyTexts {
+    my($X,$window,$prop,$style,$strings) = @_;
+    setWMPropertyEncode($X,$window,$prop,sub{
+	    my($style,$strings) = @_;
+	    return STRING=>8,join(pack('C',0),map{Encode::encode('iso-8859-1',$_)} @$strings)
+		if $style eq 'StringStyle' or
+		  ($style eq 'StdICCStyle' and _strings_OK($strings));
+	    return COMPOUND_TEXT=>8,join(pack('C',0),map{Encode::encode('x11-compound-text',$_)} @$strings)
+		if $style eq 'StdICCStyle' or $style eq 'CompoundTextStyle';
+	    warn "style '$style' defaults to Utf8StringStyle"
+		if $style ne 'Utf8StringStyle';
+	    return UTF8_STRING=>8,join(pack('C',0),map{Encode::encode('UTF-8',$_)} @$strings);
+    },$style,$strings);
+}
+
+=item B<setWMPropertyTermText>(I<$X>,I<$window>,I<$prop>,I<$style>,I<$string>)
+
+Set the property, I<$prop>, to the string value, I<$string>.
+I<$style> must be one of C<StringStyle>, C<StdICCStyle>,
+C<CompoundTextStyle> or C<Utf8StringStyle>.
+The resulting property will be null-terminated.
+
+=cut
+
+sub setWMPropertyTermText {
+    my($X,$window,$prop,$style,$string) = @_;
+    setWMPropertyEncode($X,$window,$prop,sub{
+            my($style,$string) = @_;
+            return STRING=>8,Encode::encode('iso-8859-1',$string)."\x00"
+                if $style eq 'StringStyle' or
+                  ($style eq 'StdICCStyle' and _string_OK($string));
+            return COMPOUND_TEXT=>8,Encode::encode('x11-compound-text',$string)."\x00"
+                if $style eq 'StdICCStyle' or $style eq 'CompoundTextStyle';
+            warn "style '$style' defaults to Utf8StringStyle"
+                if $style ne 'Utf8StringStyle';
+            return UTF8_STRING=>8,Encode::encode('UTF-8',$string)."\x00";
+    },$style,$string);
+}
+
+=item B<setWMPropertyTermTexts>(I<$X>,I<$window>,I<$prop>,I<$style>,I<$string>)
+
+Set the property, I<$prop>, to the string values, I<$strings>.
+I<$style> must be one of C<StringStyle>, C<StdICCStyle>,
+C<CompoundTextStyle> or C<Utf8StringStyle>.
+The resulting property will be null-terminated.
+
+=cut
+
+sub setWMPropertyTermTexts {
+    my($X,$window,$prop,$style,$strings) = @_;
+    setWMPropertyEncode($X,$window,$prop,sub{
+	    my($style,$strings) = @_;
+	    return STRING=>8,join(pack('C',0),map{Encode::encode('iso-8859-1',$_)} @$strings)."\x00"
+		if $style eq 'StringStyle' or
+		  ($style eq 'StdICCStyle' and _strings_OK($strings));
+	    return COMPOUND_TEXT=>8,join(pack('C',0),map{Encode::encode('x11-compound-text',$_)} @$strings)."\x00"
+		if $style eq 'StdICCStyle' or $style eq 'CompoundTextStyle';
+	    warn "style '$style' defaults to Utf8StringStyle"
+		if $style ne 'Utf8StringStyle';
+	    return UTF8_STRING=>8,join(pack('C',0),map{Encode::encode('UTF-8',$_)} @$strings)."\x00";
+    },$style,$strings);
+}
+
+=item B<setWMPropertyString>(I<$X>,I<$window>,I<$prop>,I<$type>,I<$string>)
 
 Set set property, I<$prop>, to the string value, I<$string>.
 I<$type> must be one of C<STRING>, C<COMPOUND_TEXT> or C<UTF8_STRING>.
@@ -544,21 +1148,11 @@ to append the null character to the end of the string, I<$string>.
 =cut
 
 sub setWMPropertyString {
-    my($self,$window,$prop,$type,$string) = @_;
-    $self->setWMPropertyEncode($window,$prop,8,sub{
-	    my($type,$string) = @_;
-	    return STRING=>Encode::encode('iso-8859-1',$string)
-		if $type eq 'STRING' or
-		  ($type eq 'COMPOUND_TEXT' and _string_OK($string));
-	    return $type=>Encode::encode('x11-compound-text',$string)
-		if $type eq 'COMPOUND_TEXT';
-	    warn "type '$type' defaults to UTF8_STRING"
-		if $type ne 'UTF8_STRING';
-	    return UTF8_STRING=>Encode::encode('UTF-8',$string);
-    },$type,$string);
+    my @args = @_; $args[3] = _map_style($args[3]);
+    return setWMPropertyText(@args);
 }
 
-=item $X->B<setWMPropertyStrings>(I<$window>,I<$prop>,I<@strings>)
+=item B<setWMPropertyStrings>(I<$X>,I<$window>,I<$prop>,I<$strings>)
 
 Set set property, I<$prop>, to the string values, I<$strings>.
 I<$type> must be one of C<STRING>, C<COMPOUND_TEXT> or C<UTF8_STRING>.
@@ -569,21 +1163,67 @@ strings.
 =cut
 
 sub setWMPropertyStrings {
-    my($self,$window,$prop,$type,$strings) = @_;
-    $self->setWMPropertyEncode($window,$prop,8,sub{
-	    my($type,$strings) = @_;
-	    return STRING=>join(pack('C',0),map{Encode::encode('iso-8859-1',$_)} @$strings)
-		if $type eq 'STRING' or
-		  ($type eq 'COMPOUND_TEXT' and _strings_OK($strings));
-	    return $type=>join(pack('C',0),map{Encode::encode('x11-compound-text',$_)} @$strings)
-		if $type eq 'COMPOUND_TEXT';
-	    warn "type '$type' defaults to UTF8_STRING"
-		if $type ne 'UTF8_STRING';
-	    return UTF8_STRING=>join(pack('C',0),map{Encode::encode('UTF-8',$_)} @$strings);
-    },$type,$strings);
+    my @args = @_; $args[3] = _map_style($args[3]);
+    return setWMPropertyTexts(@args);
 }
 
-=item $X->B<setWMPropertyInt>(I<$window>,I<$prop>,I<$type>,I<$integer>)
+=item B<setWMPropertyTermString>(I<$X>,I<$window>,I<$prop>,I<$type>,I<$string>)
+
+Like setWMPropertyString() except for null-terminated strings instead
+of null-separated strings.
+
+=cut
+
+sub setWMPropertyTermString {
+    my @args = @_; $args[3] = _map_style($args[3]);
+    return setWMPropertyTermText(@args);
+}
+
+=item B<setWMPropertyTermStrings>(I<$X>,I<$window>,I<$prop>,I<$type>,I<$strings>)
+
+Like setWMPropertyStrings() except for null-terminated strings instead
+of null-separated strings.
+
+=cut
+
+sub setWMPropertyTermStrings {
+    my @args = @_; $args[3] = _map_style($args[3]);
+    return setWMPropertyTermText(@args);
+}
+
+=item B<setWMPropertyUint>(I<$X>,I<$window>,I<$prop>,I<$type>,I<$integer>)
+
+Sets the property, I<$prop>, to the integer value, I<$integer>, of type,
+I<$type>.  I<$prop> and I<$type> are atom names as a scalar string.  This
+results in a property of type, I<$type>.
+
+=cut
+
+sub setWMPropertyUint {
+    my($X,$window,$prop,$type,$integer) = @_;
+    setWMPropertyEncode($X,$window,$prop,sub{
+	    my($type,$integer) = @_;
+	    return $type, 32, pack('L',$integer);
+    },$type,$integer);
+}
+
+=item B<setWMPropertyUints>(I<$X>,I<$window>,I<$prop>,I<@integers>)
+
+Sets the property, I<$prop>, to the integer values, I<@integers>, of type,
+I<$type>.  I<$prop> and I<$type> are atom names as a scalar string.  This
+results in a property of type, I<$type>.
+
+=cut
+
+sub setWMPropertyUints {
+    my($X,$window,$prop,$type,$integers) = @_;
+    setWMPropertyEncode($X,$window,$prop,sub{
+	    my($type,$integers) = @_;
+	    return $type, 32, pack('L*',@$integers);
+    },$type,$integer);
+}
+
+=item B<setWMPropertyInt>(I<$X>,I<$window>,I<$prop>,I<$type>,I<$integer>)
 
 Sets the property, I<$prop>, to the integer value, I<$integer>, of type,
 I<$type>.  I<$prop> and I<$type> are atom names as a scalar string.  This
@@ -592,14 +1232,14 @@ results in a property of type, I<$type>.
 =cut
 
 sub setWMPropertyInt {
-    my($self,$window,$prop,$type,$integer) = @_;
-    $self->setWMPropertyEncode($window,$prop,32,sub{
+    my($X,$window,$prop,$type,$integer) = @_;
+    setWMPropertyEncode($X,$window,$prop,sub{
 	    my($type,$integer) = @_;
-	    return $type, pack('L',$integer);
+	    return $type, 32, pack('l',$integer);
     },$type,$integer);
 }
 
-=item $X->B<setWMPropertyInts>(I<$window>,I<$prop>,I<@integers>)
+=item B<setWMPropertyInts>(I<$X>,I<$window>,I<$prop>,I<@integers>)
 
 Sets the property, I<$prop>, to the integer values, I<@integers>, of type,
 I<$type>.  I<$prop> and I<$type> are atom names as a scalar string.  This
@@ -608,14 +1248,14 @@ results in a property of type, I<$type>.
 =cut
 
 sub setWMPropertyInts {
-    my($self,$window,$prop,$type,$integers) = @_;
-    $self->setWMPropertyEncode($window,$prop,32,sub{
+    my($X,$window,$prop,$type,$integers) = @_;
+    setWMPropertyEncode($X,$window,$prop,sub{
 	    my($type,$integers) = @_;
-	    return $type, pack('L*',@$integers);
+	    return $type, 32, pack('l*',@$integers);
     },$type,$integer);
 }
 
-=item $X->B<setWMPropertyAtom>(I<$window>,I<$prop>,I<$atom>)
+=item B<setWMPropertyAtom>(I<$X>,I<$window>,I<$prop>,I<$atom>)
 
 Sets the property, I<$prop>, to the atom named I<$atom>.
 This results in a C<ATOM> type property.
@@ -623,13 +1263,13 @@ This results in a C<ATOM> type property.
 =cut
 
 sub setWMPropertyAtom {
-    my($self,$window,$prop,$atom) = @_;
-    $self->setWMPropertyEncode($window,$prop,32,sub{
-	    return ATOM=>pack('L',$self->atom(shift));
+    my($X,$window,$prop,$atom) = @_;
+    setWMPropertyEncode($X,$window,$prop,sub{
+	    return ATOM=>32,pack('L',$X->atom(shift));
     },$atom);
 }
 
-=item $X->B<setWMPropertyAtoms>(I<$window>,I<$prop>,I<$atoms>)
+=item B<setWMPropertyAtoms>(I<$X>,I<$window>,I<$prop>,I<$atoms>)
 
 Sets the property, I<$prop>, to the list of atoms named by I<@$atoms>.
 This results in a C<ATOM> type property.
@@ -637,11 +1277,13 @@ This results in a C<ATOM> type property.
 =cut
 
 sub setWMPropertyAtoms {
-    my($self,$window,$prop,$atoms) = @_;
-    $self->setWMPropertyEncode($window,$prop,32,sub{
-	    return ATOM=>pack('L*',map{$self->atom($_)}@{$_[0]});
+    my($X,$window,$prop,$atoms) = @_;
+    setWMPropertyEncode($X,$window,$prop,sub{
+	    return ATOM=>32,pack('L*',map{$X->atom($_)}@{$_[0]});
     },$atoms);
 }
+
+=back
 
 =back
 
@@ -653,20 +1295,20 @@ The following methods are used for sending events:
 
 =over
 
-=item $X->B<clientMessage>(I<$targ>,I<$win>,I<$type>,I<$data>)
+=item B<clientMessage>(I<$X>,I<$targ>,I<$win>,I<$type>,I<$data>)
 
 Send a client message to a window, I<$targ>, with the specified window as
-I<$win>, client meesage type the atom name I<$type>, and 20-bytes of
+I<$win>, client message type the atom name I<$type>, and 20-bytes of
 packed client message data, I<$data>.  The mask used is C<StrutureNotify>
 and C<SubstructureNotify>.
 
 =cut
 
 sub clientMessage {
-    my($X,$target,$window,$type,$data) = @_;
-    $target = $X->root unless $target;
+    my($X,$window,$type,$data) = @_;
     $window = $X->root unless $window;
-    $X->SendEvent($target, 0,
+    $type = $X->atom($type) unless $type =~ m{^\d+$};
+    $X->SendEvent($X->root, 0,
 	    $X->pack_event_mask(qw(
 		    StructureNotify
 		    SubstructureNotify
@@ -674,10 +1316,9 @@ sub clientMessage {
 	    $X->pack_event(
 		name=>'ClientMessage',
 		window=>$window,
-		format=$format,
-		type=>
-	    ));
-    $X->flush;
+                type=>$type,
+		format=32,
+                data=>$data));
 }
 
 =back
@@ -687,6 +1328,107 @@ sub clientMessage {
 1;
 
 __END__
+
+=head1 IMPORTS
+
+Any public subroutine can be imported.  Some tags have been defined as
+follows:
+
+=over
+
+=item :encdec
+
+Special encoding and decoding subroutines as follows:
+
+    getWMRootPropertyDecode
+    getWMPropertyDecode
+    setWMRootPropertyEncode
+    setWMPropertyEncode
+
+=item :string
+
+String encoding and decoding subroutines as follows:
+
+    getWMRootPropertyString
+    getWMRootPropertyStrings
+    getWMRootPropertyTermString
+    getWMRootPropertyTermStrings
+    getWMPropertyString
+    getWMPropertyStrings
+    getWMPropertyTermString
+    getWMPropertyTermStrings
+    setWMRootPropertyString
+    setWMRootPropertyStrings
+    setWMRootPropertyTermString
+    setWMRootPropertyTermStrings
+    setWMPropertyString
+    setWMPropertyStrings
+    setWMPropertyTermString
+    setWMPropertyTermStrings
+
+=item :text
+
+Text encoding and decoding subroutines as follows:
+
+    setWMRootPropertyText
+    setWMRootPropertyTexts
+    setWMRootPropertyTermText
+    setWMRootPropertyTermTexts
+    setWMPropertyText
+    setWMPropertyTexts
+    setWMPropertyTermText
+    setWMPropertyTermTexts
+
+=item :uint
+
+Unsigned integer encoding and decoding subroutines as follows:
+
+    getWMRootPropertyUint
+    getWMRootPropertyUints
+    getWMPropertyUint
+    getWMPropertyUints
+    setWMRootPropertyUint
+    setWMRootPropertyUints
+    setWMPropertyUint
+    setWMPropertyUints
+
+=item :int
+
+Signed integer encoding and decoding subroutines as follows:
+
+    getWMRootPropertyInt
+    getWMRootPropertyInts
+    getWMPropertyInt
+    getWMPropertyInts
+    setWMRootPropertyInt
+    setWMRootPropertyInts
+    setWMPropertyInt
+    setWMPropertyInts
+
+=item :atom
+
+Atom encoding and decoding subroutines as follows:
+
+    getWMRootPropertyAtom
+    getWMRootPropertyAtoms
+    getWMPropertyAtom
+    getWMPropertyAtoms
+    setWMRootPropertyAtom
+    setWMRootPropertyAtoms
+    setWMPropertyAtom
+    setWMPropertyAtoms
+
+=item :bits
+
+Bits encoding and decoding subroutines as follows:
+
+    getWMPropertyBits
+
+=item :all
+
+All exportable subroutines.
+
+=back
 
 =head1 AUTHOR
 

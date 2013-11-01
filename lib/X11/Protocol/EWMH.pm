@@ -28,6 +28,32 @@ compliant window manager.
 
 The following methods are provided by this module:
 
+=cut
+
+sub new {
+    my $X = X11::Protocol::WMH->new(@_);
+    if ($X) {
+	$X->_init_NetLayer;
+	# FIXME: more
+    }
+    return $X;
+}
+
+sub NetClientMessage {
+    my($X,$window,$type,$data) = @_;
+    $window = $X->root unless $window;
+    $X->SendEvent($X->root, 0,
+	    $X->pack_event_mask(qw(
+		    SubstructureNotify
+		    SubstructureRedirect)),
+	    $X->pack_event(
+		name => 'ClientMessage',
+		window => $window,
+		type => $X->atom($type),
+		format => 32,
+		data => $data));
+}
+
 =head2 Root window properties (and related messages)
 
 The following are root window properties and related messages of the
@@ -68,19 +94,6 @@ sub get_NET_SUPPORTED {
     return shift->getWMRootPropertyAtoms('_NET_SUPPORTED');
 }
 
-=item $ewmh->B<event_handler_PropertyNotify_NET_SUPPORT>(I<$e>)
-
-Process a property notification event for the C<_NET_SUPPORTED> property
-on the root window.  Note that this property should not normally change
-unless window managers are restarted or switched.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_SUPPORTED {
-    my($self,$e) = @_;
-    $self->get_NET_SUPPORTED if $e->{window} == $self->root;
-}
-
 =back
 
 =head3 _NET_CLIENT_LIST, _NET_CLIENT_LIST_STACKING, WINDOW[]/32
@@ -105,18 +118,6 @@ sub get_NET_CLIENT_LIST {
     return shift->getWMRootPropertyInts('_NET_CLIENT_LIST');
 }
 
-=item $ewmh->B<event_handler_PropertyNotify_NET_CLIENT_LIST>(I<$e>)
-
-Event handler for changes in the C<_NET_CLIENT_LIST> property on the
-root window.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_CLIENT_LIST {
-    my($self,$e) = @_;
-    $self->get_NET_CLIENT_LIST if $e->{window} == $self->root;
-}
-
 =item $ewmh->B<get_NET_CLIENT_LIST_STACKING>() => [ @windows ]
 
 Get the array reference to an array of clients (XID numbers) and store it
@@ -126,18 +127,6 @@ in C<$ewmh-E<gt>{_NET_CLIENT_LIST}>.
 
 sub get_NET_CLIENT_LIST_STACKING {
     return shift->getWMRootPropertyInts('_NET_CLIENT_LIST_STACKING');
-}
-
-=item $ewmh->B<event_handler_PropertyNotify_NET_CLIENT_LIST_STACKING>(I<$e>)
-
-Event handler for changes in the C<_NET_CLIENT_LIST_STACKING> property
-on the root window.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_CLIENT_LIST_STACKING {
-    my($self,$e) = @_;
-    $self->get_NET_CLIENT_LIST_STACKING if $e->{window} == $self->root;
 }
 
 =back
@@ -208,19 +197,8 @@ message:
 
 sub set_NET_NUMBER_OF_DESKTOPS {
     my ($self,$desktops) = @_;
-    $self->ClientMessage(0,0,_NET_NUMBER_OF_DESKTOPS=>
+    $self->NetClientMessage(0,_NET_NUMBER_OF_DESKTOPS=>
 	    pack('LLLLL',$desktops,0,0,0,0));
-}
-
-=item $ewmh->B<event_handler_PropertyNotify_NET_NUMBER_OF_DESKTOPS>(I<$e>)
-
-Event handler for changes in the C<_NET_NUMBER_OF_DESKTOPS> property.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_NUMBER_OF_DESKTOPS {
-    my($self,$e) = @_;
-    $self->get_NET_NUMBER_OF_DESKTOPS if $e->{window} == $self->root;
 }
 
 =back
@@ -295,20 +273,8 @@ C<$h> using the following client message:
 
 sub set_NET_DESKTOP_GEOMETRY {
     my ($self, $w, $h) = @_;
-    $self->ClientMessage(0,0,_NET_DESKTOP_GEOMETRY=>
+    $self->NetClientMessage(0,_NET_DESKTOP_GEOMETRY=>
 	    pack('LLLLL',$w,$h,0,0,0));
-}
-
-=item $ewmh->B<event_handler_PropertyNotify_NET_DESKTOP_GEOMETRY>(I<$e>)
-
-Event handler for changes in the C<_NET_DESKTOP_GEOMETRY> property on
-the root window.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_DESKTOP_GEOMETRY {
-    my($self,$e) = @_;
-    $self->get_NET_DESKTOP_GEOMETRY if $e->{window} == $self->root;
 }
 
 =back
@@ -420,20 +386,8 @@ sending a _NET_DESKTOP_VIEWPORT client message to the root window:
 
 sub set_NET_DESKTOP_VIEWPORT {
     my($self,$vx,$vy) = @_;
-    $self->ClientMessage(0,0,_NET_DESKTOP_VIEWPORT=>
+    $self->NetClientMessage(0,_NET_DESKTOP_VIEWPORT=>
 	    pack('LLLLL',$vx,$vy,0,0,0));
-}
-
-=item $ewmh->B<event_handler_PropertyNotify_NET_DESKTOP_VIEWPORT>(I<$e>)
-
-Event handler for changes in the C<_NET_DESKTOP_VIEWPORT> property on
-the root window.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_DESKTOP_VIEWPORT {
-    my($self,$e) = @_;
-    $self->get_NET_DESKTOP_VIEWPORT if $e->{window} == $self->root;
 }
 
 =back
@@ -491,20 +445,8 @@ _NET_CURRENT_DESKTOP client message to the root window:
 sub set_NET_CURRENT_DESKTOP {
     my($self,$index,$time) = @_;
     $time = 0 unless $time;
-    $self->ClientMessage(0,0,_NET_CURRENT_DESKTOP=>
+    $self->NetClientMessage(0,_NET_CURRENT_DESKTOP=>
 	    pack('LLLLL',$index,$time,0,0,0));
-}
-
-=item $ewmh->B<event_handler_PropertyNotify_NET_CURRENT_DESKTOP>(I<$e>)
-
-Event handler for changes in the C<_NET_CURRENT_DESKTOP> propert on the
-root window.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_CURRENT_DESKTOP {
-    my($self,$e) = @_;
-    $self->get_NET_CURRENT_DESKTOP if $e->{window} == $self->root;
 }
 
 =back
@@ -559,18 +501,6 @@ sub set_NET_DESKTOP_NAMES {
 	    $X->atom('UTF8_STRING'),
 	    8, 'Replace', pack('(Z*)*',@names));
     $X->flush;
-}
-
-=item $ewmh->B<event_handler_PropertyNotify_NET_DESKTOP_NAMES>(I<$e>)
-
-Event handler for changes in the C<_NET_DESKTOP_NAMES> property on the
-root window.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_DESKTOP_NAMES {
-    my($self,$e) = @_;
-    $self->get_NET_DESKTOP_NAMES if $e->{window} == $self->root;
 }
 
 =back
@@ -643,20 +573,8 @@ sub set_NET_ACTIVE_WINDOW {
     $source = 2 unless defined $source;
     $current = 0 unless $current;
     $time = 0 unless $time;
-    $self->ClientMessage(0,$window,_NET_ACTIVE_WINDOW=>
+    $self->NetClientMessage($window,_NET_ACTIVE_WINDOW=>
 	    pack('LLLLL',$source,$time,$current,0,0));
-}
-
-=item $ewmh->B<event_handler_PropertyNotify_NET_ACTIVE_WINDOW>(I<$e>)
-
-Event handler for changes in the C<_NET_ACTIVE_WINDOW> property on the
-root window.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_ACTIVE_WINDOW {
-    my($self,$e) = @_;
-    $self->get_NET_ACTIVE_WINDOW if $e->{window} == $self->root;
 }
 
 =back
@@ -759,18 +677,6 @@ sub set_NET_WORKAREA {
     $X->flush;
 }
 
-=item $ewmh->B<event_handler_PropertyNotify_NET_WORKAREA>(I<$e>)
-
-Event handler for changes in the C<_NET_WORKAREA> property on the root
-window.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_WORKAREA {
-    my($self,$e) = @_;
-    $self->get_NET_WORKAREA if $e->{window} == $self->root;
-}
-
 =back
 
 =head3 _NET_SUPPORTING_WM_CHECK, WINDOW/32
@@ -857,19 +763,6 @@ sub get_NET_SUPPORTING_WM_CHECK {
     return $self->{_NET_SUPPORTING_WM_CHECK};
 }
 
-=item $ewmh->B<event_handler_PropertyNotify_NET_SUPPORTING_WM_CHECK>(I<$e>)
-
-Event handler for changes in the C<_NET_SUPPORTING_WM_CHECK> propert on
-the root window.  This property normally only changes when window
-mangaers are replaced or reloaded.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_SUPPORTING_WM_CHECK {
-    my($self,$e) = @_;
-    $self->get_NET_SUPPORTING_WM_CHECK if $e->{window} == $self->root;
-}
-
 =back
 
 =head3 _NET_VIRTUAL_ROOTS, WINDOW[]/32
@@ -910,18 +803,6 @@ sub get_NET_VIRTUAL_ROOTS {
 	}
     }
     return $value;
-}
-
-=item $ewmh->B<event_handler_PropertyNotify_NET_VIRTUAL_ROOTS>(I<$e>)
-
-Event handler for changes in the C<_NET_VIRTUAL_ROOTS> propert on the
-root window. 
-
-=cut
-
-sub event_handler_PropertyNotify_NET_VIRTUAL_ROOTS {
-    my($self,$e) = @_;
-    $self->get_NET_VIRTUAL_ROOTS if $e->{window} == $self->root;
 }
 
 =back
@@ -1053,18 +934,6 @@ sub get_NET_DESKTOP_LAYOUT {
     return $value;
 }
 
-=item $ewmh->B<event_handler_PropertyNotify_NET_DESKTOP_LAYOUT>(I<$e>)
-
-Event handler for changes in the C<_NET_DESKTOP_LAYOUT> property on the
-root window.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_DESKTOP_LAYOUT {
-    my($self,$e) = @_;
-    $self->get_NET_DESKTOP_LAYOUT if $e->{window} == $self->root;
-}
-
 =back
 
 =head3 _NET_SHOWING_DESKTOP desktop, CARDINAL/32
@@ -1119,20 +988,8 @@ the change:
 
 sub set_NET_SHOWING_DESKTOP {
     my($self,$flag) = @_;
-    $self->ClientMessage(0,0,_NET_SHOWING_DESKTOP=>
+    $self->NetClientMessage(0,_NET_SHOWING_DESKTOP=>
 	    pack('LLLLL',$flag,0,0,0,0));
-}
-
-=item $ewmh->B<event_handler_PropertyNotify_NET_SHOWING_DESKTOP>(I<$e>)
-
-Event handler for changes in the C<_NET_SHOWING_DESKTOP> property on the
-root window.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_SHOWING_DESKTOP {
-    my($self,$e) = @_;
-    $self->get_NET_SHOWING_DESKTOP if $e->{window} == $self->root;
 }
 
 =back
@@ -1187,7 +1044,7 @@ sub set_NET_CLOSE_WINDOW {
     my($self,$window,$time,$source) = @_;
     $source = 2 unless defined $source;
     $time = 0 unless $time;
-    $self->ClientMessage(0,$window,_NET_CLOSE_WINDOW=>
+    $self->NetClientMessage($window,_NET_CLOSE_WINDOW=>
 	    pack('LLLLL',$time,$source,0,0,0));
 }
 
@@ -1268,7 +1125,7 @@ sub set_NET_MOVERESIZE_WINDOW {
     $y = 0 unless $y;
     $width = 0 unless $width;
     $height = 0 unless $height;
-    $self->ClientMessage(0,$window,_NET_MOVERESIZE_WINDOW=>
+    $self->NetClientMessage($window,_NET_MOVERESIZE_WINDOW=>
 	    pack('LLLLL',$flag,$x,$y,$width,$height));
 }
 
@@ -1374,7 +1231,7 @@ sub set_NET_WM_MOVERESIZE {
     $direction = 11 unless defined $direction;
     $button = 0 unless $button;
     $source = 2 unless defined $source;
-    $self->ClientMessage(0,$window,_NET_WM_MOVERESIZE=>
+    $self->NetClientMessage($window,_NET_WM_MOVERESIZE=>
 	    pack('LLLLL',$x,$y,$direction,$button,$source));
 }
 
@@ -1476,7 +1333,7 @@ sub set_NET_RESTACK_WINDOW {
     $detail = 0 unless $detail;
     $source = 2 unless defined $source;
     $sibling = 0 unless $sibling;
-    $self->ClientMessage(0,$window,_NET_RESTACK_WINDOW=>
+    $self->NetClientMessage($window,_NET_RESTACK_WINDOW=>
 	    pack('LLLLL',$source,$sibling,$detail,0,0));
 }
 
@@ -1528,7 +1385,7 @@ sub set_NET_REQUEST_FRAME_EXTENTS {
     my ($self,$window) = @_;
     $window = $self->{NET_ACTIVE_WINDOW} unless $window;
     $window = 0 unless $window;
-    $self->ClientMessage(0,$window,_NET_REQUEST_FRAME_EXTENTS=>
+    $self->NetClientMessage($window,_NET_REQUEST_FRAME_EXTENTS=>
 	    pack('LLLLL',0,0,0,0,0));
 }
 
@@ -1562,18 +1419,6 @@ sub get_NET_WM_NAME {
     return $_[0]->getWMPropertyString($_[1],'_NET_WM_NAME');
 }
 
-=item $ewmh->B<event_handler_PropertyNotify_NET_WM_NAME>(I<$e>)
-
-Event handler for changes to C<_NET_WM_NAME> property on window
-C<$e-E<gt>{window}>.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_WM_NAME {
-    my($self,$e) = @_;
-    $self->get_NET_WM_NAME($e->{window});
-}
-
 =back
 
 =head3 _NET_WM_VISIBLE_NAME, UTF8_STRING
@@ -1602,18 +1447,6 @@ sub get_NET_WM_VISIBLE_NAME {
     return $_[0]->getWMPropertyString($_[1],'_NET_WM_VISIBLE_NAME');
 }
 
-=item $ewmh->B<event_handler_PropertyNotify_NET_VISIBLE_NAME>(I<$e>)
-
-Event handler for changes to C<_NET_WM_VISIBLE_NAME> property on window
-C<$e-E<gt>{window}>.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_VISIBLE_NAME {
-    my($self,$e) = @_;
-    $self->get_NET_WM_VISIBLE_NAME($e->{window});
-}
-
 =back
 
 =head3 _NET_WM_ICON_NAME, UTF8_STRING
@@ -1637,18 +1470,6 @@ sub get_NET_WM_ICON_NAME {
     return $_[0]->getWMPropertyString($_[1],'_NET_WM_ICON_NAME');
 }
 
-=item $ewmh->B<event_handler_PropertyNotify_NET_WM_ICON_NAME>(I<$e>)
-
-Event handler for changes to C<_NET_WM_ICON_NAME> property on window
-C<$e-E<gt>{window}>.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_WM_ICON_NAME {
-    my($self,$e) = @_;
-    $self->get_NET_WM_ICON_NAME($e->{window});
-}
-
 =back
 
 =head3 _NET_WM_VISIBLE_ICON_NAME, UTF8_STRING
@@ -1670,18 +1491,6 @@ C<undef> if no such propert exists in C<$window>.
 
 sub get_NET_WM_VISIBLE_ICON_NAME {
     return $_[0]->getWMPropertyString($_[1],'_NET_WM_VISIBLE_ICON_NAME');
-}
-
-=item $ewmh->B<event_handler_PropertyNotify_NET_WM_VISIBLE_ICON_NAME>(I<$e>)
-
-Event handler for changes to the C<_NET_WM_VISIBLE_ICON_NAME> property
-of window C<$e-E<gt>{window}>.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_WM_VISIBLE_ICON_NAME {
-    my ($self,$e) = @_;
-    $self->get_NET_WM_VISIBLE_ICON_NAME($e->{window});
 }
 
 =back
@@ -1749,20 +1558,8 @@ sub set_NET_WM_DESKTOP {
     $window = $self->{_NET_ACTIVE_WINDOW} unless $window;
     $window = 0 unless $window;
     $source = 2 unless defined $source;
-    $self->ClientMessage(0,$window,_NET_WM_DESKTOP=>
+    $self->NetClientMessage($window,_NET_WM_DESKTOP=>
 	    pack('LLLLL',$index,$source,0,0,0));
-}
-
-=item $ewmh->B<event_handler_PropertyNotify_NET_WM_DESKTOP>(I<$e>)
-
-Event handler for changes to the C<_NET_WM_DESKTOP> property of window
-C<$e-E<gt>{window}>.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_WM_DESKTOP {
-    my($self,$e) = @_;
-    $self->get_NET_WM_DESKTOP($e->{window});
 }
 
 =back
@@ -1919,18 +1716,6 @@ type for C<$window>, or C<undef> if the window has no such property.
 
 sub get_NET_WM_WINDOW_TYPE {
     return $_[0]->getWMPropertyAtoms($_[1],'_NET_WM_WINDOW_TYPE');
-}
-
-=item $ewmh->B<event_handler_PropertyNotify_NET_WM_WINDOW_TYPE>(I<$e>)
-
-Event handler for changes to the C<_NET_WM_WINDOW_TYPE> property of
-window C<$e-E<gt>{window}>.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_WM_WINDOW_TYPE {
-    my($self,$e) = @_;
-    $self->get_NET_WM_WINDOW_TYPE($e->{window});
 }
 
 =back
@@ -2173,20 +1958,8 @@ sub set_NET_WM_STATE {
     $source = 2 unless defined $source;
     $prop1 = 0 unless $prop1; $prop1 = $prop1 ? $self->atom($prop1) : 0;
     $prop2 = 0 unless $prop2; $prop2 = $prop1 ? $self->atom($prop2) : 0;
-    $self->ClientMessage(0,$window,_NET_WM_STATE=>
+    $self->NetClientMessage($window,_NET_WM_STATE=>
 	    pack('LLLLL',$action,$prop1,$prop2,$source,0));
-}
-
-=item $ewmh->B<event_handler_PropertyNotify_NET_WM_STATE>(I<$e>)
-
-Event handler for changes in the C<_NET_WM_STATE> property of window,
-C<$e-E<gt>{window}>.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_WM_STATE {
-    my($self,$e) = @_;
-    $self->get_NET_WM_STATE($e->{window});
 }
 
 =back
@@ -2310,18 +2083,6 @@ sub get_NET_WM_ALLOWED_ACTIONS {
     return $_[0]->getWMPropertyAtoms($_[1], '_NET_WM_ALLOWED_ACTIONS');
 }
 
-=item $ewmh->B<event_handler_PropertyNotify_NET_WM_ALLOWED_ACTIONS>(I<$e>)
-
-Eventh handler for changes in the C<_NET_WM_ALLOWED_ACTIONS> property of
-window, C<$e-E<gt>{window}>.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_WM_ALLOWED_ACTIONS {
-    my($self,$e) = @_;
-    $self->get_NET_WM_ALLOWED_ACTIONS($e->{window});
-}
-
 =back
 
 =head3 _NET_WM_STRUT, left, right, top, bottom, CARDINAL[4]/32
@@ -2347,18 +2108,6 @@ C<$window>.
 
 sub get_NET_WM_STRUT {
     return $_[0]->getWMPropertyInts($_[1], '_NET_WM_STRUT');
-}
-
-=item $ewmh->B<event_handler_PropertyNotify_NET_WM_STRUT>(I<$e>)
-
-Event handler for changes to the C<_NET_WM_STRUT> property of window,
-C<$e-E<gt>{Window}>.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_WM_STRUT {
-    my($self,$e) = @_;
-    $self->get_NET_WM_STRUT($e->{window});
 }
 
 =back
@@ -2433,18 +2182,6 @@ sub get_NET_WM_STRUT_PARTIAL {
     return $_[0]->getWMPropertyInts($_[1], '_NET_WM_STRUT_PARTIAL');
 }
 
-=item $ewmh->B<event_handler_PropertyNotify_NET_STRUT_PARTIAL>(I<$e>)
-
-Event handler for changes to the C<_NET_WM_STRUT_PARTIAL> property for
-window, C<$e-E<gt>{window}>.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_STRUT_PARTIAL {
-    my($self,$e) = @_;
-    $self->get_NET_WM_STRUT_PARTIAL($e->{window});
-}
-
 =back
 
 =head3 _NET_WM_ICON_GEOMETRY, x, y, width, height, CARDINAL[4]/32
@@ -2470,18 +2207,6 @@ for C<$window>.
 
 sub get_NET_WM_ICON_GEOMETRY {
     return $_[0]->getWMPropertyInts($_[1], '_NET_WM_ICON_GEOMETRY');
-}
-
-=item $ewmh->B<event_handler_ProprtyNotify_NET_WM_ICON_GEOMETRY>(I<$e>)
-
-Event handler for changes to the C<_NET_WM_ICON_GEOMETRY> property of
-window, C<$e-E<gt>{window}>.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_WM_ICON_GEOMETRY {
-    my($self,$e) = @_;
-    $self->get_NET_WM_ICON_GEOMETRY($e->{window});
 }
 
 =back
@@ -2511,18 +2236,6 @@ window, C<$window>.
 
 sub get_NET_WM_ICON {
     return $_[0]->getWMPropertyInts($_[1], '_NET_WM_ICON');
-}
-
-=item $ewmh->B<event_handler_PropertyNotify_NET_WM_ICON>(I<$e>)
-
-Event handler for changes to the C<_NET_WM_ICON> property of window,
-C<$e-E<gt>{window}>.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_WM_ICON {
-    my($self,$e) = @_;
-    $self->get_NET_WM_ICON($e->{window});
 }
 
 =back
@@ -2557,18 +2270,6 @@ sub get_NET_WM_PID {
     return $_[0]->getWMPropertyInt($_[1], '_NET_WM_PID');
 }
 
-=item $ewmh->B<event_handler_PropertyNotify_NET_WM_PID>(I<$e>)
-
-Event handler for changes to the C<_NET_WM_PID> property for window,
-C<$e-E<gt>{window}>.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_WM_PID {
-    my($self,$e) = @_;
-    $self->get_NET_WM_PID($e->{window});
-}
-
 =back
 
 =head3 _NET_WM_HANDLED_ICONS
@@ -2592,18 +2293,6 @@ for C<$window>.
 
 sub get_NET_WM_HANDLED_ICONS {
     return $_[0]->getWMPropertyInt($_[1], '_NET_WM_HANDLED_ICONS');
-}
-
-=item $ewmh->B<event_handler_PropertyNotify_NET_WM_HANDLED_ICONS>(I<$e>)
-
-Event handler for changes to the C<_NET_WM_HANDLED_ICONS> property for
-window, C<$e-E<gt>{window}>.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_WM_HANDLED_ICONS {
-    my($self,$e) = @_;
-    $self->get_NET_WM_HANDLED_ICONS($e->{window});
 }
 
 =back
@@ -2655,18 +2344,6 @@ sub get_NET_WM_USER_TIME {
     return $_[0]->getWMPropertyInt($_[1], '_NET_WM_USER_TIME');
 }
 
-=item $ewmh->B<event_handler_PropertyNotify_NET_WM_USER_TIME>(I<$e>)
-
-Event handler for changes to the C<_NET_WM_USER_TIME> property of the
-window, C<$e-E<gt>{window}>.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_WM_USER_TIME {
-    my($self,$e) = @_;
-    $self->get_NET_WM_USER_TIME($e->{window});
-}
-
 =back
 
 =head3 _NET_WM_USER_TIME_WINDOW WINDOW/32
@@ -2697,18 +2374,6 @@ sub get_NET_WM_USER_TIME_WINDOW {
     return $_[0]->getWMPropertyInt($_[1], '_NET_WM_USER_TIME_WINDOW');
 }
 
-=item $ewmh->B<event_handler_PropertyNotify_NET_WM_USER_TIME_WINDOW>(I<$e>)
-
-Event handler for changes to the C<_NET_WM_USER_TIME_WINDOW> property
-for window, C<$e-E<gt>{window}>.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_WM_USER_TIME_WINDOW {
-    my($self,$e) = @_;
-    $self->get_NET_WM_USER_TIME_WINDOW($e->{window});
-}
-
 =back
 
 =head3 _NET_FRAME_EXTENTS, left, right, top, bottom, CARDINAL[4]/32
@@ -2730,18 +2395,6 @@ or C<undef> if no such property is associated with C<$window>.
 
 sub get_NET_FRAME_EXTENTS {
     return $_[0]->getWMPropertyInts($_[1], '_NET_FRAME_EXTENTS');
-}
-
-=item $ewmh->B<event_handler_PropertyNotify_NET_FRAME_EXTENTS>(I<$e>)
-
-Event handler for changes to the C<_NET_FRAME_EXTENTS> propery of
-window, C<$e-E<gt>{window}>.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_FRAME_EXTENTS {
-    my($self,$e) = @_;
-    $self->get_NET_FRAME_EXTENTS($e->{window});
 }
 
 =back
@@ -2782,18 +2435,6 @@ sub get_NET_WM_OPAQUE_REGION {
     return $_[0]->getWMPropertyInts($_[1], '_NET_WM_OPAQUE_REGION');
 }
 
-=item $ewmh->B<event_handler_PropertyNotify_NET_WM_OPAQUE_REGION>(I<$e>)
-
-Event hander for changes to the C<_NET_WM_OPAQUE_REGION> property of
-window, C<$e-E<gt>{window}>.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_OPAQUE_REGION {
-    my($self,$e) = @_;
-    $self->get_NET_WM_OPAQUE_REGION($e->{window});
-}
-
 =back
 
 =head3 _NET_WM_BYPASS_COMPOSITOR, CARDINAL/32
@@ -2827,18 +2468,6 @@ if no such property is associated with C<$window>.
 
 sub get_NET_WM_BYPASS_COMPOSITOR {
     return $_[0]->getWMPropertyInt($_[1], '_NET_WM_BYPASS_COMPOSITOR');
-}
-
-=item $ewmh->B<event_handler_PropertyNotify_NET_WM_BYPASS_COMPOSITOR>(I<$e>)
-
-Event handler for changes to the C<_NET_WM_BYPASS_COMPOSITOR> property
-of window, C<$e-E<gt>{window}>.
-
-=cut
-
-sub event_handler_PropertyNotify_NET_BYPASS_COMPOSITOR {
-    my($self,$e) = @_;
-    $self->get_NET_WM_BYPASS_COMPOSITOR($e->{window});
 }
 
 =back
@@ -2920,27 +2549,17 @@ for window, C<$window>.
 sub set_NET_WM_FULLSCREEN_MONITORS {
     my ($self,$window,$t,$b,$l,$r,$source) = @_;
     $source = 2 unless defined $source;
-    $self->ClientMessage(0,$window,_NET_WM_FULLSCREEN_MONITORS=>
+    $self->NetClientMessage($window,_NET_WM_FULLSCREEN_MONITORS=>
 	    pack('LLLLL',$t,$b,$l,$r,$source));
 }
 
-=item $ewmh->B<event_handler_PropertyNotify_NET_WM_FULLSCREEN_MONITORS>(I<$e>)
-
-Event handler for changes to the C<_NET_WM_FULLSCREEN_MONITORS> property
-of window, C<$e-E<gt>{window}>.
+=back
 
 =cut
-
-sub event_handler_PropertyNotify_NET_WM_FULLSCREEN_MONITORS {
-    my ($self,$e) = @_;
-    $self->get_NET_WM_FULLSCREEN_MONITORS($e->{window});
-}
 
 1;
 
 __END__
-
-=back
 
 =head2 Other properties
 

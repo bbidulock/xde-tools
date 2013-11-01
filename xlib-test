@@ -14,24 +14,113 @@ BEGIN {
 	$here = "$cwd$here";
     }
     print STDERR "here is: '$here'\n";
-    unshift @INC, "$here/lib" unless $here =~ m{/bin/};
+    unshift @INC, "$here/lib" unless $here =~ m{^/usr/bin/};
 }
 
 use X11::Protocol::Xlib;
 
 my $X = X11::Protocol::Xlib->new();
 
+sub escape_arg {
+    my $str = shift;
+    if ($str =~ m{['"|&;()<>]} or $str =~ m{\s}) {
+	$str = "'".join("'\"'\"'",split(/'/,$str))."'";
+    }
+    return $str;
+}
+
+sub shell_command {
+    my($command,@args) = @_;
+    my @parms = map{escape_arg($_)}@args;
+    return join(' ',$command,@parms);
+}
+
 sub check_window {
     my($X,$window) = @_;
     my($root,$parent,@kids) = $X->QueryTree($window);
-    my @windows = ( $window );
-    foreach (@kids) {
-	push @windows, check_window($X,$_);
+    my %properties = map{$X->atom_name($_)=>1}$X->ListProperties($window);
+    my $hints = $X->GetWMHints($window)			    if $properties{WM_HINTS};
+    my $name = $X->FetchName($window)			    if $properties{WM_NAME};
+    my $class = $X->GetClassHint($window)		    if $properties{WM_CLASS};
+    my $command = $X->GetCommand($window)		    if $properties{WM_COMMAND};
+    my $protocols = $X->GetWMProtocols($window)		    if $properties{WM_PROTOCOLS};
+    my $sizes = $X->GetWMNormalHints($window)		    if $properties{WM_NORMAL_HINTS};
+    my $icon = $X->GetIconName($window)			    if $properties{WM_ICON_NAME};
+    my $machine = $X->GetClientMachine($window)		    if $properties{WM_CLIENT_MACHINE};
+    my $state = $X->GetWMState($window)			    if $properties{WM_STATE};
+    if ($hints or $name or $class or $command or $sizes or $icon or $machine or $state) {
+	printf "Client window: 0x%08x\n", $window;
+	printf "\t%-20s: %s\n", properties=>join(', ',keys %properties);
+	if ($state) {
+	    printf "    %s:\n", 'WM_STATE';
+	    printf "\t%-20s: %s\n", state=>$state->{state} if $state->{state};
+	    if ($state->{icon} and $state->{icon} eq 'None') {
+		printf "\t%-20s: %s\n", icon=>$state->{icon} if $state->{icon};
+	    } else {
+		printf "\t%-20s: 0x%08x\n", icon=>$state->{icon} if $state->{icon};
+	    }
+	}
+	if ($name) {
+	    printf "    %s:\n", 'WM_NAME';
+	    printf "\t%-20s: %s\n", name=>$name;
+	}
+	if ($icon) {
+	    printf "    %s:\n", 'WM_ICON_NAME';
+	    printf "\t%-20s: %s\n", icon=>$icon;
+	}
+	if ($class) {
+	    printf "    %s:\n", 'WM_CLASS';
+	    printf "\t%-20s: %s\n", res_name=>$class->{res_name};
+	    printf "\t%-20s: %s\n", res_class=>$class->{res_class};
+	}
+	if ($command) {
+	    printf "    %s:\n", 'WM_COMMAND';
+	    printf "\t%-20s: %s\n", command=>shell_command(@$command);
+	}
+	if ($machine) {
+	    printf "    %s:\n", 'WM_CLIENT_MACHINE';
+	    printf "\t%-20s: %s\n", hostname=>$machine;
+	}
+	if ($protocols) {
+	    printf "    %s:\n", 'WM_PROTOCOLS';
+	    printf "\t%-20s: %s\n", protocols=>join(', ',map{$X->atom_name($_)}@$protocols);
+	}
+	if ($hints) {
+	    printf "    %s:\n", 'WM_HINTS';
+	    foreach (qw(input initial_state icon_pixmap icon_window icon_x
+			icon_y icon_mask window_group message urgency)) {
+		next unless defined $hints->{$_};
+		if ($hints->{$_} =~ m{^[1-9]}) {
+		    printf "\t%-20s: 0x%08x\n", $_,$hints->{$_};
+		} else {
+		    printf "\t%-20s: %s\n", $_,$hints->{$_};
+		}
+	    }
+	}
+	if ($sizes) {
+	    printf "    %s:\n", 'WM_NORMAL_HINTS';
+	    if (defined $sizes->{supplied}) {
+		printf "\t%-20s: %s\n", supplied=>join(', ',@{$sizes->{supplied}});
+	    }
+	    foreach (qw(user_position user_size program_position
+			program_size x y width height min_width min_height
+			max_width max_height width_inc height_inc min_aspect
+			max_aspect base_width base_height win_gravity)) {
+		next unless defined $sizes->{$_};
+		if (ref $sizes->{$_} eq 'HASH') {
+		    printf "\t%-20s: x=>%d, y=>%d\n", $_,$sizes->{$_}{x},$sizes->{$_}{y};
+		} else {
+		    printf "\t%-20s: %s\n", $_,$sizes->{$_};
+		}
+	    }
+	}
     }
-    return @windows;
+    foreach (@kids) {
+	check_window($X,$_);
+    }
 }
 
-my @windows = check_window($X,$X->root);
+check_window($X,$X->root);
 
 foreach (@windows) {
     if (my $state = $X->GetWMState($_)) {

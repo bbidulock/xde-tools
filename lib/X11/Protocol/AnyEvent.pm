@@ -44,27 +44,27 @@ directly to X11::Protocol::new().
 =cut
 
 sub new {
-    my $self = X11::Protocol::new(@_);
-    if ($self) {
-	$self->{event_handler} = sub{
-	    my($self,$e) = @_;
-	    push @{$self->{ae}{events}}, \%e
-		unless $self->{ae}{discard_events};
+    my $X = X11::Protocol::new(@_);
+    if ($X) {
+	$X->{event_handler} = sub{
+	    my($X,$e) = @_;
+	    push @{$X->{ae}{events}}, \%e
+		unless $X->{ae}{discard_events};
 	};
-	$self->{error_handler} = sub{
-	    my($self,$e) = @_;
+	$X->{error_handler} = sub{
+	    my($X,$e) = @_;
 	    print STDERR "Received error: \n",
-		  $self->format_error_msg($e), "\n";
-	    push @{$self->{ae}{events}}, $e
-		unless $self->{ae}{discard_errors};
+		  $X->format_error_msg($e), "\n";
+	    push @{$X->{ae}{events}}, $e
+		unless $X->{ae}{discard_errors};
 	};
-	$self->{ae}{watcher} = AE::io $self->fh, 0, sub{
-	    $self->handle_input;
-	    $self->process_queue;
+	$X->{ae}{watcher} = AE::io $X->fh, 0, sub{
+	    $X->handle_input;
+	    $X->process_queue;
 	};
-	$self->{ae}{quit} = AE::cv;
+	$X->{ae}{quit} = AE::cv;
     }
-    return $self;
+    return $X;
 }
 
 =item $X->B<destroy>()
@@ -75,16 +75,16 @@ so that the object can be garbage collected.
 =cut
 
 sub destroy {
-    my $self = shift;
+    my $X = shift;
     # remove circular references
-    delete $self->{ae}{quit};
-    delete $self->{ae}{watcher};
-    $self->{event_handler} = sub{ };
-    $self->{error_handler} = sub{ };
-    $self->fh->flush;
-    $self->purge_queue;
-    $self->fh->close;
-    return $self;
+    delete $X->{ae}{quit};
+    delete $X->{ae}{watcher};
+    $X->{event_handler} = sub{ };
+    $X->{error_handler} = sub{ };
+    $X->fh->flush;
+    $X->purge_queue;
+    $X->fh->close;
+    return $X;
 }
 
 =item $X->B<fh>() => $fh
@@ -121,9 +121,9 @@ first time.
 =cut
 
 sub main {
-    my $self = shift;
-    $self->GetScreenSaver;
-    $self->process_queue;
+    my $X = shift;
+    $X->GetScreenSaver;
+    $X->process_queue;
     shift->{ae}{quit}->recv;
 }
 
@@ -161,11 +161,11 @@ method.
 =cut
 
 sub process_events {
-    my $self = shift;
-    if ($self->{ae}{discard_events} <= 1) {
-	$self->process_queue;
+    my $X = shift;
+    if ($X->{ae}{discard_events} <= 1) {
+	$X->process_queue;
     } else {
-	$self->{ae}{discard_events} -= 1;
+	$X->{ae}{discard_events} -= 1;
     }
 }
 
@@ -193,11 +193,11 @@ method.
 =cut
 
 sub process_errors {
-    my $self = shift;
-    if ($self->{ae}{discard_errors} <= 1) {
-	$self->process_queue;
+    my $X = shift;
+    if ($X->{ae}{discard_errors} <= 1) {
+	$X->process_queue;
     } else {
-	$self->{ae}{discard_errors} -= 1;
+	$X->{ae}{discard_errors} -= 1;
     }
 }
 
@@ -211,10 +211,10 @@ discarded.
 =cut
 
 sub purge_queue {
-    my $self = shift;
+    my $X = shift;
     my $errors = 0;
     my $events = 0;
-    while (my $e = shift @{$self->{ae}{events}}) {
+    while (my $e = shift @{$X->{ae}{events}}) {
 	if (ref $e eq 'HASH') {
 	    $events += 1;
 	} else {
@@ -233,18 +233,18 @@ before entering the main event loop.  It also may be called
 =cut
 
 sub process_queue {
-    my $self = shift;
+    my $X = shift;
     my $errors = 0;
     my $events = 0;
-    while (my $e = shift @{$self->{ae}{events}}) {
+    while (my $e = shift @{$X->{ae}{events}}) {
 	if (ref $e eq 'HASH') {
-	    next if $self->{ae}{discard_events};
+	    next if $X->{ae}{discard_events};
 	    $events += 1;
-	    $self->event_handler($e);
+	    $X->event_handler($e);
 	} else {
-	    next if $self->{ae}{discard_errors};
+	    next if $X->{ae}{discard_errors};
 	    $errors += 1;
-	    $self->error_handler($e);
+	    $X->error_handler($e);
 	}
     }
     return $events + $errors unless wantarray;
@@ -260,11 +260,11 @@ C<event_handler_$e-E<gt>{name}> if it exists.
 =cut
 
 sub event_handler {
-    my($self,$e) = @_;
-    my $sub = $self->can("event_handler_$e->{name}");
-    return &$sub($self,$e) if $sub;
+    my($X,$e) = @_;
+    my $sub = $X->can("event_handler_$e->{name}");
+    return &$sub($X,$e) if $sub;
     warn "Discarding unwanted $e->{name} event"
-	if $self->{ops}{verbose};
+	if $X->{ops}{verbose};
 }
 
 =item $X->B<error_handler>(I<$e>)
@@ -276,27 +276,74 @@ overridden by the module using this module as a base.
 =cut
 
 sub error_handler {
-    my($self,$e) = @_;
-    warn "Received error: \n", $self->format_error_msg($e);
+    my($X,$e) = @_;
+    warn "Received error: \n", $X->format_error_msg($e);
+}
+
+sub _time_less_than {
+    my($one,$two) = @_;
+    return 0 unless $two;
+    return 0 if $two eq 'CurrentTime';
+    return 1 unless $one;
+    return 1 if $one eq 'CurrentTime';
+    return unpack('l',pack('l',$one-$two)) < 0;
+}
+
+sub _update_current_time {
+    my($X,$e) = @_;
+    $X->{current_time} = $e->{time}
+	if _time_less_than($X->{current_time},$e->{time});
 }
 
 
 =item $X->B<event_handler_PropertyNotify>(I<$e>)
 
-Internal event handler used to dispatch C<PropertyNotify> enents.  this
+Internal event handler used to dispatch C<PropertyNotify> events.  This
 method, when not overridden by the module using this module as a base,
 will call the C<event_handler_PropertyNotify${atom}> method of the
 derived class when a notification for property I<$atom> arrives.
 
+This method also automatically updates properties named I<$atom> for any
+window that has C<PropertyNotify> events selected and a corresponding
+C<get$atom> method exists.  The results of the corresponding C<get$atom>
+operations are stored in
+C<$X-E<gt>{windows}{$win}{$atom}>, where I<$win> is the window for which
+the property named I<$atom> has changed or been deleted.
+C<$X-E<gt>{windows}{$win}{proptimes}{$atom}> is updated with the time of
+the last change.
+
+This method updates C<$X-E<gt>{current_time}> with the current X server
+time.
+
 =cut
 
 sub event_handler_PropertyNotify {
-    my($self,$e) = @_;
-    my $atom = $self->GetAtomName($e->{atom});
-    my $sub = $self->can("event_handler_PropertyNotify$atom");
-    return &$sub($self,$e) if $sub;
+    $_[0]->_update_current_time($_[1]);
+    my($X,$e) = @_;
+    my $atom = $X->atom_name($e->{atom});
+
+    # automatically update properties
+    my $win = $e->{window};
+    if (_time_less_than($X->{windows}{$win}{proptimes}{$atom},$e->{time})) {
+	$X->{windows}{$win}{proptimes}{$atom} = $e->{time};
+	if ($e->{state} eq 'NewValue') {
+	    if (my $sub = $X->can("get$atom")) {
+		if (defined(my $result = &$sub($X,$e->{window}))) {
+		    $X->{windows}{$win}{$atom} = $result;
+		} else {
+		    delete $X->{windows}{$win}{$atom};
+		}
+	    }
+	}
+	elsif ($e->{state} eq 'Deleted') {
+	    delete $X->{windows}{$win}{$atom};
+	}
+    }
+
+    my $sub = $X->can("event_handler_$e->{name}$atom");
+    return &$sub($X,$e) if $sub;
     warn "Discarding unwanted $e->{name} for $atom event"
-	if $self->{ops}{verbose};
+	if $X->{ops}{verbose};
 }
 
 =item $X->B<event_handler_ClientMessage>(I<$e>)
@@ -306,15 +353,151 @@ method, when not overridden by the derived class, will call the
 C<event_handler_ClientMessage$type> method of the derived class when a
 client message with type I<$type> arrives.
 
+This method updates C<$X-E<gt>{current_time}> with the current X server
+time.
+
 =cut
 
 sub event_handler_ClientMessage {
-    my($self,$e) = @_;
-    my $type = $self->GetAtomName($e->{type});
-    my $sub = $self->can("event_handler_ClientMessage$type");
-    return &$sub($self,$e) if $sub;
-    warn "Discarding unwanted $e->{name} for $type event"
-	if $self->{ops}{verbose};
+    $_[0]->_update_current_time($_[1]);
+    my($X,$e) = @_;
+    my $atom = $X->atom_name($e->{type});
+    my $sub = $X->can("event_handler_$e->{name}$atom");
+    return &$sub($X,$e) if $sub;
+    warn "Discarding unwanted $e->{name} for $atom event"
+	if $X->{ops}{verbose};
+}
+
+=item $X->B<event_handler_SelectionRequest>(I<$e>)
+
+Internal event handler used to dispatch C<SelectionRequest> events.
+This method, when not overridden by the derived class, will call the
+C<event_handler_SelectionRequest$selection> method of the derived class
+when a client message with selection I<$selection> arrives.
+
+This method updates C<$X-E<gt>{current_time}> with the current X server
+time.
+
+=cut
+
+sub event_handler_SelectionRequest {
+    $_[0]->_update_current_time($_[1]);
+    my($X,$e) = @_;
+    my $atom = $X->atom_name($e->{selection});
+    my $sub = $X->can("event_handler_$e->{name}$atom");
+    return &$sub($X,$e) if $sub;
+    warn "Discarding unwanted $e->{name} for $atom event"
+	if $X->{ops}{verbose};
+}
+
+=item $X->B<event_handler_SelectionClear>(I<$e>)
+
+Internal event handler used to dispatch C<SelectionClear> events.  This
+method, when not overridden by the derived class, will call the
+C<event_handler_SelectionClear$selection> method of the derived class
+when a client message with selection I<$selection> arrives.
+
+This method updates C<$X-E<gt>{current_time}> with the current X server
+time.
+
+=cut
+
+sub event_handler_SelectionClear {
+    $_[0]->_update_current_time($_[1]);
+    my($X,$e) = @_;
+    my $atom = $X->atom_name($e->{selection});
+    my $sub = $X->can("event_handler_$e->{name}$atom");
+    return &$sub($X,$e) if $sub;
+    warn "Discarding unwanted $e->{name} for $atom event"
+	if $X->{ops}{verbose};
+}
+
+=item $X->B<event_handler_SelectionNotify>(I<$e>)
+
+Internal event handler used to dispatch C<SelectionNotify> events.  This
+method, when not overridden by the derived class, will call the
+C<event_handler_SelectionNotify$selection> method of the derived class
+when a client message with selection I<$selection> arrives.
+
+This method updates C<$X-E<gt>{current_time}> with the current X server
+time.
+
+=cut
+
+sub event_handler_SelectionNotify {
+    $_[0]->_update_current_time($_[1]);
+    my($X,$e) = @_;
+    my $atom = $X->atom_name($e->{selection});
+    my $sub = $X->can("event_handler_$e->{name}$atom");
+    return &$sub($X,$e) if $sub;
+    warn "Discarding unwanted $e->{name} for $atom event"
+	if $X->{ops}{verbose};
+}
+
+=item $X->B<event_handler_KeyPress>(I<$e>)
+
+This method simply updates C<$X-E<gt>{current_time}> with the current X
+server time.
+
+=cut
+
+sub event_handler_KeyPress {
+    $_[0]->_update_current_time($_[1]);
+}
+
+=item $X->B<event_handler_KeyRelease>(I<$e>)
+
+This method simply updates C<$X-E<gt>{current_time}> with the current X
+server time.
+
+=cut
+
+sub event_handler_KeyRelease {
+    $_[0]->_update_current_time($_[1]);
+}
+
+=item $X->B<event_handler_ButtonPress>(I<$e>)
+
+This method simply updates C<$X-E<gt>{current_time}> with the current X
+server time.
+
+=cut
+
+sub event_handler_ButtonPress {
+    $_[0]->_update_current_time($_[1]);
+}
+
+=item $X->B<event_handler_ButtonRelease>(I<$e>)
+
+This method simply updates C<$X-E<gt>{current_time}> with the current X
+server time.
+
+=cut
+
+sub event_handler_ButtonRelease {
+    $_[0]->_update_current_time($_[1]);
+}
+
+=item $X->B<event_handler_EntryNotify>(I<$e>)
+
+This method simply updates C<$X-E<gt>{current_time}> with the current X
+server time.
+
+=cut
+
+sub event_handler_EntryNotify {
+    $_[0]->_update_current_time($_[1]);
+}
+
+=item $X->B<event_handler_LeaveNotify>(I<$e>)
+
+This method simply updates C<$X-E<gt>{current_time}> with the current X
+server time.
+
+=cut
+
+sub event_handler_LeaveNotify {
+    $_[0]->_update_current_time($_[1]);
 }
 
 =back
