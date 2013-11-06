@@ -1,11 +1,72 @@
 package X11::Protocol::ICCCM;
-use base qw(X11::Protocol::Xlib);
+use X11::Protocol::Util qw(:all);
 use X11::Protocol;
-use X11::Protocol::AtomConstants;
 use strict;
 use warnings;
-use vars '$VERSION';
+use vars '$VERSION', '@ISA', '@EXPORT_OK', '%EXPORT_TAGS';
 $VERSION = 0.01;
+@ISA = ('Exporter');
+
+%EXPORT_TAGS = (
+    all => [qw(
+	getWM_NAME
+	dmpWM_NAME
+	setWM_NAME
+	getWM_ICON_NAME
+	dmpWM_ICON_NAME
+	setWM_ICON_NAME
+	getWM_NORMAL_HINTS
+	dmpWM_NORMAL_HINTS
+	setWM_NORMAL_HINTS
+	getWM_HINTS
+	dmpWM_HINTS
+	setWM_HINTS
+	getWM_CLASS
+	dmpWM_CLASS
+	setWM_CLASS
+	getWM_TRANSIENT_FOR
+	dmpWM_TRANSIENT_FOR
+	setWM_TRANSIENT_FOR
+	getWM_PROTOCOLS
+	dmpWM_PROTOCOLS
+	setWM_PROTOCOLS
+	getWM_COLORMAP_WINDOWS
+	dmpWM_COLORMAP_WINDOWS
+	setWM_COLORMAP_WINDOWS
+	getWM_CLIENT_MACHINE
+	dmpWM_CLIENT_MACHINE
+	setWM_CLIENT_MACHINE
+	getWM_COMMAND
+	dmpWM_COMMAND
+	setWM_COMMAND
+	getWM_STATE
+	dmpWM_STATE
+	setWM_STATE
+	reqWM_STATE
+	getWM_ICON_SIZE
+	dmpWM_ICON_SIZE
+	setWM_ICON_SIZE
+	getSM_CLIENT_ID
+	dmpSM_CLIENT_ID
+	setWM_CLIENT_ID
+	getWM_CLIENT_LEADER
+	dmpWM_CLIENT_LEADER
+	setWM_CLIENT_LEADER
+	getWM_WINDOW_ROLE
+	dmpWM_WINDOW_ROLE
+	setWM_WINDOW_ROLE
+	getWM_LOCALE_NAME
+	dmpWM_LOCALE_NAME
+	setWM_LOCALE_NAME
+    )],
+);
+
+foreach my $pfx (qw(get set dmp req)) {
+    push @{$EXPORT_TAGS{$pfx}},
+	 grep {/^$pfx/} @{$EXPORT_TAGS{all}};
+}
+
+Exporter::export_ok_tags('all');
 
 =head1 NAME
 
@@ -68,7 +129,7 @@ pay dividends.
 
 =over
 
-=item $icccm->B<getWM_NAME>(I<$window>) => I<$name> or undef
+=item B<getWM_NAME>(I<$X>,I<$window>) => I<$name> or undef
 
 Returns the C<WM_NAME> property name, I<$name>, for the window,
 I<$window>, or C<undef> when the C<WM_NAME> property does not exist for
@@ -76,10 +137,15 @@ I<$window>.  I<$name>, when defined, is a perl character string.
 
 =cut
 
-*X11::Protocol::ICCCM::getWM_NAME =
-\&X11::Protocol::Xlib::FetchName;
+sub getWM_NAME {
+    return getWMPropertyString(@_[0..1],WM_NAME=>);
+}
 
-=item $icccm->B<setWM_NAME>(I<$window>,I<$name>)
+sub dmpWM_NAME {
+    return dmpWMPropertyString($_[0],WM_NAME=>name=>$_[1]);
+}
+
+=item B<setWM_NAME>(I<$X>,I<$window>,I<$name>)
 
 Sets the C<WM_NAME> property name, I<$name>, on the window, I<$window>;
 or, when I<$name> is C<undef>, deletes the C<WM_NAME> property from
@@ -87,8 +153,9 @@ I<$window>.  When defined, I<$name> is a perl character string.
 
 =cut
 
-*X11::Protocol::ICCCM::setWM_NAME =
-\&X11::Protocol::Xlib::StoreName;
+sub setWM_NAME {
+    return setWMPropertyString(@_[0..1],WM_NAME=>COMPOUND_TEXT=>$_[2]);
+}
 
 =back
 
@@ -105,7 +172,7 @@ windows; rather, they should rely on the window manager to do so.
 
 =over
 
-=item $icccm->B<getWM_ICON_NAME>(I<$window>) => I<$name> or undef
+=item B<getWM_ICON_NAME>(I<$X>,I<$window>) => I<$name> or undef
 
 Returns the C<WM_ICON_NAME> property icon name, I<$name>, for the window,
 I<$window>, or C<undef> when the C<WM_ICON_NAME> property does not exist
@@ -113,10 +180,15 @@ for I<$window>.  I<$name>, when defined, is a perl character string.
 
 =cut
 
-*X11::Protocol::ICCCM::getWM_ICON_NAME =
-\&X11::Protocol::Xlib::GetIconName;
+sub getWM_ICON_NAME {
+    return getWMPropertyString(@_[0..1],WM_ICON_NAME=>);
+}
 
-=item $icccm->B<setWM_ICON_NAME>(I<$window>,I<$name>)
+sub dmpWM_ICON_NAME {
+    return dmpWMPropertyString($_[0],WM_ICON_NAME=>name=>$_[1]);
+}
+
+=item B<setWM_ICON_NAME>(I<$X>,I<$window>,I<$name>)
 
 Sets the C<WM_ICON_NAME> property icon name, I<$name>, for the window,
 I<$window>; or, when I<$name> is C<undef>, deletes the C<WM_ICON_NAME>
@@ -125,8 +197,9 @@ string.
 
 =cut
 
-*X11::Protocol::ICCCM::setWM_ICON_NAME =
-\&X11::Protocol::Xlib::SetIconName;
+sub setWM_ICON_NAME {
+    return setWMPropertyString(@_[0..1],WM_ICON_NAME=>COMPOUND_TEXT=>$_[2]);
+}
 
 =back
 
@@ -245,9 +318,49 @@ reference to a hash containing the following keys:
 
 =cut
 
+use constant {
+    WM_NORMAL_HINTS_USPOSITION	=> (1<<0),
+    WM_NORMAL_HINTS_USSIZE	=> (1<<1),
+    WM_NORMAL_HINTS_PPOSITION	=> (1<<2),
+    WM_NORMAL_HINTS_PSIZE	=> (1<<3),
+    WM_NORMAL_HINTS_PMINSIZE	=> (1<<4),
+    WM_NORMAL_HINTS_PMAXSIZE	=> (1<<5),
+    WM_NORMAL_HINTS_PRESIZEINC	=> (1<<6),
+    WM_NORMAL_HINTS_PASPECT	=> (1<<7),
+    WM_NORMAL_HINTS_PBASESIZE	=> (1<<8),
+    WM_NORMAL_HINTS_PWINGRAVITY	=> (1<<9),
+
+    WMSizeHints=>[qw(
+	USPosition
+	USSize
+	PPosition
+	PSize
+	PMinSize
+	PMaxSize
+	PResizeInc
+	PAspect
+	PBaseSize
+	PWinGravity)],
+
+    WMSizeHintsFields=>[qw(
+	supplied
+	user_position
+	user_size
+	program_position
+	program_size
+	x y width height
+	min_width min_height
+	max_width max_height
+	width_inc height_inc
+	min_aspect_num min_aspect_den max_aspect_num max_aspect_den
+	base_width base_height
+	win_gravity
+    )],
+};
+
 =over
 
-=item $icccm->B<getWM_NORMAL_HINTS>(I<$window>) => I<$hints> or undef
+=item B<getWM_NORMAL_HINTS>(I<$X>,I<$window>) => I<$hints> or undef
 
 Returns the I<$prop> property size hints, I<$hints>, for the window,
 I<$window>, or C<undef> when no I<$prop> property exists for I<$window>.
@@ -256,10 +369,110 @@ L</WM_SIZE_HINTS>.
 
 =cut
 
-*X11::Protocol::ICCCM::getWM_NORMAL_HINTS =
-\&X11::Protocol::Xlib::GetWMNormalHints;
+sub getWM_NORMAL_HINTS {
+    my($X,$window) = @_;
+    return getWMPropertyDecode($X,$window,WM_NORMAL_HINTS=>sub{
+	    my $data = shift;
+	    my($flags,
+		$x,$y,$width,$height,
+		$min_width,$min_height,
+		$max_width,$max_height,
+		$width_inc,$height_inc,
+		$min_aspect_num,$min_aspect_den,
+		$max_aspect_num,$max_aspect_den,
+		$base_width, $base_height,
+		$win_gravity);
+	    if (length($data) >= 72) {
+		($flags,
+		 $x,$y,$width,$height,
+		 $min_width,$min_height,
+		 $max_width,$max_height,
+		 $width_inc,$height_inc,
+		 $min_aspect_num,$min_aspect_den,
+		 $max_aspect_num,$max_aspect_den,
+		 $base_width, $base_height,
+		 $win_gravity) =
+		    unpack('LLLLLlllllllllllll',$data);
+	    }
+	    else {
+		($flags,
+		 $x,$y,$width,$height,
+		 $min_width,$min_height,
+		 $max_width,$max_height,
+		 $width_inc,$height_inc,
+		 $min_aspect_num,$min_aspect_den,
+		 $max_aspect_num,$max_aspect_den,
+		 $base_width, $base_height,
+		 $win_gravity) =
+		    unpack('LLLLLllllllllll',$data);
+		$base_width = $min_width;
+		$base_height = $min_height;
+		$win_gravity = 2;
+		$flags |= &WM_NORMAL_HINTS_PWINGRAVITY;
+		$flags |= &WM_NORMAL_HINTS_PBASESIZE
+		    if $flags & &WM_NORMAL_HINTS_PMINSIZE;
+	    }
+	    my %hints = ();
+	    if ($flags & &WM_NORMAL_HINTS_USPOSITION) {
+		$hints{user_position} = 'True';
+		$hints{x} = $x;
+		$hints{y} = $y;
+	    }
+	    if ($flags & &WM_NORMAL_HINTS_USSIZE) {
+		$hints{user_size} = 'True';
+		$hints{width} = $width;
+		$hints{height} = $height;
+	    }
+	    if ($flags & &WM_NORMAL_HINTS_PPOSITION) {
+		$hints{program_position} = 'True';
+		$hints{x} = $x;
+		$hints{y} = $y;
+	    }
+	    if ($flags & &WM_NORMAL_HINTS_PSIZE) {
+		$hints{program_size} = 'True';
+		$hints{width} = $width;
+		$hints{height} = $height;
+	    }
+	    if ($flags & &WM_NORMAL_HINTS_PMINSIZE) {
+		$hints{min_width} = $min_width;
+		$hints{min_height} = $min_height;
+	    }
+	    if ($flags & &WM_NORMAL_HINTS_PMAXSIZE) {
+		$hints{max_width} = $max_width;
+		$hints{max_height} = $max_height;
+	    }
+	    if ($flags & &WM_NORMAL_HINTS_PRESIZEINC) {
+		$hints{width_inc} = $width_inc;
+		$hints{height_inc} = $height_inc;
+	    }
+	    if ($flags & &WM_NORMAL_HINTS_PASPECT) {
+		$hints{min_aspect_num} = $min_aspect_num;
+		$hints{min_aspect_den} = $min_aspect_den;
+		$hints{max_aspect_num} = $max_aspect_num;
+		$hints{max_aspect_den} = $max_aspect_den;
+	    }
+	    if ($flags & &WM_NORMAL_HINTS_PBASESIZE) {
+		$hints{base_width} = $base_width;
+		$hints{base_height} = $base_height;
+	    }
+	    if ($flags & &WM_NORMAL_HINTS_PWINGRAVITY) {
+		$hints{win_gravity} =
+		    val2name(WinGravity=>$X->{const}{WinGravity},$win_gravity);
+	    }
+	    return \%hints;
+    });
+}
 
-=item $icccm->B<setWM_NORMAL_HINTS>(I<$window>,I<$hints>)
+sub dmpWM_NORMAL_HINTS {
+    return dmpWMPropertyHashInts($_[0],WM_NORMAL_HINTS=>[qw(
+		user_position user_size program_position program_size
+		x y width height min_width min_height max_width
+		max_height width_inc height_inc min_aspect_num
+		min_aspect_den max_aspect_num max_aspect_den base_width
+		base_height win_gravity)],$_[1]);
+}
+
+=item B<setWM_NORMAL_HINTS>(I<$X>,I<$window>,I<$hints>)
 
 Sets the I<$prop> property size hints, I<$hints>, on the window,
 I<$window>; or, when I<$hints> is C<undef>, deletes the I<$prop> property
@@ -269,8 +482,58 @@ L</WM_SIZE_HINTS>.
 
 =cut
 
-*X11::Protocol::ICCCM::setWM_NORMAL_HINTS =
-\&X11::Protocol::Xlib::SetWMNormalHints;
+sub setWM_NORMAL_HINTS {
+    my($X,$window,$hints) = @_;
+    return setWMPropertyEncode($X,$window,WM_NORMAL_HINTS=>sub{
+	    my @vals = ();
+	    if (ref $hints eq 'ARRAY') {
+		@vals = @$hints;
+	    }
+	    elsif (ref $hints eq 'HASH') {
+		@vals = (
+		    $hints->{user_position},
+		    $hints->{user_size},
+		    $hints->{program_position},
+		    $hints->{program_size},
+		    $hints->{x},
+		    $hints->{y},
+		    $hints->{width},
+		    $hints->{height},
+		    $hints->{min_width},
+		    $hints->{min_height},
+		    $hints->{max_width},
+		    $hints->{max_height},
+		    $hints->{width_inc},
+		    $hints->{height_inc},
+		    $hints->{min_aspect_num},
+		    $hints->{min_aspect_den},
+		    $hints->{max_aspect_num},
+		    $hints->{max_aspect_den},
+		    $hints->{base_width},
+		    $hints->{base_height},
+		    $hints->{win_gravity},
+		    );
+	    }
+	    my $flags = 0;
+	    $vals[0] = name2val(Boolean=>[qw(False True)],$vals[0]) if defined $vals[0];
+	    $vals[1] = name2val(Boolean=>[qw(False True)],$vals[1]) if defined $vals[1];
+	    $vals[2] = name2val(Boolean=>[qw(False True)],$vals[2]) if defined $vals[2];
+	    $vals[3] = name2val(Boolean=>[qw(False True)],$vals[3]) if defined $vals[3];
+	    $vals[20] = name2val(WinGravity=>$X->{const}{WinGravity},$vals[20]) if defined $vals[20];
+	    $flags |= &WM_NORMAL_HINTS_USPOSITION   if $vals[0];
+	    $flags |= &WM_NORMAL_HINTS_USSIZE	    if $vals[1];
+	    $flags |= &WM_NORMAL_HINTS_PPOSITION    if $vals[2];
+	    $flags |= &WM_NORMAL_HINTS_PSIZE	    if $vals[3];
+	    $flags |= &WM_NORMAL_HINTS_PMINSIZE	    if defined $vals[ 8] or defined $vals[ 9];
+	    $flags |= &WM_NORMAL_HINTS_PMAXSIZE	    if defined $vals[10] or defined $vals[11];
+	    $flags |= &WM_NORMAL_HINTS_PRESIZEINC   if defined $vals[12] or defined $vals[13];
+	    $flags |= &WM_NORMAL_HINTS_PASPECT	    if defined $vals[14] or defined $vals[15] or defined $vals[16] or defined $vals[17];
+	    $flags |= &WM_NORMAL_HINTS_PBASESIZE    if defined $vals[18] or defined $vals[19];
+	    $flags |= &WM_NORMAL_HINTS_PWINGRAVITY  if defined $vals[20];
+	    foreach (4..19) { $vals[$_] = 0 unless $vals[$_] }
+	    return CARDINAL=>32,pack('LLLLLlllllllllllll',$flags,@vals[4..20]);
+    });
+}
 
 =back
 
@@ -460,9 +723,61 @@ hash that contains the following keys:
     message          message hint: boolean
     urgency          urgency hint: boolean
 
+=cut
+
+use constant {
+    WM_HINTS_INPUTHINT		    => (1<<0),
+    WM_HINTS_STATEHINT		    => (1<<1),
+    WM_HINTS_ICONPIXMAPHINT	    => (1<<2),
+    WM_HINTS_ICONWINDOWHINT	    => (1<<3),
+    WM_HINTS_ICONPOSITIONHINT	    => (1<<4),
+    WM_HINTS_ICONMASKHINT	    => (1<<5),
+    WM_HINTS_WINDOWGROUPHINT	    => (1<<6),
+    WM_HINTS_MESSAGEHINT	    => (1<<7),
+    WM_HINTS_URGENCYHINT	    => (1<<8),
+
+    WMHints => [qw(
+	InputHint
+	StateHint
+	IconPixmapHint
+	IconWindowHint
+	IconPositionHint
+	IconMaskHint
+	WindowGroupHint
+	MessageHint
+	UrgencyHint
+    )],
+
+    WM_STATE_WITHDRAWNSTATE	=> 0,
+    WM_STATE_NORMALSTATE	=> 1,
+    WM_STATE_ZOOMSTATE		=> 2,
+    WM_STATE_ICONICSTATE	=> 3,
+    WM_STATE_INACTIVESTATE	=> 4,
+
+    WMState => [qw(
+	WithdrawnState
+	NormalState
+	ZoomState
+	IconicState
+	InactiveState
+    )],
+
+    WMHintsFields => [qw(
+	input
+	initial_state
+	icon_pixmap
+	icon_window
+	icon_x icon_y
+	icon_mask
+	window_group
+	message
+	urgency
+    )],
+};
+
 =over
 
-=item $icccm->B<getWM_HINTS>(I<$window>) => I<$hints>
+=item B<getWM_HINTS>(I<$X>,I<$window>) => I<$hints>
 
 Returns the C<WM_HINTS> property hints, I<$hints>, for the window,
 I<$window>, or C<undef> when no C<WM_HINTS> property exists for
@@ -471,12 +786,81 @@ I<$hints>, when defined, is a reference to a hints hash: see L</WM_HINTS>.
 
 =cut
 
-*X11::Protocol::ICCCM::getWM_HINTS =
-\&X11::Protocol::Xlib::GetWMHints;
+sub getWM_HINTS {
+    my($X,$window) = @_;
+    return getWMPropertyDecode($X,$window,WM_HINTS=>sub{
+	    my($flags, $input, $initial_state, $icon_pixmap,
+		$icon_window, $icon_x, $icon_y, $icon_mask,
+		$window_group) = unpack('LLLLLllLL',shift);
+	    my %hints = ();
+	    if ($flags & &WM_HINTS_INPUTHINT) {
+		$hints{input} = $input ? 'True' : 'False';
+	    }
+	    if ($flags & &WM_HINTS_STATEHINT) {
+		$hints{initial_state} =
+		    val2name(WMState=>WMState(),$initial_state);
+	    }
+	    if ($flags & &WM_HINTS_ICONPIXMAPHINT) {
+		$hints{icon_pixmap} = $icon_pixmap ? $icon_pixmap : 'None';
+	    }
+	    if ($flags & &WM_HINTS_ICONWINDOWHINT) {
+		$hints{icon_window} = $icon_window ? $icon_window : 'None';
+	    }
+	    if ($flags & &WM_HINTS_ICONPOSITIONHINT) {
+		$hints{icon_x} = $icon_x;
+		$hints{icon_y} = $icon_y;
+	    }
+	    if ($flags & &WM_HINTS_ICONMASKHINT) {
+		$hints{icon_mask} = $icon_mask ? $icon_mask : 'None';
+	    }
+	    if ($flags & &WM_HINTS_WINDOWGROUPHINT) {
+		$hints{window_group} = $window_group ? $window_group : 'None';
+	    }
+	    if ($flags & &WM_HINTS_MESSAGEHINT) {
+		$hints{message} = 'True';
+	    }
+	    if ($flags & &WM_HINTS_URGENCYHINT) {
+		$hints{urgency} = 'True';
+	    }
+	    return \%hints;
+    });
+}
 
-=item $icccm->B<setWM_HINTS>(I<$window>,I<$hints>)
+sub dmpWM_HINTS {
+    my($X,$hints) = @_;
+    return dmpWMPropertyDisplay($X,WM_HINTS=>sub{
+	    foreach (qw(input initial_state)) {
+		next unless defined $hints->{$_};
+		printf "\t%-20s: %s\n",$_,$hints->{$_};
+	    }
+	    foreach (qw(icon_pixmap icon_window)) {
+		next unless defined $hints->{$_};
+		if ($hints->{$_} =~ m{^\d+$}) {
+		    printf "\t%-20s: 0x%08x\n",$_,$hints->{$_};
+		} else {
+		    printf "\t%-20s: %s\n",$_,$hints->{$_};
+		}
+	    }
+	    foreach (qw(icon_x icon_y)) {
+		next unless defined $hints->{$_};
+		printf "\t%-20s: %s\n",$_,$hints->{$_};
+	    }
+	    foreach (qw(icon_mask window_group)) {
+		next unless defined $hints->{$_};
+		if ($hints->{$_} =~ m{^\d+$}) {
+		    printf "\t%-20s: 0x%08x\n",$_,$hints->{$_};
+		} else {
+		    printf "\t%-20s: %s\n",$_,$hints->{$_};
+		}
+	    }
+	    foreach (qw(message urgency)) {
+		next unless defined $hints->{$_};
+		printf "\t%-20s: %s\n",$_,$hints->{$_};
+	    }
+    });
+}
 
-=item $X->B<SetWMHints>(I<$window>,I<$hints>)
+=item B<setWM_HINTS>(I<$X>,I<$window>,I<$hints>)
 
 Sets the C<WM_HINTS> property hints, I<$hints>, on the window, I<$window>;
 or, when I<$hints> is C<undef>, deletes the C<WM_HINTS> property from
@@ -485,8 +869,49 @@ I<$hints>, when defined, is a reference to a hints hash: see L</WM_HINTS>.
 
 =cut
 
-*X11::Protocol::ICCCM::setWM_HINTS =
-\&X11::Protocol::Xlib::SetWMHints;
+sub setWM_HINTS {
+    my($X,$window,$hints) = @_;
+    return setWMPropertyEncode($X,$window,WM_HINTS=>sub{
+	    my @vals = ();
+	    if (ref $hints eq 'ARRAY') {
+		@vals = @$hints;
+	    }
+	    elsif (ref $hints eq 'HASH') {
+		@vals = (
+		    $hints->{input},
+		    $hints->{initial_state},
+		    $hints->{icon_pixmap},
+		    $hints->{icon_window},
+		    $hints->{icon_x},
+		    $hints->{icon_y},
+		    $hints->{icon_mask},
+		    $hints->{window_group},
+		    $hints->{message},
+		    $hints->{urgency});
+	    }
+	    my $flags = 0;
+	    $vals[0] = name2val(Boolean=>[qw(False True)],$vals[0]) if defined $vals[0];
+	    $vals[1] = name2val(WMState=>WMState(),$vals[1]) if defined $vals[1];
+	    $vals[2] = 0 if $vals[2] and $vals[2] eq 'None';
+	    $vals[3] = 0 if $vals[3] and $vals[3] eq 'None';
+	    $vals[6] = 0 if $vals[6] and $vals[6] eq 'None';
+	    $vals[7] = 0 if $vals[7] and $vals[7] eq 'None';
+	    $vals[8] = name2val(Boolean=>[qw(False True)],$vals[8]) if defined $vals[8];
+	    $vals[9] = name2val(Boolean=>[qw(False True)],$vals[9]) if defined $vals[9];
+	    $flags |= &WM_HINTS_INPUTHINT	 if defined $vals[0];
+	    $flags |= &WM_HINTS_STATEHINT	 if defined $vals[1];
+	    $flags |= &WM_HINTS_ICONPIXMAPHINT	 if defined $vals[2];
+	    $flags |= &WM_HINTS_ICONWINDOWHINT	 if defined $vals[3];
+	    $flags |= &WM_HINTS_ICONPOSITIONHINT if defined $vals[4];
+	    $flags |= &WM_HINTS_ICONPOSITIONHINT if defined $vals[5];
+	    $flags |= &WM_HINTS_ICONMASKHINT	 if defined $vals[6];
+	    $flags |= &WM_HINTS_WINDWOGROUPHINT  if defined $vals[7];
+	    $flags |= &WM_HINTS_MESSAGEHINT	 if $vals[8];
+	    $flags |= &WM_HINTS_URGENCYHINT	 if $vals[9];
+	    foreach (0..9) { $vals[$_] = 0 unless defined $vals[$_] }
+	    return CARDINAL=>32,pack('LLLLLllLL',$flags,@vals[0..7]);
+    });
+}
 
 =back
 
@@ -561,7 +986,7 @@ null-separated strings.
 
 =over
 
-=item $icccm->B<getWM_CLASS>(I<$window>) => I<$hints> or undef
+=item B<getWM_CLASS>(I<$X>,I<$window>) => I<$hints> or undef
 
 Returns the C<WM_CLASS> property class hints, I<$hints>, for the window,
 I<$window>, or C<undef> when the C<WM_CLASS> property does not exist for
@@ -570,10 +995,15 @@ I<$hints>, when defined, is a reference to a hints hash: see L</WM_CLASS>.
 
 =cut
 
-*X11::Protocol::ICCCM::getWM_CLASS =
-\&X11::Protocol::Xlib::GetClassHint;
+sub getWM_CLASS {
+    return getWMPropertyTermStrings(@_[0..1],WM_CLASS=>);
+}
 
-=item $icccm->B<setWM_CLASS>(I<$window>,I<$class>)
+sub dmpWM_CLASS {
+    return dmpWMPropertyTermStrings($_[0],WM_CLASS=>class=>$_[1]);
+}
+
+=item B<setWM_CLASS>(I<$X>,I<$window>,I<$class>)
 
 Sets the C<WM_CLASS> property class hints, I<$hints>, on the window,
 I<$window>; or, when I<$hints> is C<undef>, deletes the C<WM_CLASS>
@@ -582,8 +1012,9 @@ I<$hints>, when defined, is a reference to a hints hash: see L</WM_CLASS>.
 
 =cut
 
-*X11::Protocol::ICCCM::setWM_CLASS =
-\&X11::Protocol::Xlib::SetClassHint;
+sub setWM_CLASS {
+    return setWMPropertyTermStrings(@_[0..1],WM_CLASS=>COMPOUND_TEXT=>$_[2]);
+}
 
 =back
 
@@ -608,7 +1039,7 @@ mapped.
 
 =over
 
-=item $icccm->B<getWM_TRANSIENT_FOR>(I<$window>) => I<$owner> or undef
+=item B<getWM_TRANSIENT_FOR>(I<$X>,I<$window>) => I<$owner> or undef
 
 Returns the C<WM_TRANSIENT_FOR> property owner window, I<$owner>, for the
 window, I<$window>, or C<undef> when no C<WM_TRANSIENT_FOR> property
@@ -617,10 +1048,15 @@ I<$owner>, when defined, contains the XID of the owner window.
 
 =cut
 
-*X11::Protocol::ICCCM::getWM_TRANSIENT_FOR =
-\&X11::Protocol::Xlib::GetTransientForHint;
+sub getWM_TRANSIENT_FOR {
+    return getWMPropertyUint(@_[0..1],WM_TRANSIENT_FOR=>);
+}
 
-=item $icccm->B<setWM_TRANSIENT_FOR>(I<$window>,I<$owner>)
+sub dmpWM_TRANSIENT_FOR {
+    return dmpWMPropertyUint($_[0],WM_TRANSIENT_FOR=>owner=>$_[1]);
+}
+
+=item B<setWM_TRANSIENT_FOR>(I<$X>,I<$window>,I<$owner>)
 
 Sets the C<WM_TRANSIENT_FOR> property owner windows, I<$owner>, for the
 window, I<$window>; or, when I<$owner> is C<undef>, deletes the
@@ -629,8 +1065,10 @@ I<$owner>, when defined, contains the XID of the owner window.
 
 =cut
 
-*X11::Protocol::ICCCM::setWM_TRANSIENT_FOR =
-\&X11::Protocol::Xlib::SetTransientForHint;
+sub setWM_TRANSIENT_FOR {
+    return setWMPropertyUint(@_[0..1],WM_TRANSIENT_FOR=>WINDOW=>$_[2]);
+}
+
 
 =back
 
@@ -663,7 +1101,7 @@ It is expected that this table will grow over time.
 
 =over
 
-=item $icccm->B<getWM_PROTOCOLS>(I<$window>) => I<$protocols> or undef
+=item B<getWM_PROTOCOLS>(I<$X>,I<$window>) => I<$protocols> or undef
 
 Returns the C<WM_PROTOCOLS> property protocols, I<$protocols>, for the
 window, I<$window>, or C<undef> when no C<WM_PROTOCOLS> property exists
@@ -672,10 +1110,15 @@ of protocol names.
 
 =cut
 
-*X11::Protocol::ICCCM::getWM_PROTOCOLS =
-\&X11::Protocol::Xlib::GetWMProtocols;
+sub getWM_PROTOCOLS {
+    return getWMPropertyAtoms(@_[0..1],WM_PROTOCOLS=>);
+}
 
-=item $icccm->B<setWM_PROTOCOLS>(I<$window>,I<$protocols>)
+sub dmpWM_PROTOCOLS {
+    return dmpWMPropertyAtoms($_[0],WM_PROTOCOLS=>protocols=>$_[1]);
+}
+
+=item B<setWM_PROTOCOLS>(I<$X>,I<$window>,I<$protocols>)
 
 Sets the C<WM_PROTOCOLS> property protocols, I<$protocols>, on window,
 I<$window>.  I<$protocols>, when defined, is a reference to an array of
@@ -683,8 +1126,9 @@ protocol names; when undefined, the property is deleted from I<$window>.
 
 =cut
 
-*X11::Protocol::ICCCM::setWM_PROTOCOLS =
-\&X11::Protocol::Xlib::SetWMProtocols;
+sub setWM_PROTOCOLS {
+    return setWMPropertyAtoms(@_[0..1],WM_PROTOCOLS=>$_[2]);
+}
 
 =back
 
@@ -699,7 +1143,7 @@ For the details of this mechanism, see Color-maps.
 
 =over
 
-=item $icccm->B<getWM_COLORMAP_WINDOWS>(I<$window>) => I<$windows> or undef
+=item B<getWM_COLORMAP_WINDOWS>(I<$X>,I<$window>) => I<$windows> or undef
 
 Returns the C<WM_COLORMAP_WINDOWS> property colormap windows, I<$windows>,
 for the window, I<$window>, or C<undef> when no C<WM_COLORMAP_WINDOWS>
@@ -708,10 +1152,15 @@ to an array containing the XIDs of the colormap windows.
 
 =cut
 
-*X11::Protocol::ICCCM::getWM_COLORMAP_WINDOWS =
-\&X11::Protocol::Xlib::GetWMColormapWindows;
+sub getWM_COLORMAP_WINDOWS {
+    return getWMPropertyUints(@_[0..1],WM_COLORMAP_WINDOWS=>);
+}
 
-=item $icccm->B<setWM_COLORMAP_WINDOWS>(I<$window>,I<$windows>)
+sub dmpWM_COLORMAP_WINDOWS {
+    return dmpWMPropertyUints($_[0],WM_COLORMAP_WINDOWS=>windows=>$_[1]);
+}
+
+=item B<setWM_COLORMAP_WINDOWS>(I<$X>,I<$window>,I<$windows>)
 
 Sets the C<WM_COLORMAP_WINDOWS> property colormap windows, I<$windows> on
 the window, I<$window>; or, when I<$windows> is C<undef>, deletes the
@@ -720,8 +1169,9 @@ reference to an array containing the XIDs of the colormap windows.
 
 =cut
 
-*X11::Protocol::ICCCM::setWM_COLORMAP_WINDOWS =
-\&X11::Protocol::Xlib::SetWMColormapWindows;
+sub setWM_COLORMAP_WINDOWS {
+    return setWMPropertyUints(@_[0..1],WM_COLORMAP_WINDOWS=>WINDOW=>$_[2]);
+}
 
 =back
 
@@ -733,7 +1183,7 @@ as seen from the machine running the server.
 
 =over
 
-=item $icccm->B<getWM_CLIENT_MACHINE>(I<$window>) => I<$hostname> or undef
+=item B<getWM_CLIENT_MACHINE>(I<$X>,I<$window>) => I<$hostname> or undef
 
 Returns the C<WM_CLIENT_MACHINE> property hostname, I<$hostname>, for the
 window, I<$window>, or C<undef> when the C<WM_CLIENT_MACHINE> property
@@ -742,10 +1192,15 @@ character string.
 
 =cut
 
-*X11::Protocol::ICCCM::getWM_CLIENT_MACHINE =
-\&X11::Protocol::Xlib::GetClientMachine;
+sub getWM_CLIENT_MACHINE {
+    return getWMPropertyString(@_[0..1],WM_CLIENT_MACHINE=>);
+}
 
-=item $icccm->B<setWM_CLIENT_MACHINE>(I<$window>,I<$hostname>)
+sub dmpWM_CLIENT_MACHINE {
+    return dmpWMPropertyString($_[0],WM_CLIENT_MACHINE=>hostname=>$_[1]);
+}
+
+=item B<setWM_CLIENT_MACHINE>(I<$X>,I<$window>,I<$hostname>)
 
 Sets the C<WM_CLIENT_MACHINE> property hostname, I<$hostname>, on the
 window, I<$window>; or, when I<$hostname> is C<undef>, deletes the
@@ -754,8 +1209,9 @@ is a perl character string.
 
 =cut
 
-*X11::Protocol::ICCCM::setWM_CLIENT_MACHINE =
-\&X11::Protocol::Xlib::SetClientMachine;
+sub setWM_CLIENT_MACHINE {
+    return setWMPropertyString(@_[0..1],WM_CLIENT_MACHINE=>COMPOUND_STRING=>$_[2]);
+}
 
 =back
 
@@ -810,7 +1266,7 @@ null-separated strings.
 
 =over
 
-=item $icccm->B<getWM_COMMAND>(I<$window>) => I<$argv> or undef
+=item B<getWM_COMMAND>(I<$X>,I<$window>) => I<$argv> or undef
 
 Returns the C<WM_COMMAND> property program arguments, I<$argv>, for the
 window, I<$window>, or C<undef> when the C<WM_COMMAND> property does not
@@ -819,10 +1275,33 @@ of strings.
 
 =cut
 
-*X11::Protocol::ICCCM::getWM_COMMAND =
-\&X11::Protocol::Xlib::GetCommand;
+sub getWM_COMMAND {
+    return getWMPropertyTermStrings(@_[0..1],WM_COMMAND=>);
+}
 
-=item $icccm->B<setWM_COMMAND>(I<$window>,I<$argv>)
+sub escape_arg {
+    my $str = shift;
+    if ($str =~ m{['"|&;()<>]} or $str =~ m{\s}) {
+	$str = "'".join("'\"'\"'",split(/'/,$str))."'";
+    }
+    return $str;
+}
+
+sub shell_command {
+    my($command,@args) = @_;
+    my @parms = map{escape_arg($_)}@args;
+    return join(' ',$command,@parms);
+}
+
+sub dmpWM_COMMAND {
+    my($X,$argv) = @_;
+    return dmpWMPropertyDisplay($X,WM_COMMAND=>sub{
+	printf "\t%-20s: %s\n",command=>shell_command(@$argv);
+    });
+}
+
+
+=item B<setWM_COMMAND>(I<$X>,I<$window>,I<$argv>)
 
 Sets the C<WM_COMMAND> property with program arguments, I<$argv>, for the
 window, I<$window>, or when I<$argv> is undefined, deletes the property
@@ -831,8 +1310,9 @@ strings.
 
 =cut
 
-*X11::Protocol::ICCCM::setWM_COMMAND =
-\&X11::Protocol::Xlib::SetCommand;
+sub setWM_COMMAND {
+    return setWMPropertyTermStrings(@_[0..1],WM_COMMAND=>COMPOUND_TEXT=>$_[2]);
+}
 
 =back
 
@@ -1083,7 +1563,7 @@ The state names are as follows:
 
 =over
 
-=item $icccm->B<getWM_STATE>(I<$window>) => I<$state> or undef
+=item B<getWM_STATE>(I<$X>,I<$window>) => I<$state> or undef
 
 Returns the C<WM_STATE> property state, I<$state>, for the window,
 I<$window>, or C<undef> when the C<WM_STATE> property does not exist for
@@ -1092,10 +1572,25 @@ I<$state>, when defined, is a reference to a state hash: see L</WM_STATE>.
 
 =cut
 
-*X11::Protocol::ICCCM::getWM_STATE =
-\&X11::Protocol::Xlib::GetWMState;
+sub getWM_STATE {
+    return getWMPropertyDecode(@_[0..1],WM_STATE=>sub{
+	    my ($state,$icon) = unpack('LL',shift);
+	    $state = 0 unless $state;
+	    $state = val2name(WMState=>WMState(),$state);
+	    $icon = 'None' unless $icon;
+	    return { state=>$state, icon=>$icon };
+    });
+}
 
-=item $icccm->B<setWM_STATE>(I<$window>,I<$state>)
+sub dmpWM_STATE {
+    my($X,$state) = @_;
+    return dmpWMPropertyDisplay($X,WM_STATE=>sub{
+	printf "\t%-20s: %s\n",state=>$state->{state};
+	printf "\t%-20s: %s\n",icon=>$state->{icon};
+    });
+}
+
+=item B<setWM_STATE>(I<$X>,I<$window>,I<$state>)
 
 Sets the C<WM_STATE> property state, I<$state>, on the window, I<$window>,
 or, when I<$state> is C<undef>, deletes the C<WM_STATE> property from
@@ -1104,15 +1599,69 @@ I<$state>, when defined, is a reference to a state hash: see L</WM_STATE>.
 
 =cut
 
-*X11::Protocol::ICCCM::setWM_STATE =
-\&X11::Protocol::Xlib::SetWMState;
+sub setWM_STATE {
+    my($X,$window,$wmstate) = @_;
+    return setWMPropertyEncode($X,$window,WM_STATE=>sub{
+	    my($state,$icon);
+	    if (ref $wmstate eq 'ARRAY') {
+		($state,$icon) = @$wmstate;
+	    }
+	    elsif (ref $wmstate eq 'HASH') {
+		$state = $wmstate->{state};
+		$icon  = $wmstate->{icon};
+	    }
+	    $state = 0 unless $state;
+	    $state = name2val(WMState=>WMState(),$state);
+	    $icon = 0 unless $icon;
+	    $icon = 0 if $icon eq 'None';
+	    return CARDINAL=>32,pack('LL',$state,$icon);
+    });
+}
 
-=item $X->B<ChgWM_STATE>(I<$window>,I<$state>)
+=item B<reqWM_STATE>(I<$X>,I<$window>,I<$state>)
 
 =cut
 
-*X11::Protocol::ICCCM::chgWM_STATE =
-\&X11::Protocol::Xlib::ChangeWMState;
+sub reqWM_STATE {
+    my($X,$window,$state) = @_;
+    $state = 0 unless $state;
+    $state = name2val(WMState=>WMState(),$state);
+    my($res) = $X->robust_req(QueryTree=>$window);
+    return 0 unless ref $res;
+    my($root) = @$res;
+    if ($state == WM_STATE_WITHDRAWNSTATE) {
+	($res) = $X->robust_req(UnmapWindow=>$window);
+	return 0 unless ref $res;
+	($res) = $X->robust_req(SendEvent=>$root,0,
+		$X->pack_event_mask(qw(
+			SubstructureRedirect
+			SubstructureNotify)),
+		$X->pack_event(
+		    name=>'UnmapNotify',
+		    event=>$root, # PEKWM wants $window
+		    window=>$window,
+		    from_configure=>0));
+	return 0 unless ref $res;
+    }
+    elsif ($state == WM_STATE_NORMALSTATE) {
+	($res) = $X->robust_req(MapWindow=>$window);
+	return 0 unless ref $res;
+    }
+    else {
+	($res) = $X->robust_req(SendEvent=>$root,0,
+		$X->pack_event_mask(qw(
+			SubstructureRedirect
+			SubstructureNotify)),
+		$X->pack_event(
+		    name=>'ClientMessage',
+		    window=>$window,
+		    type=>$X->atom('WM_CHANGE_STATE'),
+		    format=>32,
+		    data=>pack('Lxxxxxxxxxxxxxxxx',$state)));
+	return 0 unless ref $res;
+    }
+    return 1;
+}
 
 =back
 
@@ -1144,7 +1693,7 @@ hash with the following keys:
 
 =over
 
-=item $icccm->B<getWM_ICON_SIZE>(I<$root>) => I<$sizes> or undef
+=item B<getWM_ICON_SIZE>(I<$X>,I<$root>) => I<$sizes> or undef
 
 Returns the C<WM_ICON_SIZE> property icon sizes, I<$sizes>, for the
 window, I<$root>, or C<undef> when the C<WM_ICON_SIZE> property does not
@@ -1156,10 +1705,15 @@ When unspecified, null or zero, I<$root> defaults to C<$X-E<gt>root>.
 
 =cut
 
-*X11::Protocol::ICCCM::getWM_ICON_SIZE =
-\&X11::Protocol::Xlib::GetIconSizes;
+sub getWM_ICON_SIZE {
+    return getWMPropertyHashInts(@_[0..1],WM_ICON_SIZE=>[qw(min_width min_height max_width max_height width_inc height_inc)])
+}
 
-=item $icccm->B<setWM_ICON_SIZE>(I<$root>,I<$sizes>)
+sub dmpWM_ICON_SIZE {
+    return dmpWMPropertyHashInts($_[0],WM_ICON_SIZE=>[qw(min_width min_height max_width max_height width_inc height_inc)],$_[1]);
+}
+
+=item B<setWM_ICON_SIZE>(I<$X>,I<$root>,I<$sizes>)
 
 Sets the C<WM_ICON_SIZE> property icon sizes, I<$sizes>, on the window,
 I<$root>; or, when I<$sizes> is C<undef>, deletes the C<WM_ICON_SIZE>
@@ -1170,8 +1724,9 @@ When unspecified, null or zero, I<$root> defaults to C<$X-E<gt>root>.
 
 =cut
 
-*X11::Protocol::ICCCM::setWM_ICON_SIZE =
-\&X11::Protocol::Xlib::SetIconSizes;
+sub setWM_ICON_SIZE {
+    return setWMPropertyHashInts(@_[0..1],WM_ICON_SIZE=>CARDINAL=>[qw(min_width min_height max_width max_height width_inc height_inc)],$_[2])
+}
 
 =back
 
@@ -1305,6 +1860,177 @@ may simply issue a C<GetSelectionOwner> request on the appropriate WM_Sn
 selection.  If this selection is owned, clients may assume that the window
 manager complies with ICCCM version 2.0 or later.
 
+=head2 SM_CLIENT_ID
+
+Each session participant will obtain a unique client identifier
+(client-ID) from the session manager. The client must identify one top
+level window as the "client leader." This window must be created by the
+client. It may be in any state, including the Withdrawn state. The
+client leader window must have a SM_CLIENT_ID property, which contains
+the client-ID obtained from the session management protocol. That
+property must:
+
+=over
+
+=item
+
+be of type STRING;
+
+=item
+
+be of format 8; and
+
+=item
+
+contain the client-ID as a string of XPCS characters encoded using ISO 8859-1.
+
+=back
+
+A client must withdraw all of its top level windows on the same display
+before modifiying either the WM_CLIENT_LEADER or the SM_CLIENT_ID
+property of its client leader window.
+
+=over
+
+=item B<getSM_CLIENT_ID>(I<$X>,I<$window>) => I<$clientid> or undef
+
+=cut
+
+sub getSM_CLIENT_ID {
+    return getWMPropertyString(@_[0..1],SM_CLIENT_ID=>);
+}
+
+sub dmpSM_CLIENT_ID {
+    return dmpWMPropertyString($_[0],SM_CLIENT_ID=>client_id=>$_[1]);
+}
+
+=item B<setSM_CLIENT_ID>(I<$X>,I<$window>,I<$clientid>)
+
+=cut
+
+sub setWM_CLIENT_ID {
+    return setWMPropertyString(@_[0..1],SM_CLIENT_ID=>STRING=>$_[2]);
+}
+
+=back
+
+=head2 WM_CLIENT_LEADER
+
+All top-level, non-transient windows created by a client on the same
+display as the client leader must have a WM_CLIENT_LEADER property.
+This property contains a window ID that identifies the client leader
+window. The client leader window must have a WM_CLIENT_LEADER property
+containing its own window ID (i.e. the client leader window is pointing
+to itself). Transient windows need not have a WM_CLIENT_LEADER property
+if the client leader can be determined using the information in the
+WM_TRANSIENT_FOR property. The WM_CLIENT_LEADER property must:
+
+=over
+
+=item
+
+be of type WINDOW;
+
+=item
+
+be of format 32; and
+
+=item
+
+contain the window ID of the client leader window.
+
+=back
+
+A client must withdraw all of its top level windows on the same display
+before modifiying either the WM_CLIENT_LEADER or the SM_CLIENT_ID
+property of its client leader window.
+
+=over
+
+=item B<getWM_CLIENT_LEADER>(I<$X>,I<$window>) => I<$leader> or undef
+
+=cut
+
+sub getWM_CLIENT_LEADER {
+    return getWMPropertyRecursive(@_[0..1],WM_CLIENT_LEADER=>);
+}
+
+sub dmpWM_CLIENT_LEADER {
+    return dmpWMPropertyUint($_[0],WM_CLIENT_LEADER=>leader=>$_[1]);
+}
+
+=item B<setWM_CLIENT_LEADER>(I<$X>,I<$window>,I<$leader>)
+
+=cut
+
+sub setWM_CLIENT_LEADER {
+    return setWMPropertyRecursive(@_[0..1],WM_CLIENT_LEADER=>WINDOW=>$_[2]);
+}
+
+=back
+
+=head2 WM_WINDOW_ROLE
+
+It is necessary that other clients be able to uniquely identify a window
+(across sessions) among all windows related to the same client-ID. For
+example, a window manager can require this unique ID to restore geometry
+information from a previous session, or a workspace manager could use it
+to restore information about which windows are in which workspace. A
+client may optionally provide a WM_WINDOW_ROLE property to uniquely
+identify a window within the scope specified above. The combination of
+SM_CLIENT_ID and WM_WINDOW_ROLE can be used by other clients to uniquely
+identify a window across sessions.
+
+If the WM_WINDOW_ROLE property is not specified on a top level window,
+a client that needs to uniquely identify that window will try to use
+instead the values of WM_CLASS and WM_NAME. If a client has multiple
+windows with identical WM_CLASS and WM_NAME properties, then it should
+provide a WM_WINDOW_ROLE property.
+
+The client must set the WM_WINDOW_ROLE property to a string that
+uniquely identifies that window among all windows that have the same
+client leader window. The property must:
+
+=over
+
+=item
+
+be of type STRING;
+
+=item
+
+be of format 8; and
+
+=item
+
+contain a string restricted to the XPCS characters, encoded in ISO 8859-1.
+
+=back
+
+=over
+
+=item B<getWM_WINDOW_ROLE>(I<$X>,I<$window>) => I<$role> or undef
+
+=cut
+
+sub getWM_WINDOW_ROLE {
+    return getWMPropertyString(@_[0..1],WM_WINDOW_ROLE=>);
+}
+
+sub dmpWM_WINDOW_ROLE {
+    return dmpWMPropertyString($_[0],WM_WINDOW_ROLE=>role=>$_[1]);
+}
+
+=item B<setWM_WINDOW_ROLE>(I<$X>,I<$window>,I<$role>)
+
+=cut
+
+sub setWM_WINDOW_ROLE {
+    return setWMPropertyString(@_[0..1],WM_WINDOW_ROLE=>STRING=>$_[2]);
+}
+
+=back
+
 =head2 WM_SAVE_YOURSELF
 
 Clients that want to be warned when the session manager feels that they
@@ -1367,6 +2093,32 @@ step
 
 Receiving WM_SAVE_YOURSELF on a window is, conceptually, a command to save
 the entire client state.
+
+=head2 WM_LOCALE_NAME
+
+=over
+
+=item B<getWM_LOCALE_NAME>(I<$X>,I<$window>) => I<$locale> or undef
+
+=cut
+
+sub getWM_LOCALE_NAME {
+    return getWMPropertyString(@_[0..1],WM_LOCALE_NAME=>);
+}
+
+sub dmpWM_LOCALE_NAME {
+    return dmpWMPropertyString($_[0],WM_LOCALE_NAME=>locale=>$_[1]);
+}
+
+=item B<setWM_LOCALE_NAME>(I<$X>,I<$window>,I<$locale>)
+
+=cut
+
+sub setWM_LOCALE_NAME {
+    return setWMPropertyString(@_[0..1],WM_LOCALE_NAME=>STRING=>$_[2]);
+}
+
+=back
 
 =head2 Configuring the window
 

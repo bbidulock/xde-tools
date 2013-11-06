@@ -1,0 +1,72 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+    if $running_under_some_shell;
+
+BEGIN {
+    use strict;
+    use warnings;
+    my $here = $0; $here =~ s{/[^/]*$}{};
+    if ($here =~ s{^\.}{}) {
+	chomp(my $cwd = `pwd`);
+	$here = "/$here" if $here;
+	$here = "$cwd$here";
+    }
+    print STDERR "here is: '$here'\n";
+    unshift @INC, "$here/lib" unless $here =~ m{^/usr/bin/};
+}
+
+package MyICCCM;
+use base qw(X11::Protocol::WMSpecific X11::Protocol::EWMH X11::Protocol::WMH X11::Protocol::ICCCM X11::Protocol::Util X11::Protocol);
+
+package main;
+use strict;
+use warnings;
+use Carp qw(confess);
+
+sub my_error_handler {
+    my($self,$data) = @_;
+    confess($self->format_error_msg($data));
+}
+
+my $X = MyICCCM->new();
+
+$X->wm_check();
+
+sub check_window {
+    my($X,$window) = @_;
+    my($root,$parent,@kids) = $X->QueryTree($window);
+    my @properties = sort
+	map{$X->atom_name($_)}
+	$X->ListProperties($window);
+    my @known = sort
+	map{$X->can("get$_")?$_:()}
+	@properties;
+    my @unknown = sort
+	map{$X->can("get$_")?():$_}
+	@properties;
+    if (@properties) {
+	printf "Client window: 0x%08x\n", $window;
+	printf "\t%-20s: %s\n", properties=>join(', ',@properties);
+	printf "\t%-20s: %s\n", unknown=>join(', ',@unknown) if @unknown;
+	foreach (@known) {
+	    if (defined(my $result = $X->can("get$_")->($X,$window))) {
+		if ($X->can("dmp$_")) {
+		    $X->can("dmp$_")->($X,$result);
+		} else {
+		    warn "No dmp method for '$_'";
+		}
+	    }
+	}
+    }
+    foreach (@kids) {
+	check_window($X,$_);
+    }
+}
+
+check_window($X,$X->root);
+
+exit(0);
+
+# vim: set sw=4 tw=72 fo=tcqlorn:

@@ -122,20 +122,6 @@ sub check_window {
 
 check_window($X,$X->root);
 
-foreach (@windows) {
-    if (my $state = $X->GetWMState($_)) {
-	printf "Client window: 0x%08x\n", $_;
-    }
-}
-
-
-if (my $sizes = $X->GetIconSizes($X->root)) {
-    while (my ($k,$v) = each %$sizes) {
-	printf "%-20s: %d\n", $k, $kv;
-    }
-}
-
 exit(0);
-
 
 # vim: set sw=4 tw=72 fo=tcqlorn:

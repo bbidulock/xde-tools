@@ -1,11 +1,97 @@
 package X11::Protocol::WMH;
-use base qw(X11::Protocol::ICCCM);
+use X11::Protocol::Util  qw(:all);
+use X11::Protocol::ICCCM qw(:all);
 use X11::Protocol;
 use X11::AtomConstants;
 use strict;
 use warnings;
-use vars '$VERSION';
+use vars '$VERSION', '@ISA', '@EXPORT_OK', '%EXPORT_TAGS';
 $VERSION = 0.01;
+@ISA = ('Exporter');
+
+%EXPORT_TAGS = (
+    all => [qw(
+	WinClientMessage
+	get_WIN_SUPPORTING_WM_CHECK
+	dmp_WIN_SUPPORTING_WM_CHECK
+	set_WIN_SUPPORTING_WM_CHECK
+	get_WIN_PROTOCOLS
+	dmp_WIN_PROTOCOLS
+	set_WIN_PROTOCOLS
+	get_WIN_CLIENT_LIST
+	dmp_WIN_CLIENT_LIST
+	set_WIN_CLIENT_LIST
+	get_WIN_WORKSPACE
+	dmp_WIN_WORKSPACE
+	set_WIN_WORKSPACE
+	req_WIN_WORKSPACE
+	got_WIN_WORKSPACE
+	get_WIN_WORKSPACE_COUNT
+	dmp_WIN_WORKSPACE_COUNT
+	set_WIN_WORKSPACE_COUNT
+	get_WIN_WORKSPACE_NAMES
+	dmp_WIN_WORKSPACE_NAMES
+	set_WIN_WORKSPACE_NAMES
+	get_WIN_WORKAREA
+	dmp_WIN_WORKAREA
+	set_WIN_WORKAREA
+	get_WIN_CLIENT_MOVING
+	dmp_WIN_CLIENT_MOVING
+	set_WIN_CLIENT_MOVING
+	get_WIN_STATE
+	dmp_WIN_STATE
+	set_WIN_STATE
+	req_WIN_STATE
+	event_handler_ClientMessage_WIN_STATE
+	got_WIN_STATE
+	get_WIN_HINTS
+	dmp_WIN_HINTS
+	set_WIN_HINTS
+	req_WIN_HINTS
+	got_WIN_HINTS
+	get_WIN_LAYER
+	dmp_WIN_LAYER
+	set_WIN_LAYER
+	req_WIN_LAYER
+	got_WIN_LAYER
+	get_WIN_WORKSPACES 
+	dmp_WIN_WORKSPACES
+	set_WIN_WORKSPACES
+	req_WIN_WORKSPACES
+	got_WIN_WORKSPACES_ADD
+	got_WIN_WORKSPACES_REMOVE
+	get_WIN_EXPANDED_SIZE
+	dmp_WIN_EXPANDED_SIZE
+	set_WIN_EXPANDED_SIZE
+	get_WIN_ICONS
+	dmp_WIN_ICONS
+	set_WIND_ICONS
+	get_WIN_APP_STATE
+	dmp_WIN_APP_STATE
+	set_WIN_APP_STATE
+	get_WIN_DESKTOP_BUTTON_PROXY
+	dmp_WIN_DESKTOP_BUTTON_PROXY
+	set_WIN_DESKTOP_BUTTON_PROXY
+	get_WIN_AREA_COUNT
+	dmp_WIN_AREA_COUNT
+	set_WIN_AREA_COUNT
+	get_WIN_AREA
+	dmp_WIN_AREA
+	set_WIN_AREA
+	req_WIN_AREA
+	got_WIN_AREA
+    )],
+    req => [qw(
+	WinClientMessage
+    )],
+);
+
+foreach my $pfx (qw(get set dmp req)) {
+    push @{$EXPORT_TAGS{$pfx}},
+	 grep {/^$pfx/} @{$EXPORT_TAGS{all}};
+}
+
+Exporter::export_ok_tags('all');
 
 =head1 NAME
 
@@ -34,27 +120,23 @@ XDE-supported window manager that continues to be WMH compliant.
 
 The following methods are provided by this module.
 
-=cut
+=item B<WinClientMessage>(I<$X>,I<$window>,I<$type>,I<$data>)
 
-sub new {
-    my $X = X11::Protocol::ICCCM->new(@_);
-    if ($X) {
-	$X->_init_WindowLayer;
-	$X->_init_WindowState;
-	$X->_init_WindowHints;
-    }
-    return $X;
-}
+=cut
 
 sub WinClientMessage {
     my($X,$window,$type,$data) = @_;
+    $window = 0 unless defined $window;
+    $window = 0 if $window eq 'None';
     $window = $X->root unless $window;
+    $type = ($type =~ m{^\d+$}) ? $type : $X->atom($type);
+    $data = pack('LLLLL',@$data) if ref $data eq 'ARRAY';
     $X->SendEvent($X->root, 0,
 	    $X->pack_event_mask('SubstructureNotify'),
 	    $X->pack_event(
 		name=>'ClientMessage',
 		window=>$window,
-		type=>$X->atom($type),
+		type=>$type,
 		format=>32,
 		data=>$data));
 }
@@ -85,89 +167,33 @@ this property set on it with the same values and type.
 
 =cut
 
-=item $wmh->B<get_WIN_SUPPORTING_WM_CHECK> => I<$window> or undef
+=item B<get_WIN_SUPPORTING_WM_CHECK>(I<$X>,I<$window>) => I<$check> or undef
 
-Returns the supporting window manager check window, I<$window>, or
+Returns the supporting window manager check window, I<$check>, or
 C<undef> when no such window exists.  This method can support a certain
 amount of race condition.
 
 =cut
 
 sub get_WIN_SUPPORTING_WM_CHECK {
-    my($X,$root) = @_;
-    $root = $X->root unless $root;
-    my $atom = $X->atom('_WIN_SUPPORTING_WM_CHECK');
-    my $win;
-    unless ($win) {
-	my($value,$rtype,$format) = $X->GetProperty($root,$atom,0,0,1);
-	$win = unpack('L',$value) if $format;
-	if ($win) {
-	    my $oth;
-	    ($value,$rtype,$format) = $X->GetProperty($win,$atom,0,0,1);
-	    $oth = unpack('L',$value) if $format;
-	    if ($oth) {
-		unless ($win == $oth) {
-		    warn sprintf "Check window 0x%x != 0x%x", $win, $oth;
-		    $win = undef;
-		}
-	    }
-	}
-    }
-    unless ($win) {
-	my($value,$rtype,$format) = $X->GetProperty($root,$atom,0,0,1);
-	$win = unpack('L',$value) if $format;
-	if ($win) {
-	    my $oth;
-	    ($value,$rtype,$format) = $X->GetProperty($win,$atom,0,0,1);
-	    $oth = unpack('L',$value) if $format;
-	    if ($oth) {
-		unless ($win == $oth) {
-		    warn sprintf "Check window 0x%x != 0x%x", $win, $oth;
-		    $win = undef;
-		}
-	    }
-	}
-    }
-    if ($win) {
-	# fill out some other stuff???
-	$X->{windows}{$win} = {} unless $X->{windows}{$win};
-	$X->{checkwin} = $X->{windows}{$win};
-	$X->getWM_CLASS($win);
-	$X->get_NET_WM_PID($win);
-    } else {
-	$win = delete $X->{_WIN_SUPPORTING_WM_CHECK};
-	delete $X->{windows}{$win}{_WIN_SUPPORTING_WM_CHECK} if $win;
-	delete $X->{_WIN_SUPPORTING_WM_CHECK};
-	delete $X->{checkwin};
-    }
-    return $X->{_WIN_SUPPORTING_WM_CHECK};
+    return getWMRootPropertyRecursive($_[0],_WIN_SUPPORTING_WM_CHECK=>$_[1]);
 }
 
-=item $wmh->B<set_WIN_SUPPORTING_WM_CHECK>(I<$window>)
+sub dmp_WIN_SUPPORTING_WM_CHECK {
+    return dmpWMRootPropertyUint($_[0],_WIN_SUPPORTING_WM_CHECK=>check=>$_[1]);
+}
+
+=item B<set_WIN_SUPPORTING_WM_CHECK>(I<$X>,I<$check>)
 
 Sets the supporting window manager check window by setting the
-C<_WIN_SUPPORTING_WM_CHECK> property on both the window, I<$window>, and
-the root window for I<$window>.  Only a window manager that owns the
+C<_WIN_SUPPORTING_WM_CHECK> property on both the window, I<$check>, and
+the root window for I<$check>.  Only a window manager that owns the
 C<WM_Sn> selection should call this function.
 
 =cut
 
 sub set_WIN_SUPPORTING_WM_CHECK {
-    my($X,$window) = @_;
-    my($res) = $X->robust_req(QueryTree=>$window);
-    return unless ref $res;
-    my $root = $res->[0];
-    ($res) = $X->robust_req(
-	    ChangeProperty=>$window,
-	    $X->atom('_WIN_SUPPORTING_WM_CHECK'),
-	    X11::AtomConstants::CARDINAL(), 32,
-	    Replace=>pack('L',$window));
-    return unless ref $res;
-    ($res) = $X->robust_req(
-	    ChangeProperty=>$root,
-	    $X->atom('_WIN_SUPPORTING_WM_CHECK'),
-	    X11::AtomConstants::CARDINAL(), 32,
-	    Replace=>pack('L',$window));
+    return setWMRootPropertyRecursive($_[0],_WIN_SUPPORTING_WM_CHECK=>WINDOW=>$_[1]);
 }
 
 =back
@@ -194,6 +220,12 @@ the following:
  _WIN_WORKSPACE_NAMES
  _WIN_CLIENT_LIST
 
+ _WIN_AREA_COUNT            (not in wm-comp.pdf)
+ _WIN_AREA                  (not in wm-comp.pdf)
+ _WIN_DESKTOP_BUTTON_PROXY  (not in wm-comp.pdf)
+ _WIN_SUPPORTING_WM_CHECK   (not in wm-comp.pdf)
+ _WIN_WORKAREA              (not in wm-comp.pdf)
+
 If you list one of these properties then you support it and applications
 can expect information provided by, or accepted by the Window Manager to
 work.
@@ -203,57 +235,37 @@ work.
 
 =cut
 
-=item $wmh->B<get_WIN_PROTOCOLS>() => I<$names> or undef
+=item B<get_WIN_PROTOCOLS>(I<$X>,I<$root>) => I<$names> or undef
 
-Returns an array reference to a list of atom names associated with the
-root property indicating support of various WMH protocols, or C<undef>
-if the property does not exist on the root window.  Possible values in
-the list are:
-
-    _WIN_LAYER, _WIN_STATE, _WIN_HINTS, _WIN_APP_STATE,
-    _WIN_EXPANDED_SIZE, _WIN_ICONS, _WIN_WORKSPACE,
-    _WIN_WORKSPACE_COUNT, _WIN_WORKSPACE_NAMES,
-    _WIN_CLIENT_LIST
-
-    _WIN_AREA_COUNT, _WIN_AREA, _WIN_DESKTOP_BUTTON_PROXY,
-    _WIN_SUPPORTING_WM_CHECK, _WIN_WORKAREA
+Returns I<$names> as a reference to a hash of atom names or C<undef>
+when no C<_WIN_PROTOCOL> property exists on root window, I<$root>.
+I<$root>, when unspecified, defaults to C<$X-E<gt>root>.  Possible keys
+are as described above under L</_WIN_PROTOCOLS>.
 
 =cut
 
 sub get_WIN_PROTOCOLS {
-    my($X,$root) = @_;
-    $root = $X->root unless $root;
-    my($value,$rtype,$format,$after) =
-	$X->GetProperty($root,
-		$X->atom('_WIN_PROTOCOLS'),
-		0,0,1);
-    return undef unless $format;
-    my $data = $value;
-    if ($after) {
-	($value,$rtype,$format,$after) =
-	    $X->GetProperty($root,
-		    $X->atom('_WIN_PROTOCOLS'),
-		    0,1,($after+3)>>2);
-	return undef unless $format;
-	$data .= $value;
-    }
-    return [ map{$X->atom_name($_)}unpack('L*',$data);
+    return getWMRootPropertyAtoms($_[0],_WIN_PROTOCOLS=>$_[1]);
 }
 
-=item $wmh->B<set_WIN_PROTOCOLS>(I<$names>)
+sub dmp_WIN_PROTOCOLS {
+    return dmpWMRootPropertyAtoms($_[0],_WIN_PROTOCOLS=>protocols=>$_[1]);
+}
 
-Note that C<_WIN_PROTOCOLS> must only be set by a window manager.
+=item B<set_WIN_PROTOCOLS>(I<$X>,I<$names>)
+
+
+Sets the C<_WIN_PROTOCOLS> property to the atoms of the names of the
+array or hash referenced by I<$names>, or when I<$names> is undefined,
+removes the C<_WIN_PROTOCOLS> property from the C<$X-E<gt>root> window.
+
+Note that C<_WIN_PROTOCOLS> should only be set by a window manager (the
+owner of the C<_WIN_SUPPORTING_WM_CHECK> window).
 
 =cut
 
 sub set_WIN_PROTOCOLS {
-    my($X,$names) = @_;
-    return $X->DeleteProperty($X->root,$X->atom('_WIN_PROTOCOLS'))
-	unless $names;
-    $X->ChangeProperty($X->root,
-	    $X->atom('_WIN_PROTOCOLS'),
-	    X11::AtomConstants::ATOM(), 32,
-	    Replace=>pack('L*',map{$X->atom($_)},@$names));
+    return setWMRootPropertyAtoms($_[0],_WIN_PROTOCOLS=>$_[1]);
 }
 
 =back
@@ -281,7 +293,7 @@ containing the list of XIDs for client windows.
 
 =cut
 
-=item $wmh->B<get_WIN_CLIENT_LIST>(I<$root>) => I<$clients> or undef
+=item B<get_WIN_CLIENT_LIST>(I<$X>,I<$root>) => I<$clients> or undef
 
 Returns the C<_WIN_CLIENT_LIST> property client list as an array
 reference, I<$clients>, or C<undef> when no C<_WIN_CLIENT_LIST> property
@@ -291,31 +303,18 @@ defaults to C<$X-E<gt>root>.
 =cut
 
 sub get_WIN_CLIENT_LIST {
-    my($X,$root) = @_;
-    $root = $X->root unless $root;
-    my($value,$rtype,$format,$after) =
-	$X->GetProperty($root,
-		$X->atom('_WIN_CLIENT_LIST'),
-		0,0,1);
-    return undef unless $format;
-    my $data = $value;
-    if ($after) {
-	($value,$rtype,$format,$after) =
-	    $X->GetProperty($root,
-		    $X->atom('_WIN_CLIENT_LIST'),
-		    0,1,($after+3)>>2);
-	return undef unless $format;
-	$data .= $value;
-    }
-    return [ unpack('L*',$data) ];
+    return getWMRootPropertyUints($_[0],_WIN_CLIENT_LIST=>$_[1]);
 }
 
-=item $wmh->B<set_WIN_CLIENT_LIST>(I<$clients>,I<$root>)
+sub dmp_WIN_CLIENT_LIST {
+    return dmpWMRootPropertyUints($_[0],_WIN_CLIENT_LIST=>clients=>$_[1]);
+}
+
+=item B<set_WIN_CLIENT_LIST>(I<$X>,I<$clients>)
 
 Sets the C<_WIN_CLIENT_LIST> property to the array referenced by
-I<$clients> on the root window, I<$root>, or when I<$clients> is
-C<undef>, deletes the C<_WIN_CLIENT_LIST> property from the root window,
-I<$root>.  When I<$root> is unspecified, it defaults to C<$X-E<gt>root>.
+I<$clients> on the root window, or when I<$clients> is C<undef>, deletes
+the C<_WIN_CLIENT_LIST> property from the root window.
 
 Only a window manager should set the C<_WIN_CLIENT_LIST> property
 directly in this way.
@@ -323,14 +322,7 @@ directly in this way.
 =cut
 
 sub set_WIN_CLIENT_LIST {
-    my($X,$clients,$root) = @_;
-    $root = $X->root unless $root;
-    return $X->DeleteProperty($root,$X->atom('_WIN_CLIENT_LIST'))
-	unless $clients;
-    $X->ChangeProperty($root,
-	    $X->atom('_WIN_CLIENT_LIST'),
-	    X11::AtomConstants::CARDINAL(), 32,
-	    Replace=>pack('L*',@$clients));
+    return setWMRootPropertyUints($_[0],_WIN_CLIENT_LIST=>$_[1]);
 }
 
 =back
@@ -348,7 +340,7 @@ window should appear.
 
 =cut
 
-=item $wmh->B<get_WIN_WORKSPACE>(I<$window>) =>  I<$workspace>
+=item B<get_WIN_WORKSPACE>(I<$X>,I<$window>) =>  I<$workspace>
 
 Return the C<_WIN_WORKSPACE> property workspace, I<$workspace>, for the
 specified window, I<$window>, or C<undef> when no C<_WIN_WORKSPACE>
@@ -361,17 +353,14 @@ but see also L</_WIN_WORKSPACES>.
 =cut
 
 sub get_WIN_WORKSPACE {
-    my($X,$window) = @_;
-    $window = $X->root unless $window;
-    my($res) = $X->robust_req(
-	    GetProperty=>$window,
-	    $X->atom('_WIN_WORKSPACE'),
-	    0,0,1);
-    return unpack('L',$res->[0]) if ref $res;
-    return undef;
+    return getWMPropertyUint($_[0],$_[1],_WIN_WORKSPACE=>);
 }
 
-=item $wmh->B<set_WIN_WORKSPACE>(I<$window>,I<$workspace>)
+sub dmp_WIN_WORKSPACE {
+    return dmpWMPropertyUint($_[0],_WIN_WORKSPACE=>workspace=>$_[1]);
+}
+
+=item B<set_WIN_WORKSPACE>(I<$X>,I<$window>,I<$workspace>)
 
 Set the C<_WIN_WORKSPACE> property workspace, I<$workspace>, for the
 specified window, I<$window>, or when I<$workspace> is C<undef>, remove
@@ -379,25 +368,18 @@ the C<_WIN_WORKSPACE> property from I<$window>.  I<$workspace>, when
 defined, is the scalar index of the workspace (counting from zero).
 
 The client should only set C<_WIN_WORKSPACE> directly before initially
-mapping a top-level window.  After mapping, chg_WIN_WORKSPACE() should
+mapping a top-level window.  After mapping, req_WIN_WORKSPACE() should
 be used instead.  C<_WIN_WORKSPACE> should only be set on the root
-window by the window manager.  The client should use chg_WIN_WORKSPACE()
+window by the window manager.  The client should use req_WIN_WORKSPACE()
 to request that the window manager change the property.
 
 =cut
 
 sub set_WIN_WORKSPACE {
-    my($X,$window,$workspace) = @_;
-    $window = $X->root unless $window;
-    return $X->DeleteProperty($window,$X->atom('_WIN_WORKSPACE'))
-	unless defined $workspace;
-    $X->ChangeProperty($window,
-	    $X->atom('_WIN_WORKSPACE'),
-	    X11::AtomConstants::CARDINAL(),
-	    32, Replace=>pack('L',$workspace));
+    return setWMPropertyUint($_[0],$_[1],_WIN_WORKSPACE=>CARDINAL=>$_[2]);
 }
 
-=item $wmh->B<chg_WIN_WORKSPACE>(I<$window>,I<$workspace>,I<$timestamp>)
+=item B<req_WIN_WORKSPACE>(I<$X>,I<$window>,I<$workspace>,I<$timestamp>)
 
 Sends a C<_WIN_WORKSPACE> client message to the root window to change
 the workspace, I<$workspace>, for the specified window, I<$window>, with
@@ -407,18 +389,24 @@ I<$timestamp> defaults to C<CurrentTime>.
 
 When a client window is specified for I<$window>, a change to the active
 workspace on which the client window appears is requested, but see also
-L</_WIN_WORKSPACES>.  When a root window is specified for I<$window>, a
-change to the actively displayed workspace is requested.
+L</_WIN_WORKSPACES>.  When a root window is specified for I<$window>, or
+I<$window> is C<None> or C<undef>, a change to the actively displayed
+workspace is requested.
 
 =cut
 
-sub chg_WIN_WORKSPACE {
+sub req_WIN_WORKSPACE {
     my($X,$window,$workspace,$timestamp) = @_;
-    $window = $X->root unless $window;
     $timestamp = 0 unless $timestamp;
     $timestamp = 0 if $timestamp eq 'CurrentTime';
-    $X->WinClientMessage($window,_WIN_WORKSPACE=>
-	    pack('LLxxxxxxxxxxxx',$workspace,$timestamp));
+    WinClientMessage($X,$window,_WIN_WORKSPACE=>[$workspace,$timestamp]);
+}
+
+sub got_WIN_WORKSPACE {
+    my($X,$window,$workspace,$timestamp) = @_;
+    $timestamp = 0 unless defined $timestamp;
+    $timestamp = 'CurrentTime' unless $timestamp;
+    return ($window,$workspace,$timestamp);
 }
 
 =back
@@ -432,22 +420,21 @@ workspaces.
 
 =cut
 
-=item $wmh->B<get_WIN_WORKSPACE_COUNT>(I<$root>) => I<$count> or undef
+=item B<get_WIN_WORKSPACE_COUNT>(I<$X>,I<$root>) => I<$count> or undef
 
 When unspecified, I<$root> defaults to C<$X-E<gt>root>.
 
 =cut
 
 sub get_WIN_WORKSPACE_COUNT {
-    my($X,$root) = @_;
-    $root = $X->root unless $root;
-    my($value,$rtype,$format,$after) =
-	$X->GetProperty($root,$X->atom('_WIN_WORKSPACE_COUNT'),0,0,1);
-    return undef unless $format;
-    return unpack('L',$value);
+    return getWMRootPropertyUint($_[0],_WIN_WORKSPACE_COUNT=>$_[1]);
 }
 
-=item $wmh->B<set_WIN_WORKSPACE_COUNT>(I<$count>,I<$root>)
+sub dmp_WIN_WORKSPACE_COUNT {
+    return dmpWMRootPropertyUint($_[0],_WIN_WORKSPACE_COUNT=>count=>$_[1]);
+}
+
+=item B<set_WIN_WORKSPACE_COUNT>(I<$X>,I<$count>)
 
 Sets the number of workspaces to I<$count>, or when I<$count> is
 undefined, 
@@ -459,15 +446,7 @@ When unspecified, I<$root> defaults to C<$X-E<gt>root>.
 =cut
 
 sub set_WIN_WORKSPACE_COUNT {
-    my ($X,$count,$root) = @_;
-    $root = $X->root unless $root;
-    return $X->DeleteProperty($root,$X->atom('_WIN_WORKSPACE_COUNT'))
-	unless defined $count;
-    return unless $count > 0;
-    $X->ChangeProperty($root,
-	    $X->atom('_WIN_WORKSPACE_COUNT'),
-	    X11::AtomConstants::CARDINAL, 32,
-	    Replace=>pack('L', $count));
+    return setWMRootPropertyUint($_[0],_WIN_WORKSPACE_COUNT=>CARDINAL=>$_[1]);
 }
 
 =back
@@ -481,7 +460,7 @@ each desktop.
 
 =cut
 
-=item $wmh->B<get_WIN_WORKSPACE_NAMES>(I<$root>) => I<$names> or undef
+=item B<get_WIN_WORKSPACE_NAMES>(I<$X>,I<$root>) => I<$names> or undef
 
 Return the workspace names as a reference to a list of name strings, or
 C<undef> if the property does not exist.
@@ -491,13 +470,22 @@ When unspecified, I<$root> defaults to C<$X-E<gt>root>.
 =cut
 
 sub get_WIN_WORKSPACE_NAMES {
-    my($X,$root) = @_;
-    $root = $X->root unless $root;
-    my $text = $X->GetTextProperty($root,'_WIN_WORKSPACE_NAMES',0);
-    return TextPropertyToTextList($text);
+    return getWMRootPropertyTermStrings($_[0],_WIN_WORKSPACE_NAMES=>$_[1]);
 }
 
-=item $wmh->B<set_WIN_WORKSPACE_NAMES>(I<$names>,I<$root>)
+sub dmp_WIN_WORKSPACE_NAMES {
+    my ($X,$names) = @_;
+    return dmpWMRootPropertyDisplay($X,_WIN_WORKSPACE_NAMES=>sub{
+	    my @vals = @$names;
+	    my $i = 0;
+	    while (@vals) {
+		printf "\t%-20s: '%s'\n",'workspace('.$i.')',shift @vals; $i++;
+	    }
+    });
+    return dmpWMRootPropertyTermStrings($_[0],_WIN_WORKSPACE_NAMES=>names=>$_[1]);
+}
+
+=item B<set_WIN_WORKSPACE_NAMES>(I<$X>,I<$names>)
 
 Set the workspace names to the referenced list of names, C<$names>.
 (This simply sets the property and does not send a client message.)
@@ -507,12 +495,7 @@ When unspecified, I<$root> defaults to C<$X-E<gt>root>.
 =cut
 
 sub set_WIN_WORKSPACE_NAMES {
-    my ($X,$names,$root) = @_;
-    $root = $X->root unless $root;
-    return $X->DeleteProperty($root,$X->atom('_WIN_WORKSPACE_NAMES'))
-	unless $names;
-    my $text = TextListToTextProperty($names,'StringStyle');
-    $X->SetTextProperty($root,$text,'_WIN_WORKSPACE_NAMES');
+    return setWMRootPropertyTermStrings($_[0],_WIN_WORKSPACE_NAMES=>COMPOUND_TEXT=>$_[1]);
 }
 
 =back
@@ -542,7 +525,7 @@ containing the following integer valued keys:
 
 =cut
 
-=item $wmh->B<get_WIN_WORKAREA>(I<$root>) => I<$rectangle> or undef
+=item B<get_WIN_WORKAREA>(I<$X>,I<$root>) => I<$rectangle> or undef
 
 Returns the C<_WIN_WORKAREA> property available work area, I<$rectangle>,
 or C<undef> when no such C<_WIN_WORKAREA> property exists on root
@@ -552,23 +535,18 @@ C<$X-E<gt>root>.
 =cut
 
 sub get_WIN_WORKAREA {
-    my($X,$root) = @_;
-    $root = $X->root unless $root;
-    my($value,$rtype,$format,$after) =
-	$X->GetProperty($root,
-		$X->atom('_WIN_WORKAREA'),
-		0,0,4);
-    return undef unless $format;
-    my($minX,$minY,$maxX,$maxY) = unpack('llll',$value);
-    return { minX=>$minX, minY=>$minY, maxX=>$maxX, maxY=>$maxY };
+    return getWMRootPropertyHashUints($_[0],_WIN_WORKAREA=>[qw(minX minY maxX maxY)],$_[1]);
 }
 
-=item $wmh->B<set_WIN_WORKARES>(I<$rectangle>,I<$root>)
+sub dmp_WIN_WORKAREA {
+    return dmpWMRootPropertyHashUints($_[0],_WIN_WORKAREA=>[qw(minX minY maxX maxY)],$_[1]);
+}
+
+=item B<set_WIN_WORKARES>(I<$X>,I<$rectangle>)
 
 Sets the C<_WIN_WORKAREA> available work area to the rectangle,
 I<$rectangle>, or when I<$rectangle> is unspecified, deletes the
-C<_WIN_WORKAREA> property from the root window, I<$root>.  When I<$root>
-is unspecified, it defaults to C<$X-E<gt>root>.
+C<_WIN_WORKAREA> property from the root window, C<$X-E<gt>root>.
 
 Note that the C<_WIN_WORKAREA> property is only set by the window
 manager.
@@ -576,18 +554,7 @@ manager.
 =cut
 
 sub set_WIN_WORKAREA {
-    my($X,$rectangle,$root) = @_;
-    $root = $X->root unless $root;
-    return $X->DeleteProperty($root,$X->atom('_WIN_WORKAREA'))
-	unless $rectangle;
-    $X->ChangeProperty($root,
-	    $X->atom('_WIN_WORKAREA'),
-	    X11::AtomConstants::CARDINAL(), 32,
-	    Replace=>pack('llll',
-		$rectangle->{minX},
-		$rectangle->{minY},
-		$rectangle->{maxX},
-		$rectangle->{maxY}));
+    return setWMRootPropertyHashUints($_[0],_WIN_WORKAREA=>CARDINAL=>[qw(minX maxX minY maxY)],$_[1]);
 }
 
 =back
@@ -609,23 +576,19 @@ This atom is only ever set by the client.
 
 =cut
 
-=item $wmh->B<get_WIN_CLIENT_MOVING>(I<$window>) => I<$bool>
+=item B<get_WIN_CLIENT_MOVING>(I<$X>,I<$window>) => I<$bool>
 
 =cut
 
 sub get_WIN_CLIENT_MOVING {
-    my($X,$window) = @_;
-    my($res) = $X->robust_req(
-	    GetProperty=>$window,
-	    $X->atom('_WIN_CLIENT_MOVING'),
-	    0,0,1);
-    return undef unless ref $res;
-    my($value,$rtype,$format,$after) = @$res;
-    return undef unless $format;
-    return unpack('L',$value);
+    return getWMPropertyUint($_[0],$_[1],'_WIN_CLIENT_MOVING');
 }
 
-=item $wmh->B<set_WIN_CLIENT_MOVING>(I<$window>,I<$bool>)
+sub dmp_WIN_CLIENT_MOVING {
+    return dmpWMPropertyUint($_[0],_WIN_CLIENT_MOVING=>moving=>$_[1]);
+}
+
+=item B<set_WIN_CLIENT_MOVING>(I<$X>,I<$window>,I<$bool>)
 
 Sets the client moving flag to C<$bool> for window, C<$window>, or when
 I<$bool> is undefined, deletes the C<_WIN_CLIENT_MOVING> property from
@@ -634,143 +597,7 @@ the window, I<$window>.
 =cut
 
 sub set_WIN_CLIENT_MOVING {
-    my ($X,$window,$bool) = @_;
-    return $X->robust_req(
-	    DeleteProperty=>$window,
-	    $X->atom('_WIN_CLIENT_MOVING'))
-	unless defined $bool;
-    return $X->robust_req(
-	    ChangeProperty=>$window,
-	    $X->atom('_WIN_CLIENT_MOVING'),
-	    X11::AtomConstants::CARDINAL, 32,
-	    Replace=>pack('L',$bool));
-}
-
-=back
-
-=head3 _ICEWM_TRAY, CARDINAL/32
-
-The C<_ICEWM_TRAY> property contains the tray option associated with a
-client window.  This property can have values as follows:
-
- 0 - ignore     WIN_TRAY_IGNORE
- 1 - minimized  WIN_TRAY_MINIMIZED
- 2 - exclusive  WIN_TRAY_EXCLUSIVE
-
-When set to I<ignore> (0) (default), the window has its window button
-only on TaskPane.  When set to I<mimimized> (1), the window has its icon
-on TrayPane and only has a window button on TaskPane if it is not
-mimimized.  When set to I<exclusive> (2), the window only has its icon
-on the TrayPane and there is no window button on TaskPane.  Note that
-using the "Tray Icon" selection from the window menu, toggles from 0 to
-2 and back again.  The "TrayPane" is on the IceWM panel where the system
-tray is located.  The "TaskPane" is the task bar portion of the IceWM
-panel.
-
-Only the window manager sets this property.  A client wishing to change
-the property must send a C<ClientMessage> to the root window with mask
-C<SubstructureNotifyMask> as follows:
-
- window = window
- message_type = _ICEWM_TRAY
- format = 32
- data.l[0] = tray_opt
- data.l[1] = timestamp
- other data.l[] elements = 0
-
-=head4 Methods
-
-In the following methods, I<$option> is an interpreted scalar value of
-type C<IceWMTray> that can have one of the following interpreted names
-or symbolic constant values:
-
-    Ignore      WIN_TRAY_IGNORE     => 0
-    Minimized   WIN_TRAY_MINIMIZED  => 1
-    Exclusive   WIN_TRAY_EXCLUSIVE  => 2
-
-
-=over
-
-=cut
-
-use constant {
-    IceWMTray => [qw(
-	Ignore
-	Minimized
-	Exclusive
-    )],
-};
-
-use constant {
-    WIN_TRAY_IGNORE	    => 0,
-    WIN_TRAY_MINIMIZED	    => 1,
-    WIN_TRAY_EXCLUSIVE	    => 2,
-};
-
-=item $wmh->B<get_ICEWM_TRAY>(I<$window>) => I<$option>
-
-Returns the C<_ICEWM_TRAY> property tray option, I<$option>, or C<undef>
-when no C<_ICEWM_TRAY> property exists on the window, I<$window>.
-I<$option> is an interpreted scalar value as described above under
-L</_ICEWM_TRAY>.
-
-=cut
-
-sub get_ICEWM_TRAY {
-    my($X,$window) = @_;
-    my($res) = $X->robust_req(
-	    GetProperty=>$window,
-	    $X->atom('_ICEWM_TRAY'),
-	    0,0,1);
-    return undef unless ref $res;
-    my($value,$rtype,$format,$after) = @$res;
-    return undef unless $format;
-    return $X->interp('IceWMTray',unpack('L',$value));
-}
-
-=item $wmh->B<set_ICEWM_TRAY>(I<$window>,I<$option>)
-
-Sets the C<_ICEWM_TRAY> property tray option, I<$option>, for a window,
-I<$window>, or when I<$option> is C<undef>, deletes the C<_ICEWM_TRAY>
-option from I<$window>.  Only the window manager should directly set
-the property in this way.  Clients should use chg_ICEWM_TRAY().
-
-=cut
-
-sub set_ICEWM_TRAY {
-    my($X,$window,$option) = @_;
-    return $X->robust_req(
-	    DeleteProperty=>$window,
-	    $X->atom('_ICEWM_TRAY'))
-	unless defined $option;
-    return $X->robust_req(
-	    ChangeProperty=>$window,
-	    $X->atom('_ICEWM_TRAY'),
-	    X11::AtomConstants::CARDINAL(), 32,
-	    Replace=>pack('L',$X->num('IceWMTray',$option)));
-}
-
-=item $wmh->B<chg_ICEWM_TRAY>(I<$window>,I<$option>,I<$timestamp>)
-
-Sends a client message to the root window, C<$X-E<gt>root>, requesting
-that the tray option for window, I<$window>, be set to the value
-specified by I<$option>.  I<$timestamp> is the X server time of the
-invoking user event, or C<CurrentTime>.  I<$option>, when specified, is
-an interpreted scalar string as described above under L</_ICEWM_TRAY>.
-
-=cut
-
-sub chg_ICEWM_TRAY {
-    my ($X,$window,$option,$timestamp) = @_;
-    return $X->robust_req(
-            DeleteProperty=>$window,
-            $X->atom('_ICEWM_TRAY'))
-        unless defined $option;
-    $option = $X->num('IceWMTray',$option);
-    $timestamp = 0 unless $timestamp;
-    $timestamp = 0 if $timestamp eq 'CurrentTime';
-    $X->WinClientMessage($window,_ICEWM_TRAY=>
-	    pack('LLxxxxxxxxxxxx',$option,$timestamp));
+    return setWMPropertyUint($_[0],$_[1],_WIN_CLIENT_MOVING=>CARDINAL=>$_[2]);
 }
 
 =back
@@ -849,6 +676,7 @@ use constant {
     WIN_STATE_WASHIDDEN		=> (1<<29),
     WIN_STATE_WASMINIMIZED	=> (1<<30),
     WIN_STATE_WITHDRAWN		=> (1<<31),
+
     WindowState => [
 	'Sticky',
 	'Minimized',
@@ -876,11 +704,7 @@ use constant {
     ],
 };
 
-sub _init_WindowState {
-    shift->{ext_const}{WindowState} = WindowState();
-}
-
-=item $wmh->B<get_WIN_STATE>($window) => $state
+=item B<get_WIN_STATE>(I<$X>,I<$window>) => I<$state>
 
 Get the window state, C<$state> associated with a given window,
 C<$window>.  The value is a bitmask that contains the following bit
@@ -912,18 +736,14 @@ defintions:
 =cut
 
 sub get_WIN_STATE {
-    my($X,$window) = @_;
-    my($res) = $X->robust_req(
-	    GetProperty=>$window,
-	    $X->atom('_WIN_STATE'),
-	    0,0,1);
-    return undef unless ref $res;
-    my($value,$rtype,$format,$after) = @$res;
-    return undef unless $format;
-    return $X->interp('WindowState',unpack('L',$value));
+    return getWMPropertyBitnames($_[0],$_[1],_WIN_STATE=>WindowState=>WindowState());
 }
 
-=item $wmh->B<set_WIN_STATE>(I<$window>,I<$state>)
+sub dmp_WIN_STATE {
+    return dmpWMPropertyBitnames($_[0],_WIN_STATE=>state=>$_[1]);
+}
+
+=item B<set_WIN_STATE>(I<$X>,I<$window>,I<$state>)
 
 Sets the C<_WIN_STATE> property state, I<$state>, for the specified
 window, I<$window>, or when I<$state> is C<undef>, deletes the
@@ -931,22 +751,16 @@ C<_WIN_STATE> property from I<$window>.  I<$state>, when defined, is an
 interpreted scalar value as described under L</_WIN_STATE>, above.
 
 The client should only set C<_WIN_STATE> directly before initially
-mapping a top-level window.  After mapping, chg_WIN_STATE() should be
+mapping a top-level window.  After mapping, req_WIN_STATE() should be
 used instead.
 
 =cut
 
 sub set_WIN_STATE {
-    my($X,$window,$state) = @_;
-    return $X->DeleteProperty($window,$X->atom('_WIN_STATE'))
-	unless $defined $state;
-    $X->ChangeProperty($window,
-	    $X->atom('_WIN_STATE'),
-	    X11::AtomConstants::CARDINAL(), 32,
-	    Replace=>pack('L',$X->num('WindowState',$state)));
+    return setWMPropertyBitnames($_[0],$_[1],_WIN_STATE=>CARDINAL=>WindowState=>WindowState(),$_[2]);
 }
 
-=item $wmh->B<chg_WIN_STATE>(I<$window>,I<$toggles>,I<$settings>,I<$timestamp>)
+=item B<req_WIN_STATE>(I<$X>,I<$window>,I<$toggles>,I<$settings>,I<$timestamp>)
 
 Sets the window state for window, C<$window>, using the following client
 message:
@@ -991,12 +805,27 @@ masked bits.
 
 =cut
 
-sub chg_WIN_STATE {
+sub req_WIN_STATE {
     my($X,$window,$toggles,$settings,$timestamp) = @_;
     $timestamp = 0 unless $timestamp;
     $timestamp = 0 if $timestamp eq 'CurrentTime';
-    $X->WinClientMessage($window,_WIN_STATE=>
-	    pack('LLLxxxxxxxx',$toggles,$settings,$timestamp));
+    WinClientMessage($X,$window,_WIN_STATE=>[$toggles,$settings,$timestamp]);
+}
+
+sub event_handler_ClientMessage_WIN_STATE {
+    my($X,$e) = @_;
+    my($window,$toggles,$settings,$timestamp) =
+	$e->{window}, unpack('LLLLL',$e->{data});
+}
+
+sub got_WIN_STATE {
+    my($X,$window,$toggles,$settings,$timestamp) = @_;
+    $toggles = 0 unless $toggles;
+    $toggles = bits2names(WindowState=>WindowState(),$toggles);
+    $settings = 0 unless $settings;
+    $settings = bits2names(WindowState=>WindowState(),$settings);
+    $timestamp = 'CurrentTime' unless $timestamp;
+    return ($window,$toggles,$settings,$timestamp);
 }
 
 =back
@@ -1007,19 +836,27 @@ sub chg_WIN_STATE {
 
 =cut
 
-sub _init_WindowHints {
-    my $X = shift;
-    $X->{ext_const}{WindowHints} = [qw(
-	SkipFocus
-	SkipWinList
-	SkipTaskbar
-	GroupTransient
-	FocusOnClick
-	DoNotCover
-	DockHorizontal)];
-}
+use constant {
+    WIN_HINTS_SKIP_FOCUS	=> (1<<0),
+    WIN_HINTS_SKIP_WINLIST	=> (1<<1),
+    WIN_HINTS_SKIP_TASKBAR	=> (1<<2),
+    WIN_HINTS_GROUP_TRANSIENT	=> (1<<3),
+    WIN_HINTS_FOCUS_ON_CLICK	=> (1<<4),
+    WIN_HINTS_DO_NOT_COVER	=> (1<<5),
+    WIN_HINTS_DOCK_HORIZONTAL	=> (1<<6),
 
-=item $wmh->B<get_WIN_HINTS>($window) => $hints
+    WindowHints=>[qw(
+            SkipFocus
+            SkipWinList
+            SkipTaskbar
+            GroupTransient
+            FocusOnClick
+            DoNotCover
+            DockHorizontal
+            )],
+};
+
+=item B<get_WIN_HINTS>(I<$X>,I<$window>) => I<$hints>
 
 Get the window manager hints associated with a window, C<$window> and
 return them as a scalar integer value.  C<$hints> is a bitmask of zero
@@ -1041,43 +878,22 @@ or more of the following:
 =cut
 
 sub get_WIN_HINTS {
-    my($X,$window) = @_;
-    my($res) = $X->robust_req(
-	    GetProperty=>$window,
-	    $X->atom('_WIN_HINTS'),
-	    0,0,1);
-    return undef unless ref $res;
-    my($value,$rtype,$format,$after) = @$res;
-    return undef unless $format;
-    return { $X->unpack_mask('WindowHints',unpack('L',$value)) };
+    return getWMPropertyBitnames($_[0],$_[1],_WIN_HINTS=>WindowHints=>WindowHints());
 }
 
-use constant {
-    WIN_HINTS_SKIP_FOCUS	=> (1<<0),
-    WIN_HINTS_SKIP_WINLIST	=> (1<<1),
-    WIN_HINTS_SKIP_TASKBAR	=> (1<<2),
-    WIN_HINTS_GROUP_TRANSIENT	=> (1<<3),
-    WIN_HINTS_FOCUS_ON_CLICK	=> (1<<4),
-    WIN_HINTS_DO_NOT_COVER	=> (1<<5),
-    WIN_HINTS_DOCK_HORIZONTAL	=> (1<<6),
-};
+sub dmp_WIN_HINTS {
+    return dmpWMPropertyBitnames($_[0],_WIN_HINTS=>hints=>$_[1]);
+}
 
-=item $wmh->B<set_WIN_HINTS>(I<$window>,I<$hints>)
+=item B<set_WIN_HINTS>(I<$X>,I<$window>,I<$hints>)
 
 =cut
 
 sub set_WIN_HINTS {
-    my($X,$window,$hints) = @_;
-    $hints = 0 unless $hints;
-    $hints = $X->pack_mask(keys %$hints) if ref $hints eq 'HASH';
-    $hints = $X->pack_mask(     @$hints) if ref $hints eq 'ARRAY';
-    $X->ChangeProperty($window,
-	    $X->atom('_WIN_HINTS'),
-	    X11::AtomConstants::CARDINAL(), 32,
-	    Replace=>pack('L',$hints));
+    return setWMPropertyBitnames($_[0],$_[1],_WIN_HINTS=>CARDINAL=>WindowHints=>WindowHints(),$_[2]);
 }
 
-=item $wmh->B<chg_WIN_HINTS>(I<$window>,I<$hints>,I<$timestamp>)
+=item B<req_WIN_HINTS>(I<$X>,I<$window>,I<$hints>,I<$timestamp>)
 
 Sets the window manager hints, C<$hints>, associated with a window,
 C<$window>, using the following client message:
@@ -1106,15 +922,21 @@ C<$window>, using the following client message:
 
 =cut
 
-sub chg_WIN_HINTS {
+sub req_WIN_HINTS {
     my($X,$window,$hints,$timestamp) = @_;
     $timestamp = 0 unless $timestamp;
     $timestamp = 0 if $timestamp eq 'CurrentTime';
     $hints = 0 unless $hints;
-    $hints = $X->pack_mask(keys %$hints) if ref $hints eq 'HASH';
-    $hints = $X->pack_mask(     @$hints) if ref $hints eq 'ARRAY';
-    $X->WinClientMessage($window,_WIN_HINTS=>
-	    pack('LLxxxxxxxxxxxx',$hints,$timestamp));
+    $hints = names2bits(WindowHints=>WindowHints(),$hints);
+    WinClientMessage($X,$window,_WIN_HINTS=>[$hints,$timestamp]);
+}
+
+sub got_WIN_HINTS {
+    my($X,$window,$hints,$timestamp) = @_;
+    $timestamp = 'CurrentTime' unless $timestamp;
+    $hints = 0 unless $hints;
+    $hints = bits2names(WindowHints=>WindowHints(),$hints);
+    return ($window,$hints,$timestamp);
 }
 
 =back
@@ -1161,11 +983,7 @@ use constant {
     ],
 };
 
-sub _init_WindowLayer {
-    shift->{ext_const}{WindowLayer} = WindowLayer();
-}
-
-=item $wmh->B<get_WIN_LAYER>(I<$window>) => I<$layer> or undef
+=item B<get_WIN_LAYER>(I<$X>,I<$window>) => I<$layer> or undef
 
 Return the C<_WIN_LAYER> property layer, I<$layer>, for the specified
 window, I<$window>, or C<undef> when no C<_WIN_LAYER> property exists on
@@ -1175,18 +993,14 @@ described under L</_WIN_LAYER>, above.
 =cut
 
 sub get_WIN_LAYER {
-    my($X,$window) = @_;
-    my($res) = $X->robust_req(
-	    GetProperty=>$window,
-	    $X->atom('_WIN_LAYER'),
-	    0,0,1);
-    return undef unless ref $res;
-    my($value,$rtype,$format,$after) = @$res;
-    return undef unless $format;
-    return $X->interp('WindowLayer', unpack('L',$value));
+    return getWMPropertyInterp($_[0],$_[1],_WIN_LAYER=>WindowLayer=>WindowLayer());
 }
 
-=item $wmh->B<set_WIN_LAYER>(I<$window>,I<$layer>)
+sub dmp_WIN_LAYER {
+    return dmpWMPropertyInterp($_[0],_WIN_LAYER=>layer=>$_[1]);
+}
+
+=item B<set_WIN_LAYER>(I<$X>,I<$window>,I<$layer>)
 
 Sets the C<_WIN_LAYER> property layer, I<$layer>, for the specified
 window, I<$window>, or when I<$layer> is C<undef>, remove the
@@ -1194,22 +1008,16 @@ C<_WIN_LAYER> property from I<$window>.  I<$layer>, when defined, is an
 interpreted scalar value as described under L</_WIN_LAYER>, above.
 
 The client should only set C<_WIN_LAYER> directly before initially
-mapping a top-level window.  After mapping, chg_WIN_LAYER() should be
+mapping a top-level window.  After mapping, req_WIN_LAYER() should be
 used instead.
 
 =cut
 
 sub set_WIN_LAYER {
-    my($X,$window,$layer) = @_;
-    return $X->DeleteProperty($window,$X->atom('_WIN_LAYER'))
-	unless defined $layer;
-    $X->ChangeProperty($window,
-	    $X->atom('_WIN_LAYER'),
-	    X11::AtomConstants::CARDINAL(), 32,
-	    Replace=>pack('L',$X->num('WindowLayer',$layer)));
+    return setWMPropertyInterp($_[0],$_[1],_WIN_LAYER=>WindowLayer=>WindowLayer(),$_[2]);
 }
 
-=item $wmh->B<chg_WIN_LAYER>(I<$window>,I<$layer>,I<$timestamp>)
+=item B<req_WIN_LAYER>(I<$X><I<$window>,I<$layer>,I<$timestamp>)
 
 Sends a C<_WIN_LAYER> client message to the root window to change the
 layer to I<$layer> for window, I<$window>, with the X server time stamp,
@@ -1227,14 +1035,21 @@ values of I<$layer>.
 # xev.data.l[1] = timestamp;
 # XSendEvent(disp, root, False, SubstructureNotifyMask, (XEvent *) &xev);
 
-sub chg_WIN_LAYER {
+sub req_WIN_LAYER {
     my($X,$window,$layer,$timestamp) = @_;
     $layer = 'Normal' unless defined $layer;
-    $layer = $X->num('WindowLayer',$layer);
+    $layer = name2val(WindowLayer=>,WindowLayer(),$layer);
     $timestamp = 0 unless $timestamp;
     $timestamp = 0 if $timestamp eq 'CurrentTime';
-    $X->WinClientMessage($window,_WIN_LAYER=>
-	    pack('LLxxxxxxxxxxxx',$layer,$timestamp));
+    WinClientMessage($X,$window,_WIN_LAYER=>[$layer,$timestamp]);
+}
+
+sub got_WIN_LAYER {
+    my($X,$window,$layer,$timestamp) = @_;
+    $layer = 0 unless $layer;
+    $layer = bits2names(WindowLayer=>WindowLayer(),$layer);
+    $timestamp = 'CurrentTime' unless $timestamp;
+    return ($window,$layer,$timestamp);
 }
 
 =back
@@ -1245,7 +1060,7 @@ sub chg_WIN_LAYER {
 
 =cut
 
-=item $wmh->B<get_WIN_WORKSPACES>(I<$window>) = [ I<@bitmask> ]
+=item B<get_WIN_WORKSPACES>(I<$X>,I<$window>) = [ I<@bitmask> ]
 
 Return a bit mask of the workspaces on which a specified window,
 C<$window> is to appear, or C<undef> if this property is not set on
@@ -1255,70 +1070,47 @@ C<$window>.
 
 sub get_WIN_WORKSPACES { 
     my($X,$window) = @_;
-    my($res) = $X->robust_request(
-	    GetProperty=>$window,
-	    $X->atom('_WIN_WORKSPACES'),
-	    0,0,1);
-    return undef unless ref $res;
-    my($value,$rtype,$format,$again) = @$res;
-    return undef unless $format;
-    if ($after) {
-	($res) = $X->robust_request(
-		GetProperty=>$window,
-		$X->atom('_WIN_WORKSPACES'),
-		0,1,($after+3)>>2);
-	return undef unless ref $res;
-	return undef unless $res->[2];
-	$value .= $res->[0];
-    }
-    my @bits = unpack('L*',$value);
-    my @bitmask = ();
-    my $j=0;
-    foreach my $bits (@bits) {
-	for (my $i=0,$i<32;$i++) {
-	    push @bitmask, $i+$j if $bits & (1<<$i);
-	}
-	$j += 32;
-    }
-    return \@bitmask;
+    return getWMPropertyDecode($X,$window,sub{
+            my $j = 0;
+            my @bits = ();
+            foreach my $bits (unpack('L*',shift)) {
+                for(my $i=0;$i<32;$i++) {
+                    push @bits, $i+$j if $bits & (1<<$i);
+                }
+                $j += 32;
+            }
+            return \@bits;
+    });
 }
 
-=item $wmh->B<set_WIN_WORKSPACES>(I<$window>,I<$bitmask>)
+sub dmp_WIN_WORKSPACES {
+    my($X,$workspaces) = @_;
+    return dmpWMPropertyDisplay($X,_WIN_WORKSPACES=>sub{
+	printf "\t%-20s: %s\n",workspaces=>join(', ',@$workspaces);
+    });
+}
+
+=item B<set_WIN_WORKSPACES>(I<$X>,I<$window>,I<$bitmask>)
 
 =cut
 
 sub set_WIN_WORKSPACES {
     my($X,$window,$bitmask) = @_;
-    return $X->DeleteProperty($window,$X->atom('_WIN_WORKSPACES'))
-	unless defined $bitmask;
-    my @bits = ();
-    if (ref $bitmask eq 'ARRAY') {
-	foreach (@$bitmask) {
-	    my $j = $_ >> 5;
-	    my $k = $_ & 31;
-	    $bits[$j] = 0 unless defined $bits[$j];
-	    $bits[$j] |= (1<<$k);
-	}
-    }
-    elsif (ref $bitmask eq 'HASH') {
-	foreach (keys %$bitmask) {
-	    next unless $bitmask->{$_};
-	    my $j = $_ >> 5;
-	    my $k = $_ & 31;
-	    $bits[$j] = 0 unless defined $bits[$j];
-	    $bits[$j] |= (1<<$k);
-	}
-    }
-    else {
-	$bits[0] = $bitmask;
-    }
-    $X->ChangeProperty($window,
-	    $X->atom('_WIN_WORKSPACES'),
-	    X11::AtomConstants::CARDINAL(), 32,
-	    Replace=>pack('L*',@bits));
+    return setWMPropertyEncode($X,$window,_WIN_WORKSPACES=>sub{
+            my @bits = ();
+            @bits = @$bitmask if ref $bitmask eq 'ARRAY';
+            @bits = map{$bitmask->{$_}?$_:()} keys %$bitmask if ref $bitmask eq 'HASH';
+            my @vals = ();
+            foreach (@bits) {
+                my $j = $_>>5;
+                my $i = $_&31;
+                $vals[$j] |= 1<<$i;
+            }
+            return CARDINAL=>32,pack('L*',@vals);
+    });
 }
 
-=item $wmh->B<chg_WIN_WORKSPACES>(I<$window>,I<$add>,I<$index>,I<$bits>,I<$timestamp>)
+=item B<req_WIN_WORKSPACES>(I<$X>,I<$window>,I<$add>,I<$index>,I<$bits>,I<$timestamp>)
 
 Sets a set of 32 workspaces on which a window, C<$window>, appears.
 C<$add> is true when the workspaces are to be added to the list of
@@ -1340,13 +1132,28 @@ client message:
 
 =cut
 
-sub chg_WIN_WORKSPACES {
-    my ($X,$window,$add,$index,$bits,$timestamp) = @_;
+sub req_WIN_WORKSPACES {
+    my($X,$window,$add,$index,$bits,$timestamp) = @_;
     my $prop = $add ? '_WIN_WORKSPACES_ADD' : '_WIN_WORKSPACES_REMOVE';
     $timestamp = 0 unless $timestamp;
     $timestamp = 0 if $timestamp eq 'CurrentTime';
-    $X->WinClientMessage($window,$prop=>
-	    pack('LLLxxxxxxxx',$index,$bits,$timestamp));
+    WinClientMessage($X,$window,$prop=>[$index,$bits,$timestamp]);
+}
+
+sub got_WIN_WORKSPACES_ADD {
+    my($X,$window,$index,$bits,$timestamp) = @_;
+    $index = 0 unless $index;
+    $bits = 0 unless $bits;
+    $timestamp = 'CurrentTime' unless $timestamp;
+    return ($window,$index,$bits,$timestamp);
+}
+
+sub got_WIN_WORKSPACES_REMOVE {
+    my($X,$window,$index,$bits,$timestamp) = @_;
+    $index = 0 unless $index;
+    $bits = 0 unless $bits;
+    $timestamp = 'CurrentTime' unless $timestamp;
+    return ($window,$index,$bits,$timestamp);
 }
 
 =back
@@ -1383,7 +1190,7 @@ containing the following keys (containing integer values):
 
 =cut
 
-=item $wmh->B<get_WIN_EXPANDED_SIZE>(I<$window>) => I<$geometry>
+=item B<get_WIN_EXPANDED_SIZE>(I<$X>,I<$window>) => I<$geometry>
 
 Gets the expanded size of window, C<$window>, as an array reference to
 the C<$x>, C<$y>, origin and the C<$w> width and C<$h> height.
@@ -1391,41 +1198,21 @@ the C<$x>, C<$y>, origin and the C<$w> width and C<$h> height.
 =cut
 
 sub get_WIN_EXPANDED_SIZE {
-    my($X,$window) = @_;
-    my($res) = $X->robust_req(
-	    GetProperty=>$window,
-	    $X->atom('_WIN_EXPANDED_SIZE'),
-	    0, 0, 4);
-    return undef unless ref $res;
-    my($value,$rtype,$format,$after) = @_;
-    return undef unless $format;
-    my @geom = unpack('LLLL',$value);
-    return { x => $geom[0], y => $geom[1], w => $geom[2], h => $geom[3] };
+    return getWMRootPropertyHashInts($_[0],_WIN_EXPANDED_SIZE=>[qw(x y w h)],$_[1]);
 }
 
-=item $wmh->B<set_WIN_EXPANDED_SIZE>(I<$window>,I<$geometry>)
+sub dmp_WIN_EXPANDED_SIZE {
+    return dmpWMRootPropertyHashInts($_[0],_WIN_EXPANDED_SIZE=>[qw(x y w h)],$_[1]);
+}
+
+=item B<set_WIN_EXPANDED_SIZE>(I<$X>,I<$window>,I<$geometry>)
 
 The C<_WIN_EXPANDED_SIZE> property should only be set by a client.
 
 =cut
 
 sub set_WIN_EXPANDED_SIZE {
-    my($X,$window,$geometry) = @_;
-    return $X->DeleteProperty($window,$X->atom('_WIN_EXPANDED_SIZE'))
-	unless $geometry;
-    $geometry = {} unless $geometry;
-    $geometry->{x} = 0 unless $geometry->{x};
-    $geometry->{y} = 0 unless $geometry->{y};
-    $geometry->{w} = 0 unless $geometry->{w};
-    $geometry->{h} = 0 unless $geometry->{h};
-    $X->ChangeProperty($window,
-	    $X->atom('_WIN_EXPANDED_SIZE'),
-	    X11::AtomConstants::CARDINAL(), 32,
-	    Replace=>pack('LLLL',
-		$geometry->{x},
-		$geometry->{y},
-		$geometry->{w},
-		$geometry->{h}));
+    return setWMRootPropertyHashInts($_[0],_WIN_EXPANDED_SIZE=>CARDINAL=>[qw(x y w h)],$_[1]);
 }
 
 =back
@@ -1441,12 +1228,22 @@ required.
 
 =cut
 
-=item $wmh->B<get_WIN_ICONS>($window) => [ $n, $length, ( $pixmap, $mask, $width, $height, $depth, $drawable ) ]
+=item B<get_WIN_ICONS>(I<$X>,I<$window>) => [ $n, $length, ( $pixmap, $mask, $width, $height, $depth, $drawable ) ]
 
 =cut
 
 sub get_WIN_ICONS {
-    return $_[0]->getWMPropertyInts($_[1], '_WIN_ICONS');
+    return getWMPropertyUints($_[0],$_[1],_WIN_ICONS=>);
+}
+
+sub dmp_WIN_ICONS {
+    return dmpWMPropertyUints($_[0],_WIN_ICONS=>icons=>$_[1]);
+}
+
+=item B<set_WIN_ICONS>(I<$X>,I<$window>,I<$icons>)
+
+sub set_WIND_ICONS {
+    return setWMPropertyUints($_[0],$_[1],_WIN_ICONS=>$_[2]);
 }
 
 =back
@@ -1613,34 +1410,24 @@ use constant {
     WIN_APP_STATE_PERCENT100_2         =>44,
 };
 
-=item $wmh->B<get_WIN_APP_STATE>(I<$window>) => I<$state> or undef
+=item B<get_WIN_APP_STATE>(I<$X>,I<$window>) => I<$state> or undef
 
 =cut
 
 sub get_WIN_APP_STATE {
-    my($X,$window) = @_;
-    my($res) = $X->robust_req(
-	    GetProperty=>$window,
-	    $X->atom('_WIN_APP_STATE'),
-	    0, 0, 1);
-    return undef unless ref $res;
-    my($value,$rtype,$format,$after) = @$res;
-    return undef unless $format;
-    return $X->interp(WindowAppState=>unpack('L',$value));
+    return getWMPropertyInterp($_[0],$_[1],_WIN_APP_STATE=>WindowAppState=>WindowAppState());
 }
 
-=item $wmh->B<set_WIN_APP_STATE>(I<$window>,I<$state>)
+sub dmp_WIN_APP_STATE {
+    return dmpWMPropertyInterp($_[0],_WIN_APP_STATE=>state=>$_[1]);
+}
+
+=item B<set_WIN_APP_STATE>(I<$X>,I<$window>,I<$state>)
 
 =cut
 
 sub set_WIN_APP_STATE {
-    my($X,$window,$state) = @_;
-    return $X->DeleteProperty($window,$X->atom('_WIN_APP_STATE'))
-	unless defined $state;
-    $X->ChangeProperty($window,
-	    $X->atom('_WIN_APP_STATE'),
-	    X11::AtomConstants::CARDINAL(), 32,
-	    Replace=>pack('L',$X->num(WindowAppState=>$state)));
+    return setWMPropertyInterp($_[0],$_[1],_WIN_APP_STATE=>WindowAppState=>WindowAppState(),$_[2]);
 }
 
 =back
@@ -1775,40 +1562,31 @@ contents are of type C<WINDOW>.
 
 =cut
 
-=item $wmh->B<get_WIN_DESKTOP_BUTTON_PROXY>() => $window
+=item B<get_WIN_DESKTOP_BUTTON_PROXY>(I<$X>,I<$root>) => I<$proxy>
 
-Gets the window, I<$window>, acting as the desktop button proxy, or
+Gets the window, I<$proxy>, acting as the desktop button proxy, or
 C<undef> if no such window exists.
 
 =cut
 
 sub get_WIN_DESKTOP_BUTTON_PROXY {
-    my($X,$root) = @_;
-    $root = $X->root unless $root;
-    my($value,$rtype,$format,$after) =
-	$X->GetProperty($root,
-		$X->atom('_WIN_DESKTOP_BUTTON_PROXY'),
-		0, 0, 1);
-    return undef unless $format;
-    return unpack('L', $value);
+    return getWMRootPropertyUint($_[0],_WIN_DESKTOP_BUTTON_PROXY=>$_[1]);
 }
 
-=item $wmh->B<get_WIN_DESKTOP_BUTTON_PROXY>(I<$window>)
+sub dmp_WIN_DESKTOP_BUTTON_PROXY {
+    return dmpWMRootPropertyUint($_[0],_WIN_DESKTOP_BUTTON_PROXY=>proxy=>$_[1]);
+}
 
-Sets the window, I<$window>, acting as the desktop button proxy, or,
-when I<$window> is C<undef>, deletes the C<_WIN_DESKTOP_BUTTON_PROXY>
+=item B<get_WIN_DESKTOP_BUTTON_PROXY>(I<$X>,I<$proxy>)
+
+Sets the window, I<$proxy>, acting as the desktop button proxy, or,
+when I<$proxy> is C<undef>, deletes the C<_WIN_DESKTOP_BUTTON_PROXY>
 property from the root window.
 
 =cut
 
 sub set_WIN_DESKTOP_BUTTON_PROXY {
-    my($X,$proxy) = @_;
-    return $X->DeleteProperty($X->root,$X->atom('_WIN_DESKTOP_BUTTON_PROXY'))
-	unless $proxy;
-    $X->ChangeProperty($X->root,
-	    $X->atom('_WIN_DESKTOP_BUTTON_PROXY'),
-	    X11::AtomConstants::CARDINAL(), 32,
-	    Replace=>pack('L',$proxy));
+    return setWMRootPropertyUint($_[0],_WIN_DESKTOP_BUTTON_PROXY=>CARDINAL=>$_[1]);
 }
 
 =back
@@ -1853,7 +1631,7 @@ set an atom on the root window as follows:
 
 =cut
 
-=item $wmh->B<get_WIN_AREA_COUNT> => [ $cols, $rows ]
+=item B<get_WIN_AREA_COUNT>(I<$X>,I<$root>) => I<$count>
 
 Get the number of columns and rows of screens provided by the large
 desktop area.  When large desktops are not supported, this value will be
@@ -1862,19 +1640,14 @@ desktop area.  When large desktops are not supported, this value will be
 =cut
 
 sub get_WIN_AREA_COUNT {
-    my($X,$root) = @_;
-    $root = $X->root unless $root;
-    my($res) = $X->robust_req(
-	    GetProperty=>$root,
-	    $X->atom('_WIN_AREA_COUNT'),
-	    0,0,1);
-    return undef unless ref $res;
-    my($value,$rtype,$format,$after) = @$res;
-    return undef unless $format;
-    return [ unpack('LL',$value) ];
+    return getWMRootPropertyUints($_[0],_WIN_AREA_COUNT=>$_[1]);
 }
 
-=item $wmh->B<set_WIN_AREA_COUNT>($cols,$rows)
+sub dmp_WIN_AREA_COUNT {
+    return dmpWMRootPropertyUints($_[0],_WIN_AREA_COUNT=>'cols, rows',$_[1]);
+}
+
+=item B<set_WIN_AREA_COUNT>(I<$X>,I<$cols>,I<$rows>)
 
 Set the number of columns and rows of screens provided by the large
 desktop area.  When large desktops are not supported, this value will
@@ -1883,11 +1656,7 @@ always be (1,1).
 =cut
 
 sub set_WIN_AREA_COUNT {
-    my ($X,$cols,$rows) = @_;
-    $X->ChangeProperty($X->root,
-	    $X->atom('_WIN_AREA_COUNT'),
-	    X11::AtomConstants::CARDINAL(), 32,
-	    Replace=>pack('LL', $cols, $rows));
+    return setWMRootPropertyUints($_[0],_WIN_AREA_COUNT=>$_[1]);
 }
 
 =back
@@ -1926,7 +1695,7 @@ client message like:
 
 =cut
 
-=item $wmh->B<get_WIN_AREA> => [ $col, $row ]
+=item B<get_WIN_AREA>(I<$X>,I<$root>) => [ $col, $row ]
 
 Return the current workspace area as a column index (starting at zero
 0), C<$col>, and a row index (starting at 0), C<$row>.  Returns the
@@ -1935,33 +1704,22 @@ current area as an array reference.
 =cut
 
 sub get_WIN_AREA {
-    my($X,$root) = @_;
-    $root = $X->root unless $root;
-    my($res) = $X->robust_req(
-	    GetProperty=>$root,
-	    $X->atom('_WIN_AREA'),
-	    0,0,2);
-    return undef unless ref $res;
-    my($value,$rtype,$format,$after) = @$res;
-    return [ 0, 0 ] unless $format;
-    return [ unpack('LL',$value) ];
+    return getWMRootPropertyUints($_[0],_WIN_AREA=>$_[1]);
 }
 
-=item $wmh->B<set_WIN_AREA>(I<$area>)
+sub dmp_WIN_AREA {
+    return dmpWMRootPropertyUints($_[0],_WIN_AREA=>'cols, rows',$_[1]);
+}
+
+=item B<set_WIN_AREA>(I<$X>,I<$area>)
 
 =cut
 
 sub set_WIN_AREA {
-    my($X,$area) = @_;
-    return $X->DeleteProperty($X->root,$X->atom('_WIN_AREA'))
-	unless $area;
-    $X->ChangeProperty($X->root,
-	    $X->atom('_WIN_AREA'),
-	    X11::AtomConstants::CARDINAL(), 32,
-	    Replace=>pack('LL', @$area));
+    return setWMRootPropertyUints($_[0],_WIN_AREA=>$_[1]);
 }
 
-=item $wmh->B<chg_WIN_AREA>(I<$col>,I<$row>,I<$timestamp>)
+=item B<req_WIN_AREA>(I<$X>,I<$col>,I<$row>,I<$timestamp>)
 
 Sets the active area within the workspace to the area starting at index,
 C<$col>, C<$row> using the following client message:
@@ -1976,12 +1734,17 @@ C<$col>, C<$row> using the following client message:
 
 =cut
 
-sub chg_WIN_AREA {
+sub req_WIN_AREA {
     my($X,$col,$row,$timestamp) = @_;
     $timestamp = 0 unless $timestamp;
     $timestamp = 0 if $timestamp eq 'CurrentTime';
-    $X->WinClientMessage(0,_WIN_AREA=>
-	    pack('LLLxxxxxxxx',$col,$row,$timestamp));
+    WinClientMessage($X,$X->root,_WIN_AREA=>[$col,$row,$timestamp]);
+}
+
+sub got_WIN_AREA {
+    my($X,$window,$col,$row,$timestamp) = @_;
+    $timestamp = 'CurrentTime' unless $timestamp;
+    return ($window,$col,$row,$timestamp);
 }
 
 =back

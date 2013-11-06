@@ -1,11 +1,180 @@
 package X11::Protocol::EWMH;
-use base qw(X11::Protocol::ICCCM);
+use X11::Protocol::Util  qw(:all);
+use X11::Protocol::ICCCM qw(:all);
 use X11::Protocol;
-use X11::AtomConstants;
 use strict;
 use warnings;
-use vars '$VERSION';
+use vars '$VERSION', '@ISA', '@EXPORT_OK', '%EXPORT_TAGS';
 $VERSION = 0.01;
+@ISA = ('Exporter');
+
+%EXPORT_TAGS = (
+    all => [qw(
+	NetClientMessage
+	get_NET_SUPPORTED
+	dmp_NET_SUPPORTED
+	set_NET_SUPPORTED
+	get_NET_CLIENT_LIST
+	dmp_NET_CLIENT_LIST
+	set_NET_CLIENT_LIST
+	get_NET_CLIENT_LIST_STACKING
+	dmp_NET_CLIENT_LIST_STACKING
+	set_NET_CLIENT_LIST_STACKING
+	get_NET_NUMBER_OF_DESKTOPS
+	dmp_NET_NUMBER_OF_DESKTOPS
+	set_NET_NUMBER_OF_DESKTOPS
+	req_NET_NUMBER_OF_DESKTOPS
+	got_NET_NUMBER_OF_DESKTOPS
+	get_NET_DESKTOP_GEOMETRY
+	dmp_NET_DESKTOP_GEOMETRY
+	set_NET_DESKTOP_GEOMETRY
+	req_NET_DESKTOP_GEOMETRY
+	got_NET_DESKTOP_GEOMETRY
+	get_NET_DESKTOP_VIEWPORT
+	dmp_NET_DESKTOP_VIEWPORT
+	set_NET_DESKTOP_VIEWPORT
+	req_NET_DESKTOP_VIEWPORT
+	got_NET_DESKTOP_VIEWPORT
+	get_NET_CURRENT_DESKTOP
+	dmp_NET_CURRENT_DESKTOP
+	set_NET_CURRENT_DESKTOP
+	req_NET_CURRENT_DESKTOP
+	got_NET_CURRENT_DESKTOP
+	get_NET_DESKTOP_NAMES
+	dmp_NET_DESKTOP_NAMES
+	set_NET_DESKTOP_NAMES
+	req_NET_DESKTOP_NAMES
+	get_NET_ACTIVE_WINDOW
+	dmp_NET_ACTIVE_WINDOW
+	set_NET_ACTIVE_WINDOW
+	req_NET_ACTIVE_WINDOW
+	got_NET_ACTIVE_WINDOW
+	get_NET_WORKAREA
+	dmp_NET_WORKAREA
+	set_NET_WORKAREA
+	req_NET_WORKAREA
+	get_NET_SUPPORTING_WM_CHECK
+	dmp_NET_SUPPORTING_WM_CHECK
+	set_NET_SUPPORTING_WM_CHECK
+	get_NET_VIRTUAL_ROOTS
+	dmp_NET_VIRTUAL_ROOTS
+	set_NET_VIRTUAL_ROOTS
+	get_NET_DESKTOP_LAYOUT
+	dmp_NET_DESKTOP_LAYOUT
+	set_NET_DESKTOP_LAYOUT
+	get_NET_SHOWING_DESKTOP
+	dmp_NET_SHOWING_DESKTOP
+	set_NET_SHOWING_DESKTOP
+	req_NET_SHOWING_DESKTOP
+	got_NET_SHOWING_DESKTOP
+	req_NET_CLOSE_WINDOW
+	got_NET_CLOSE_WINDOW
+	req_NET_MOVERESIZE_WINDOW
+	got_NET_MOVERESIZE_WINDOW
+	req_NET_WM_MOVERESIZE
+	got_NET_WM_MOVERESIZE
+	req_NET_RESTACK_WINDOW
+	got_NET_RESTACK_WINDOW
+	req_NET_REQUEST_FRAME_EXTENTS
+	got_NET_REQUEST_FRAME_EXTENTS
+	get_NET_WM_NAME
+	dmp_NET_WM_NAME
+	set_NET_WM_NAME
+	get_NET_WM_VISIBLE_NAME
+	dmp_NET_WM_VISIBLE_NAME
+	set_NET_WM_VISIBLE_NAME
+	get_NET_WM_ICON_NAME
+	dmp_NET_WM_ICON_NAME
+	set_NET_WM_ICON_NAME
+	get_NET_WM_VISIBLE_ICON_NAME
+	dmp_NET_WM_VISIBLE_ICON_NAME
+	set_NET_WM_VISIBLE_ICON_NAME
+	get_NET_WM_ICON_VISIBLE_NAME
+	dmp_NET_WM_ICON_VISIBLE_NAME
+	set_NET_WM_ICON_VISIBLE_NAME
+	get_NET_WM_DESKTOP
+	dmp_NET_WM_DESKTOP
+	set_NET_WM_DESKTOP
+	req_NET_WM_DESKTOP
+	got_NET_WM_DESKTOP
+	get_NET_WM_WINDOW_TYPE
+	dmp_NET_WM_WINDOW_TYPE
+	set_NET_WM_WINDOW_TYPE
+	get_NET_WM_STATE
+	dmp_NET_WM_STATE
+	set_NET_WM_STATE
+	req_NET_WM_STATE
+	get_NET_WM_ALLOWED_ACTIONS
+	dmp_NET_WM_ALLOWED_ACTIONS
+	set_NET_WM_ALLOWED_ACTIONS
+	get_NET_WM_STRUT
+	dmp_NET_WM_STRUT
+	set_NET_WM_STRUT
+	get_NET_WM_STRUT_PARTIAL
+	dmp_NET_WM_STRUT_PARTIAL
+	set_NET_WM_STRUT_PARTIAL
+	get_NET_WM_ICON_GEOMETRY
+	dmp_NET_WM_ICON_GEOMETRY
+	set_NET_WM_ICON_GEOMETRY
+	get_NET_WM_ICON
+	dmp_NET_WM_ICON
+	set_NET_WM_ICON
+	get_NET_WM_PID
+	dmp_NET_WM_PID
+	set_NET_WM_PID
+	get_NET_WM_HANDLED_ICONS
+	dmp_NET_WM_HANDLED_ICONS
+	set_NET_WM_HANDLED_ICONS
+	get_NET_WM_USER_TIME
+	dmp_NET_WM_USER_TIME
+	set_NET_WM_USER_TIME
+	get_NET_WM_USER_TIME_WINDOW
+	dmp_NET_WM_USER_TIME_WINDOW
+	set_NET_WM_USER_TIME_WINDOW
+	get_NET_FRAME_EXTENTS
+	dmp_NET_FRAME_EXTENTS
+	set_NET_FRAME_EXTENTS
+	get_NET_WM_OPAQUE_REGION
+	dmp_NET_WM_OPAQUE_REGION
+	set_NET_WM_OPAQUE_REGION
+	get_NET_WM_BYPASS_COMPOSITOR
+	dmp_NET_WM_BYPASS_COMPOSITOR
+	set_NET_WM_BYPASS_COMPOSITOR
+	get_NET_WM_FULLSCREEN_MONITORS
+	dmp_NET_WM_FULLSCREEN_MONITORS
+	set_NET_WM_FULLSCREEN_MONITORS
+	req_NET_WM_FULLSCREEN_MONITORS
+	get_NET_WM_WINDOW_OPACITY
+	dmp_NET_WM_WINDOW_OPACITY
+	set_NET_WM_WINDOW_OPACITY
+	get_NET_WM_SYNC_REQUEST_COUNTER
+	dmp_NET_WM_SYNC_REQUEST_COUNTER
+	set_NET_WM_SYNC_REQUEST_COUNTER
+	get_NET_DESKTOP_PIXMAPS
+	dmp_NET_DESKTOP_PIXMAPS
+	set_NET_DESKTOP_PIXMAPS
+	get_NET_SYSTEM_TRAY_ORIENTATION
+	dmp_NET_SYSTEM_TRAY_ORIENTATION
+	set_NET_SYSTEM_TRAY_ORIENTATION
+	get_NET_SYSTEM_TRAY_VISUAL
+	dmp_NET_SYSTEM_TRAY_VISUAL
+	set_NET_SYSTEM_TRAY_VISUAL
+	get_XEMBED_INFO
+	dmp_XEMBED_INFO
+	set_XEMBED_INFO
+    )],
+    req => [qw(
+	NetClientMessage
+    )],
+);
+
+
+foreach my $pfx (qw(get set dmp req)) {
+    push @{$EXPORT_TAGS{$pfx}},
+	 grep {/^$pfx/} @{$EXPORT_TAGS{all}};
+}
+
+Exporter::export_ok_tags('all');
 
 =head1 NAME
 
@@ -17,7 +186,7 @@ X11::Protocol::EWMH -- provide methods for controlling enhanced window manager h
 
  my $ewmh = X11::Protocol::EWMH->new();
 
- $ewmh->set_NET_DESKTOP_VIEWPORT(0,1);
+ $ewmh->req_NET_DESKTOP_VIEWPORT(0,1);
 
 =head1 DESCRIPTION
 
@@ -28,20 +197,19 @@ compliant window manager.
 
 The following methods are provided by this module:
 
-=cut
+=over
 
-sub new {
-    my $X = X11::Protocol::WMH->new(@_);
-    if ($X) {
-	$X->_init_NetLayer;
-	# FIXME: more
-    }
-    return $X;
-}
+=item B<NetClientMessage>(I<$X>,I<$window>,I<$type>,I<$data>)
+
+=cut
 
 sub NetClientMessage {
     my($X,$window,$type,$data) = @_;
+    $window = 0 unless defined $window;
+    $window = 0 if $window eq 'None';
     $window = $X->root unless $window;
+    $type = ($type =~ m{^\d+$}) ? $type : $X->atom($type);
+    $data = pack('LLLLL',@$data) if ref $data eq 'ARRAY';
     $X->SendEvent($X->root, 0,
 	    $X->pack_event_mask(qw(
 		    SubstructureNotify
@@ -49,10 +217,20 @@ sub NetClientMessage {
 	    $X->pack_event(
 		name => 'ClientMessage',
 		window => $window,
-		type => $X->atom($type),
+		type => $type,
 		format => 32,
 		data => $data));
 }
+
+use constant {
+    _NET_SOURCE_UNSPECIFIED => 0,
+    _NET_SOURCE_APPLICATION => 1,
+    _NET_SOURCE_PAGER	    => 2,
+
+    NetSource => [qw(Unspecified Application Pager)],
+};
+
+=back
 
 =head2 Root window properties (and related messages)
 
@@ -83,15 +261,36 @@ unnecessary.
 
 =cut
 
-=item $ewmh->B<get_NET_SUPPORTED>() => { map{$_=>1} @names }
+=item B<get_NET_SUPPORTED>(I<$X>,I<$root>) => I<$names> or undef
 
 Returns a reference to a hash with each existing index reflecting the
-name of a supported atom.
+name of a supported atom and a value of 1.
+Returns C<undef> when no C<_NET_SUPPORTED> property exists on I<$root>.
+I<$root> defaults to C<$X-E<gt>root>.
 
 =cut
 
 sub get_NET_SUPPORTED {
-    return shift->getWMRootPropertyAtoms('_NET_SUPPORTED');
+    return getWMRootPropertyAtoms($_[0],_NET_SUPPORTED=>$_[1]);
+}
+
+sub dmp_NET_SUPPORTED {
+    return dmpWMRootPropertyAtoms($_[0],_NET_SUPPORTED=>supported=>$_[1]);
+}
+
+=item B<set_NET_SUPPORTED>(I<$X>,I<$names>)
+
+Sets the supported atoms to I<$names>.  I<$names> can be C<undef>, in
+which case the C<_NET_SUPPORTED> property will be deleted; a hash
+reference, in which case the atom names or numbers are the keys in the
+hash with true values; or an array reference to a list of atom names or
+numbers.
+The C<_NET_SUPPORTED> property should only be set directly by a window manager.
+
+=cut
+
+sub set_NET_SUPPORTED {
+    return setWMRootPropertyAtoms($_[0],_NET_SUPPORTED=>$_[1]);
 }
 
 =back
@@ -107,26 +306,56 @@ These properties SHOULD be set and updated by the Window Manager.
 
 =cut
 
-=item $ewmh->B<get_NET_CLIENT_LIST>() => [ @windows ]
+=item B<get_NET_CLIENT_LIST>(I<$X>,I<$root>) => I<$windows> or undef
 
-Get the array reference to an array of clients (XID numbers) and store
-it in C<$ewmh-E<gt>{_NET_CLIENT_LIST}>.
+Returns the array reference to an array of clients (XID numbers).
+Returns C<undef> when no C<_NET_CLIENT_LIST> property exists on I<$root>.
+I<$root> defaults to C<$X-E<gt>root>.
 
 =cut
 
 sub get_NET_CLIENT_LIST {
-    return shift->getWMRootPropertyInts('_NET_CLIENT_LIST');
+    return getWMRootPropertyUints($_[0],_NET_CLIENT_LIST=>$_[1]);
 }
 
-=item $ewmh->B<get_NET_CLIENT_LIST_STACKING>() => [ @windows ]
+sub dmp_NET_CLIENT_LIST {
+    return dmpWMRootPropertyUints($_[0],_NET_CLIENT_LIST=>clients=>$_[1]);
+}
 
-Get the array reference to an array of clients (XID numbers) and store it
-in C<$ewmh-E<gt>{_NET_CLIENT_LIST}>.
+=item B<set_NET_CLIENT_LIST>(I<$X>,I<$windows>)
+
+The C<_NET_CLIENT_LIST> property should only be set directly by a window manager.
+
+=cut
+
+sub set_NET_CLIENT_LIST {
+    return setWMRootPropertyUints($_[0],_NET_CLIENT_LIST=>WINDOW=>$_[1]);
+}
+
+=item B<get_NET_CLIENT_LIST_STACKING>(I<$X>,I<$root>) => I<$windows> or undef
+
+Returns an array reference to an array of clients (XID numbers).
+Returns C<undef> when no C<_NET_CLIENT_LIST_STACKING> property exists on I<$root>.
+I<$root> defaults to C<$X-E<gt>root>.
 
 =cut
 
 sub get_NET_CLIENT_LIST_STACKING {
-    return shift->getWMRootPropertyInts('_NET_CLIENT_LIST_STACKING');
+    return getWMRootPropertyUints($_[0],_NET_CLIENT_LIST_STACKING=>$_[1]);
+}
+
+sub dmp_NET_CLIENT_LIST_STACKING {
+    return dmpWMRootPropertyUints($_[0],_NET_CLIENT_LIST_STACKING=>clients=>$_[1]);
+}
+
+=item B<set_NET_CLIENT_LIST_STACKING>(I<$X>,I<$windows>)
+
+The C<_NET_CLIENT_LIST_STACKING> property should only be set directly by a window manager.
+
+=cut
+
+sub set_NET_CLIENT_LIST_STACKING {
+    return setWMRootPropertyUints($_[0],_NET_CLIENT_LIST_STACKING=>WINDOW=>$_[1]);
 }
 
 =back
@@ -163,7 +392,7 @@ updated.
 
 =cut
 
-=item $ewmh->B<get_NET_NUMBER_OF_DESKTOPS>() => $desktops
+=item B<get_NET_NUMBER_OF_DESKTOPS>(I<$X>,I<$root>) => I<$desktops>
 
 Returns the number of desktops specified by the root window property,
 C<$desktops>, or C<undef> when no root window property exists.
@@ -171,13 +400,24 @@ C<$desktops>, or C<undef> when no root window property exists.
 =cut
 
 sub get_NET_NUMBER_OF_DESKTOPS {
-    my $self = shift;
-    my $value = $self->getWMRootPropertyInt('_NET_NUMBER_OF_DESKTOPS');
-    $value = 1 unless $value;
-    return $value;
+    return getWMRootPropertyUint($_[0],_NET_NUMBER_OF_DESKTOPS=>$_[1]);
 }
 
-=item $ewmh->B<set_NET_NUMBER_OF_DESKTOPS>($desktops)
+sub dmp_NET_NUMBER_OF_DESKTOPS {
+    return dmpWMRootPropertyUint($_[0],_NET_NUMBER_OF_DESKTOPS=>number=>$_[1]);
+}
+
+=item B<set_NET_NUMBER_OF_DESKTOPS>(I<$X>,I<$desktops>)
+
+The C<_NET_NuMBER_OF_DESKTOPS> property should only be set directly by a window manager.
+
+=cut
+
+sub set_NET_NUMBER_OF_DESKTOPS {
+    return setWMRootPropertyUint($_[0],_NET_NUMBER_OF_DESKTOPS=>$_[1]);
+}
+
+=item B<req_NET_NUMBER_OF_DESKTOPS>(I<$X>,I<$desktops>)
 
 Sets the number of desktops, C<$desktops>, using the following client
 message:
@@ -195,10 +435,14 @@ message:
 
 =cut
 
-sub set_NET_NUMBER_OF_DESKTOPS {
-    my ($self,$desktops) = @_;
-    $self->NetClientMessage(0,_NET_NUMBER_OF_DESKTOPS=>
-	    pack('LLLLL',$desktops,0,0,0,0));
+sub req_NET_NUMBER_OF_DESKTOPS {
+    my ($X,$desktops) = @_;
+    NetClientMessage($X,$X->root,_NET_NUMBER_OF_DESKTOPS=>[$desktops]);
+}
+
+sub got_NET_NUMBER_OF_DESKTOPS {
+    my($X,$window,$desktops) = @_;
+    return ($window,$desktops);
 }
 
 =back
@@ -239,7 +483,7 @@ the screen size when this property is not set.
 
 =cut
 
-=item $ewmh->B<get_NET_DESKTOP_GEOMETRY>() => [ $width, $height ]
+=item B<get_NET_DESKTOP_GEOMETRY>(I<$X>,I<$root>) => I<$geometry>
 
 Returns the desktop geometry as a reference to a list of desktop width
 and height in pixels, or C<undef> if the property does not exist on the
@@ -248,16 +492,31 @@ root window.
 =cut
 
 sub get_NET_DESKTOP_GEOMETRY {
-    my $self = shift;
-    my $value = $self->getWMRootPropertyInts('_NET_DESKTOP_GEOMETRY');
-    unless ($value) {
-	$value = [ $self->width_in_pixels, $self->height_in_pixels ];
-	$self->{_NET_DESKTOP_GEOMETRY} = $value;
-    }
-    return $value;
+    return getWMRootPropertyUints($_[0],_NET_DESKTOP_GEOMETRY=>$_[1]);
 }
 
-=item $ewmh->B<set_NET_DESKTOP_GEOMETRY>($w,$h)
+sub dmp_NET_DESKTOP_GEOMETRY {
+    my($X,$geometry) = @_;
+    return dmpWMRootPropertyDisplay($X,_NET_DESKTOP_GEOMETRY=>sub{
+	my @vals = @$geometry;
+	my $i = 0;
+	while (@vals) {
+	    printf "\t%-20s: (%d,%d)\n",'desktop('.$i.')',shift @vals,shift @vals; $i++;
+	}
+    });
+}
+
+=item B<set_NET_DESKTOP_GEOMETRY>(I<$X>,I<$geometry>)
+
+The C<_NET_DESKTOP_GEOMETRY> property should only be set directly by a window manager.
+
+=cut
+
+sub set_NET_DESKTOP_GEOMETRY {
+    return setWMRootPropertyUints($_[0],_NET_DESKTOP_GEOMETRY=>CARDINAL=>$_[1]);
+}
+
+=item B<req_NET_DESKTOP_GEOMETRY>(I<$X>,I<$w>,I<$h>)
 
 Sets the desktop geometry to th specified width, C<$w>, and height,
 C<$h> using the following client message:
@@ -271,10 +530,14 @@ C<$h> using the following client message:
 
 =cut
 
-sub set_NET_DESKTOP_GEOMETRY {
-    my ($self, $w, $h) = @_;
-    $self->NetClientMessage(0,_NET_DESKTOP_GEOMETRY=>
-	    pack('LLLLL',$w,$h,0,0,0));
+sub req_NET_DESKTOP_GEOMETRY {
+    my ($X, $w, $h) = @_;
+    NetClientMessage($X,$X->root,_NET_DESKTOP_GEOMETRY=>[$w,$h]);
+}
+
+sub got_NET_DESKTOP_GEOMETRY {
+    my($X,$window,$w,$h) = @_;
+    return ($window,$w,$h);
 }
 
 =back
@@ -340,7 +603,7 @@ _NET_DESKTOP_VIEWPORT property will remain unchanged.
 
 =cut
 
-=item $ewmh->B<get_NET_DESKTOP_VIEWPORT>() => [ $vx, $vy ]
+=item B<get_NET_DESKTOP_VIEWPORT>(I<$X>,I<$root>) => I<$viewport>
 
 Returns the desktop viewport as a reference to a list of x and y
 coordinats (C<$vx> and C<$vy>), or C<undef> if no such property exists
@@ -349,28 +612,42 @@ on the root window.
 =cut
 
 sub get_NET_DESKTOP_VIEWPORT {
-    my $self = shift;
-    my $value = $self->getWMRootPropertyInts('_NET_DESKTOP_VIEWPORT');
-    # window managers are very inconsistent about their treatment of
-    # this property, so we need to make some corrections.
-    my $n = $self->{_NET_NUMBER_OF_DESKTOPS};
-    $n = $self->get_NET_NUMBER_OF_DESKTOPS unless defined $n;
+    my($X,$root) = @_;
+    my $value = getWMRootPropertyInts($X,_NET_DESKTOP_VIEWPORT=>$root);
     if ($value) {
+	# window managers are very inconsistent about their treatment of
+	# this property, so we need to make some corrections.
+	my $n = get_NET_NUMBER_OF_DESKTOPS($X,$root);
+	$n = 1 unless defined $n;
 	if (@$value < ($n<<1)) {
 	    push @$value, (0,0) x ($n - (@$value>>1));
 	}
-    } else {
-	if ($n) {
-	    $value = [ (0,0) x $n ];
-	} else {
-	    $value = [ 0, 0 ];
-	}
-	$self->{_NET_DESKTOP_VIEWPORT} = $value;
     }
     return $value;
 }
 
-=item $ewmh->B<set_NET_DESKTOP_VIEWPORT>($vx,$vy)
+sub dmp_NET_DESKTOP_VIEWPORT {
+    my($X,$viewport) = @_;
+    return dmpWMRootPropertyDisplay($X,_NET_DESKTOP_VIEWPORT=>sub{
+	my @vals = @$viewport;
+	my $i = 0;
+	while (@vals) {
+	    printf "\t%-20s: (%d,%d)\n",'desktop('.$i.')',shift @vals,shift @vals; $i++;
+	}
+    });
+}
+
+=item B<set_NET_DESKTOP_VIEWPORT>(I<$X>,I<$viewport>)
+
+The C<_NET_DESKTOP_VIEWPORT> property should only be set directly by a window manager.
+
+=cut
+
+sub set_NET_DESKTOP_VIEWPORT {
+    return setWMRootPropertyUints($_[0],_NET_DESKTOP_VIEWPORT=>CARDINAL=>$_[1]);
+}
+
+=item B<req_NET_DESKTOP_VIEWPORT>(I<$X>,I<$vx>,I<$vy>)
 
 A pager can request to change the viewport for the current desktop by
 sending a _NET_DESKTOP_VIEWPORT client message to the root window:
@@ -384,10 +661,14 @@ sending a _NET_DESKTOP_VIEWPORT client message to the root window:
 
 =cut
 
-sub set_NET_DESKTOP_VIEWPORT {
-    my($self,$vx,$vy) = @_;
-    $self->NetClientMessage(0,_NET_DESKTOP_VIEWPORT=>
-	    pack('LLLLL',$vx,$vy,0,0,0));
+sub req_NET_DESKTOP_VIEWPORT {
+    my($X,$vx,$vy) = @_;
+    NetClientMessage($X,$X->root,_NET_DESKTOP_VIEWPORT=>[$vx,$vy]);
+}
+
+sub got_NET_DESKTOP_VIEWPORT {
+    my($X,$window,$vx,$vy) = @_;
+    return ($window,$vx,$vy);
 }
 
 =back
@@ -413,7 +694,7 @@ this spec, in which case the time field should be ignored.
 
 =cut
 
-=item $ewmh->B<get_NET_CURRENT_DESKTOP>() => $desktop
+=item B<get_NET_CURRENT_DESKTOP>(I<$X>,I<$root>) => I<$desktop>
 
 Returns the scalar index value of the current desktop, or C<undef> if no
 such property exists on the root window.  The first desktop has an index
@@ -422,13 +703,24 @@ value of zero (0).
 =cut
 
 sub get_NET_CURRENT_DESKTOP {
-    my $self = shift;
-    my $value = $self->getWMRootPropertyInt('_NET_CURRENT_DESKTOP');
-    $value = 0 unless $value;
-    return $value;
+    return getWMRootPropertyUint($_[0],_NET_CURRENT_DESKTOP=>$_[1]);
 }
 
-=item $ewmh->B<set_NET_CURRENT_DESKTOP>($index,$time)
+sub dmp_NET_CURRENT_DESKTOP {
+    return dmpWMRootPropertyUint($_[0],_NET_CURRENT_DESKTOP=>current=>$_[1]);
+}
+
+=item B<set_NET_CURRENT_DESKTOP>(I<$X>,I<$desktop>)
+
+The C<_NET_CURRENT_DESKTOP> property should only be set directly by a window manager.
+
+=cut
+
+sub set_NET_CURRENT_DESKTOP {
+    return setWMRootPropertyUint($_[0],_NET_CURRENT_DESKTOP=>CARDINAL=>$_[1]);
+}
+
+=item B<req_NET_CURRENT_DESKTOP>(I<$X>,I<$index>,I<$time>)
 
 If a pager wants to switch to another virtual desktop, it must send a
 _NET_CURRENT_DESKTOP client message to the root window:
@@ -442,11 +734,16 @@ _NET_CURRENT_DESKTOP client message to the root window:
 
 =cut
 
-sub set_NET_CURRENT_DESKTOP {
-    my($self,$index,$time) = @_;
+sub req_NET_CURRENT_DESKTOP {
+    my($X,$index,$time) = @_;
     $time = 0 unless $time;
-    $self->NetClientMessage(0,_NET_CURRENT_DESKTOP=>
-	    pack('LLLLL',$index,$time,0,0,0));
+    NetClientMessage($X,$X->root,_NET_CURRENT_DESKTOP=>[$index,$time]);
+}
+
+sub got_NET_CURRENT_DESKTOP {
+    my($X,$window,$index,$time) = @_;
+    $time = 'CurrentTime' unless $time;
+    return ($window,$index,$time);
 }
 
 =back
@@ -475,7 +772,7 @@ desktops changes.
 
 =cut
 
-=item $ewmh->B<get_NET_DESKTOP_NAMES>() => [ @names ]
+=item B<get_NET_DESKTOP_NAMES>(I<$X>,I<$root>) => I<$names>
 
 Returns a reference to a list of desktop name strings that represent the
 names of the corresponding ordinal desktops, or C<undef> when there is
@@ -484,23 +781,37 @@ no such property on the root window.
 =cut
 
 sub get_NET_DESKTOP_NAMES {
-    return shift->getWMRootPropertyStrings('_NET_DESKTOP_NAMES');
+    return getWMRootPropertyTermStrings($_[0],_NET_DESKTOP_NAMES=>$_[1]);
 }
 
-=item $ewmh->B<set_NET_DESKTOP_NAMES>(@names)
+sub dmp_NET_DESKTOP_NAMES {
+    my($X,$names) = @_;
+    return dmpWMRootPropertyDisplay($X,_NET_DESKTOP_NAMES=>sub{
+	my $i = 0;
+	foreach (@$names) {
+	    printf "\t%-20s: %s\n",'desktop('.$i.')',"'".$_."'"; $i++;
+	}
+    });
+}
+
+=item B<set_NET_DESKTOP_NAMES>(I<$X>,I<$names>)
+
+=cut
+
+sub set_NET_DESKTOP_NAMES {
+    return setWMRootPropertyStrings($_[0],_NET_DESKTOP_NAMES=>UTF8_STRING=>$_[1]);
+}
+
+=item B<req_NET_DESKTOP_NAMES>(I<$X>,I<@names>)
 
 Sets the desktop names to the specified list of names, C<@names>, by
 directly changing the property.
 
 =cut
 
-sub set_NET_DESKTOP_NAMES {
+sub req_NET_DESKTOP_NAMES {
     my ($X,@names) = @_;
-    $X->ChangeProperty($X->root,
-	    $X->atom('_NET_DESKTOP_NAMES'),
-	    $X->atom('UTF8_STRING'),
-	    8, 'Replace', pack('(Z*)*',@names));
-    $X->flush;
+    return set_NET_DESKTOP_NAMES($X,\@names);
 }
 
 =back
@@ -539,7 +850,7 @@ or e.g. use _NET_WM_STATE_DEMANDS_ATTENTION).
 
 =cut
 
-=item $ewmh->B<get_NET_ACTIVE_WINDOW>() => $window
+=item B<get_NET_ACTIVE_WINDOW>(I<$X>,I<$root>) => I<$active>
 
 Returns the scalar value of the active window, or C<undef> when there is
 no such property on the root window.
@@ -547,10 +858,24 @@ no such property on the root window.
 =cut
 
 sub get_NET_ACTIVE_WINDOW {
-    return shift->getWMRootPropertyInt('_NET_ACTIVE_WINDOW');
+    return getWMRootPropertyUint($_[0],_NET_ACTIVE_WINDOW=>$_[1]);
 }
 
-=item $ewmh->B<set_NET_ACTIVE_WINDOW>($window,$source,$time,$current)
+sub dmp_NET_ACTIVE_WINDOW {
+    return dmpWMRootPropertyUint($_[0],_NET_ACTIVE_WINDOW=>active=>$_[1]);
+}
+
+=item B<set_NET_ACTIVE_WINDOW>(I<$X>,I<$active>)
+
+The C<_NET_ACTIVE_WINDOW> property should only be set directly by a window manager.
+
+=cut
+
+sub set_NET_ACTIVE_WINDOW {
+    return setWMRootPropertyUint($_[0],_NET_ACTIVE_WINDOW=>WINDOW=>$_[1]);
+}
+
+=item B<req_NET_ACTIVE_WINDOW>(I<$X>,I<$window>,I<$source>,I<$time>,I<$current>)
 
 Sets C<$window> as the active window.  C<$source> is 1 for application,
 or 2 for pager/taskbar.  C<$time> should be the time of the
@@ -568,13 +893,23 @@ currently active window (or zero if none).
 
 =cut
 
-sub set_NET_ACTIVE_WINDOW {
-    my($self,$window,$source,$time,$current) = @_;
+sub req_NET_ACTIVE_WINDOW {
+    my($X,$window,$source,$time,$current) = @_;
     $source = 2 unless defined $source;
+    $source = name2val(NetSource=>NetSource(),$source);
     $current = 0 unless $current;
+    $current = 0 if $current eq 'None';
     $time = 0 unless $time;
-    $self->NetClientMessage($window,_NET_ACTIVE_WINDOW=>
-	    pack('LLLLL',$source,$time,$current,0,0));
+    $time = 0 if $time eq 'CurrentTime';
+    NetClientMessage($X,$window,_NET_ACTIVE_WINDOW=>[$source,$time,$current]);
+}
+
+sub got_NET_ACTIVE_WINDOW {
+    my($X,$window,$source,$time,$current) = @_;
+    $source = val2name(NetSource=>NetSource(),$source);
+    $current = 'None' unless $current;
+    $time = 'CurrentTime' unless $time;
+    return ($window,$source,$time,$current);
 }
 
 =back
@@ -634,7 +969,7 @@ regardless of when its own panel is being displayed.
 
 =cut
 
-=item $ewmh->B<get_NET_WORKAREA>() => [ $x, $y, $w, $h ]
+=item B<get_NET_WORKAREA>(I<$X>,I<$root>) => I<$workarea>
 
 Returns a reference to a list of (x,y) coordinates, width and height
 that represents the work area, or C<undef> when no such property exists
@@ -643,11 +978,11 @@ on the root window.
 =cut
 
 sub get_NET_WORKAREA {
-    my $self = shift;
-    my $value = $self->getWMRootPropertyInts('_NET_WORKAREA');
-    my $n = $self->{_NET_NUMBER_OF_DESKTOPS};
-    $n = $self->get_NET_NUMBER_OF_DESKTOPS unless defined $n;
+    my($X,$root) = @_;
+    my $value = getWMRootPropertyInts($_[0],_NET_WORKAREA=>$_[1]);
     if ($value) {
+	my $n = get_NET_NUMBER_OF_DESKTOPS($X,$root);
+	$n = 1 unless $n;
 	# this is for pekwm which only sets the first 4-tuple in the
 	# array
 	my $num = @$value;
@@ -660,7 +995,28 @@ sub get_NET_WORKAREA {
     return $value;
 }
 
-=item $ewmh->B<set_NET_WORKAREA>($x,$y,$w,$h)
+sub dmp_NET_WORKAREA {
+    my($X,$workarea) = @_;
+    return dmpWMRootPropertyDisplay($X,_NET_WORKAREA=>sub{
+	my @vals = @$workarea;
+	my $i = 0;
+	while (@vals) {
+	    printf "\t%-20s: (%d,%d),(%d,%d)\n",'desktop('.$i.')',splice(@vals,0,4); $i++;
+	}
+    });
+}
+
+=item B<set_NET_WORKAREA>(I<$X>,I<$workarea>)
+
+The C<_NET_WORKAREA> property should only be set directly by a window manager.
+
+=cut
+
+sub set_NET_WORKAREA {
+    return setWMRootPropertyInts($_[0],_NET_WORKAREA=>CARDINAL=>$_[1]);
+}
+
+=item B<req_NET_WORKAREA>(I<$X>,I<$x>,I<$y>,I<$w>,I<$h>)
 
 Set the work area to that specified by the (x,y) coordinates, width and
 height, C<$x>, C<$y>, C<$w>, C<$h>.  The property is set directly rather
@@ -668,13 +1024,9 @@ than sending a client message.
 
 =cut
 
-sub set_NET_WORKAREA {
-    my ($X,$x,$y,$w,$h) = @_;
-    $X->ChangeProperty($X->root,
-	    $X->atom('_NET_WORKAREA'),
-	    X11::AtomConstants::CARDINAL,
-	    32,'Replace',pack('LLLL',$x,$y,$w,$h));
-    $X->flush;
+sub req_NET_WORKAREA {
+    my ($X,@vals) = @_;
+    return set_NET_WORKAREA($X,\@vals);
 }
 
 =back
@@ -698,7 +1050,7 @@ that no conforming Window Manager is present.
 
 =cut
 
-=item $ewmh->B<get_NET_SUPPORTING_WM_CHECK>() => $window
+=item B<get_NET_SUPPORTING_WM_CHECK>(I<$X>,I<$window>) => I<$window>
 
 Returns the supporting window manager check window, C<$window>, but only
 when the property is properly set on both the root window and the check
@@ -708,59 +1060,21 @@ window, or when it is impropertly set on the check window.
 =cut
 
 sub get_NET_SUPPORTING_WM_CHECK {
-    my $self = shift;
-    my $win;
-    if ($win = $self->getWMRootPropertyInt('_NET_SUPPORTING_WM_CHECK')) {
-	if (my $oth = $self->getWMPropertyInt($win,'_NET_SUPPORTING_WM_CHECK')) {
-	    unless ($win == $oth) {
-		warn sprintf "Check window 0x%x != 0x%x", $win, $oth;
-		$win = undef;
-	    }
-	}
-    }
-    unless ($win) {
-	if ($win = $self->getWMRootPropertyInt('_NET_SUPPORTING_WM_CHECK')) {
-	    if (my $oth = $self->getWMPropertyInt($win,'_NET_SUPPORTING_WM_CHECK')) {
-		unless ($win == $oth) {
-		    warn sprintf "Check window 0x%x != 0x%x", $win, $oth;
-		    $win = undef;
-		}
-	    }
-	}
-    }
-    if ($win) {
-	# Good window manager check, fill some things out like window
-	# manager name.
-	$self->{windows}{$win} = {} unless $self->{windows}{$win};
-	$self->{checknet} = $self->{windows}{$win};
-	my $name = $self->get_NET_WM_NAME($win);
-	$self->getWM_NAME($win);
-	# Note that pekwm and openbox are setting a null WM_CLASS
-	# property on the check window.  fvwm is setting WM_NAME and
-	# WM_CLASS properly on the check window.
-	$self->getWM_CLASS($win);
-	$self->{wmpid} = $self->get_NET_WM_PID($win);
-	# Note that fluxbox is setting _BLACKBOX_PID on the root window
-	# instead.  PeKWM is setting _NET_WM_PID, but on the root window
-	# instead.  IceWM sets it correctly on the check window.
-	# Openbox sets _OPENBOX_PID on the root window.
-	if ($name) {
-	    ($name) = split(/\s+/,$name);
-	    $name = "\L$name\E";
-	} else {
-	    # guess windowmaker
-	    $name = 'wmaker';
-	}
-	$self->{wmname} = $name;
-	warn "Window manager is $name";
-    } else {
-	$win = delete $self->{_NET_SUPPORTING_WM_CHECK};
-	delete $self->{windows}{$win}{_NET_SUPPORTING_WM_CHECK} if $win;
-	delete $self->{_NET_SUPPORTING_WM_CHECK};
-	delete $self->{checknet};
-	delete $self->{wmname};
-    }
-    return $self->{_NET_SUPPORTING_WM_CHECK};
+    return getWMRootPropertyRecursive($_[0],_NET_SUPPORTING_WM_CHECK=>$_[1]);
+}
+
+sub dmp_NET_SUPPORTING_WM_CHECK {
+    return dmpWMPropertyUint($_[0],_NET_SUPPORTING_WM_CHECK=>check=>$_[1]);
+}
+
+=item B<set_NET_SUPPORTING_WM_CHECK>(I<$X>,I<$window>,I<$check>)
+
+The C<_NET_SUPPORTING_WM_CHECK> property should only be set directly by a window manager.
+
+=cut
+
+sub set_NET_SUPPORTING_WM_CHECK {
+    return setWMRootPropertyRecursive($_[0],_NET_SUPPORTING_WM_CHECK=>WINDOW=>$_[1]);
 }
 
 =back
@@ -778,7 +1092,7 @@ the window manager frame windows of their windows.
 
 =cut
 
-=item $ewmh->B<get_NET_VIRTUAL_ROOTS>() => [ @windows ]
+=item B<get_NET_VIRTUAL_ROOTS>(I<$X>,I<$root>) => I<$roots>
 
 Returns a reference to the list of virtual root windows, or C<undef>
 when no such property exists on the root window.
@@ -786,23 +1100,35 @@ when no such property exists on the root window.
 =cut
 
 sub get_NET_VIRTUAL_ROOTS {
-    my $self = shift;
-    my $value = $self->getWMRootPropertyInts('_NET_VIRTUAL_ROOTS');
+    my($X,$root) = @_;
+    my $value = getWMRootPropertyUints($X,_NET_VIRTUAL_ROOTS=>$root);
     if ($value) {
-	# AfterStep incorrectly puts the root window itselft in
+	# AfterStep incorrectly puts the root window itself in
 	# _NET_VIRTUAL ROOTS on the root window
-	my $root = $self->root;
 	my @list = (@$value);
 	my $ok = 1;
 	foreach (@list) {
 	    if ($_ == $root) {
 		$value = undef;
-		delete $self->{_NET_VIRTUAL_ROOTS};
 		last;
 	    }
 	}
     }
     return $value;
+}
+
+sub dmp_NET_VIRTUAL_ROOTS {
+    return dmpWMRootPropertyUints($_[0],_NET_VIRTUAL_ROOTS=>roots=>$_[1]);
+}
+
+=item B<set_NET_VIRTUAL_ROOTS>(I<$X>,I<$roots>)
+
+The C<_NET_VIRTUAL_ROOTS> property should only be set directly by a window manager.
+
+=cut
+
+sub set_NET_VIRTUAL_ROOTS {
+    return setWMRootPropertyUints($_[0],_NET_VIRTUAL_ROOTS=>WINDOW=>$_[1]);
 }
 
 =back
@@ -898,13 +1224,25 @@ use constant {
     _NET_WM_ORIENTATION_HORZ => 0,
     _NET_WM_ORIENTATION_VERT => 1,
 
+    NetOrientation=>[qw(
+	    Horizontal
+	    Vertical
+	    )],
+
     _NET_WM_TOPLEFT     => 0,
     _NET_WM_TOPRIGHT    => 1,
     _NET_WM_BOTTOMRIGHT => 2,
     _NET_WM_BOTTOMLEFT  => 3,
+
+    NetPosition=>[qw(
+	    TopLeft
+	    TopRight
+	    BottomRight
+	    BottomLeft
+	    )],
 };
 
-=item $ewmh->B<get_NET_DESKTOP_LAYOUT>() => [ $dir, $cols, $rows, $start ]
+=item B<get_NET_DESKTOP_LAYOUT>(I<$X>,I<$root>) => I<$layout>
 
 Returns a reference to a list containing the orientation, C<$dir>,
 number of rows and columns (C<$rows>,C<$cols>), and starting corner,
@@ -925,13 +1263,51 @@ C<$start> is one of:
 =cut
 
 sub get_NET_DESKTOP_LAYOUT {
-    my $self = shift;
-    my $value = $self->getWMRootPropertyInts('_NET_DESKTOP_LAYOUT');
-    unless ($value) {
-	$value = [ &_NET_WM_ORIENTATION_HORZ, 0, 1, &_NET_WM_TOPLEFT ];
-	$self->{'_NET_DESKTOP_LAYOUT'} = $value;
-    }
-    return $value;
+    my($X,$root) = @_;
+    return getWMRootPropertyDecode($X,_NET_DESKTOP_LAYOUT=>sub{
+	    my @vals = unpack('L*',shift);
+	    $vals[0] = 0 unless defined $vals[0];
+	    $vals[0] = val2name(NetOrientation=>NetOrientation(),$vals[0]);
+	    $vals[1] = 0 unless defined $vals[1];
+	    $vals[2] = 1 unless defined $vals[2];
+	    $vals[3] = 0 unless defined $vals[3];
+	    $vals[3] = val2name(NetPosition=>NetPosition(),$vals[3]);
+	    return {
+		orientation=>$vals[0],
+		columns=>$vals[1],
+		rows=>$vals[2],
+		starting_corner=>$vals[3] };
+    },$root);
+}
+
+sub dmp_NET_DESKTOP_LAYOUT {
+    return dmpWMRootPropertyHashUints($_[0],_NET_DESKTOP_LAYOUT=>[qw(
+		orientation columns rows starting_corner)],$_[1]);
+}
+
+=item B<set_NET_DESKTOP_LAYOUT>(I<$X>,I<$layout>)
+
+The C<_NET_DESKTOP_LAYOUT> property should only be set directly by a window manager.
+
+=cut
+
+sub set_NET_DESKTOP_LAYOUT {
+    my($X,$layout) = @_;
+    return setWMRootPropertyEncode($X,_NET_DESKTOP_LAYOUT=>sub{
+	    my @vals = ();
+	    if (ref $layout eq 'ARRAY') { @vals = @$layout }
+	    elsif (ref $layout eq 'HASH') {
+		push @vals, $layout->{orientation},
+		            $layout->{columns},
+			    $layout->{rows},
+			    $layout->{starting_corner};
+	    }
+	    $vals[0] = 0 unless defined $vals[0];
+	    $vals[0] = name2val(NetOrientation=>NetOrientation(),$vals[0]);
+	    $vals[3] = 0 unless defined $vals[3];
+	    $vals[3] = name2val(NetPosition=>NetPosition(),$vals[3]);
+	    return CARDINAL=>32,pack('L*',@vals);
+    });
 }
 
 =back
@@ -960,7 +1336,7 @@ The Window Manager may choose to ignore this client message.
 
 =cut
 
-=item $ewmh->B<get_NET_SHOWING_DESKTOP>() => $bool
+=item B<get_NET_SHOWING_DESKTOP>(I<$X>,I<$root>) => I<$bool>
 
 Returns a boolean indicating whether the window manager is in I<showing
 the desktop> mode or not, or C<undef> if this property is not defined on
@@ -969,10 +1345,24 @@ the root window.
 =cut
 
 sub get_NET_SHOWING_DESKTOP {
-    return shift->getWMRootPropertyInt('_NET_SHOWING_DESKTOP');
+    return getWMRootPropertyUint($_[0],_NET_SHOWING_DESKTOP=>$_[1]);
 }
 
-=item $ewmh->B<set_NET_SHOWING_DESKTOP>($flag)
+sub dmp_NET_SHOWING_DESKTOP {
+    return dmpWMRootPropertyUint($_[0],_NET_SHOWING_DESKTOP=>showing=>$_[1]);
+}
+
+=item B<set_NET_SHOWING_DESKTOP>(I<$X>,I<$bool>)
+
+The C<_NET_SHOWING_DESKTOP> property should only be set directly by a window manager.
+
+=cut
+
+sub set_NET_SHOWING_DESKTOP {
+    return setWMRootPropertyUint($_[0],_NET_SHOWING_DESKTOP=>CARDINAL=>$_[1]?1:0);
+}
+
+=item B<req_NET_SHOWING_DESKTOP>(I<$X>,I<$bool>)
 
 If a pager wants to enter or leave the showing desktop mode, it must
 send a _NET_SHOWING_DESKTOP client message to the root window requesting
@@ -986,10 +1376,15 @@ the change:
 
 =cut
 
-sub set_NET_SHOWING_DESKTOP {
-    my($self,$flag) = @_;
-    $self->NetClientMessage(0,_NET_SHOWING_DESKTOP=>
-	    pack('LLLLL',$flag,0,0,0,0));
+sub req_NET_SHOWING_DESKTOP {
+    my($X,$flag) = @_;
+    NetClientMessage($X,$X->root,_NET_SHOWING_DESKTOP=>[$flag]);
+}
+
+sub got_NET_SHOWING_DESKTOP {
+    my($X,$window,$flag) = @_;
+    $flag = 0 unless $flag;
+    return ($window,$flag);
 }
 
 =back
@@ -1024,7 +1419,7 @@ duplicating the code, the Window Manager can easily do the job.
 
 =cut
 
-=item $ewmh->B<set_NET_CLOSE_WINDOW>($window,$time,$source)
+=item B<req_NET_CLOSE_WINDOW>(I<$X>,I<$window>,I<$time>,I<$source>)
 
 Close a window.  For EWMH, send a _NET_CLOSE_WINDOW client message
 request to the root window with the window to close, format 32 time
@@ -1040,12 +1435,21 @@ and source indication.
 
 =cut
 
-sub set_NET_CLOSE_WINDOW {
-    my($self,$window,$time,$source) = @_;
+sub req_NET_CLOSE_WINDOW {
+    my($X,$window,$time,$source) = @_;
     $source = 2 unless defined $source;
+    $source = name2val(NetSource=>NetSource(),$source);
     $time = 0 unless $time;
-    $self->NetClientMessage($window,_NET_CLOSE_WINDOW=>
-	    pack('LLLLL',$time,$source,0,0,0));
+    $time = 0 if $time eq 'CurrentTime';
+    NetClientMessage($X,$window,_NET_CLOSE_WINDOW=>[$time,$source]);
+}
+
+sub got_NET_CLOSE_WINDOW {
+    my($X,$window,$time,$source) = @_;
+    $source = 2 unless defined $source;
+    $source = val2name(NetSource=>NetSource(),$source);
+    $time = 'CurrentTime' unless $time;
+    return ($window,$time,$source);
 }
 
 =back
@@ -1090,7 +1494,7 @@ decorations without knowing the size of the decorations.
 
 =cut
 
-=item $ewmh->B<set_NET_MOVERESIZE_WINDOW>($window,$gravity,$source,$x,$y,$width,$height)
+=item B<req_NET_MOVERESIZE_WINDOW>(I<$X>,I<$window>,I<$gravity>,I<$source>,I<$x>,I<$y>,I<$width>,I<$height>)
 
 Move or resize (or both) a window.
 
@@ -1111,10 +1515,12 @@ Move or resize (or both) a window.
 
 =cut
 
-sub set_NET_MOVERESIZE_WINDOW {
-    my($self,$window,$gravity,$source,$x,$y,$width,$height) = @_;
+sub req_NET_MOVERESIZE_WINDOW {
+    my($X,$window,$gravity,$source,$x,$y,$width,$height) = @_;
     $gravity = 0 unless $gravity;
+    $gravity = name2val(WinGravity=>$X->{const}{WinGravity},$gravity);
     $source = 2 unless defined $source;
+    $source = name2val(NetSource=>NetSource(),$source);
     my $flag = $gravity;
     $flag |= 0x100 if defined $x;
     $flag |= 0x200 if defined $y;
@@ -1125,8 +1531,28 @@ sub set_NET_MOVERESIZE_WINDOW {
     $y = 0 unless $y;
     $width = 0 unless $width;
     $height = 0 unless $height;
-    $self->NetClientMessage($window,_NET_MOVERESIZE_WINDOW=>
-	    pack('LLLLL',$flag,$x,$y,$width,$height));
+    NetClientMessage($X,$window,_NET_MOVERESIZE_WINDOW=>[$flag,$x,$y,$width,$height]);
+}
+
+sub got_NET_MOVERESIZE_WINDOW {
+    my($X,$window,$flag,$x,$y,$width,$height) = @_;
+    $flag = 0 unless $flag;
+    my $source = $flag>>12;
+    $source = 0 unless $source;
+    $source = val2name(NetSource=>NetSource(),$source);
+    my $gravity = $flag&0xff;
+    $gravity = 0 unless $gravity;
+    $gravity = val2name(WinGravity=>$X->{const}{WinGravity},$gravity);
+    $flag &= 0xf00;
+    $x = 0 unless $x;
+    $y = 0 unless $y;
+    $width = 0 unless $width;
+    $height = 0 unless $height;
+    $x = undef unless $flag&0x100;
+    $y = undef unless $flag&0x200;
+    $width = undef unless $flag&0x400;
+    $height = undef unless $flag&0x800;
+    return ($window,$gravity,$source,$x,$y,$width,$height);
 }
 
 =back
@@ -1204,9 +1630,24 @@ use constant {
     _NET_WM_MOVERESIZE_SIZE_KEYBOARD	=> 9,	# size via keyboard
     _NET_WM_MOVERESIZE_MOVE_KEYBOARD	=> 10,	# move via keyboard
     _NET_WM_MOVERESIZE_CANCEL		=> 11,	# cancel operation
+
+    NetMoveResize => [qw(
+	    topleft
+	    top
+	    topright
+	    right
+	    bottomright
+	    bottom
+	    bottomleft
+	    left
+	    move
+	    size_kbd
+	    move_kbd
+	    cancel
+    )],
 };
 
-=item $ewmh->B<set_NET_WM_MOVERESIZE>($window,$x,$y,$direction,$button,$source)
+=item B<req_NET_WM_MOVERESIZE>(I<$X>,I<$window>,I<$x>,I<$y>,I<$direction>,I<$button>,I<$source>)
 
  _NET_WM_MOVERESIZE
    window = window to be moved or resized
@@ -1224,15 +1665,28 @@ use constant {
 
 =cut
 
-sub set_NET_WM_MOVERESIZE {
-    my($self,$window,$x,$y,$direction,$button,$source) = @_;
-    $x = 0 unless $x;
-    $y = 0 unless $y;
+sub req_NET_WM_MOVERESIZE {
+    my($X,$window,$x_root,$y_root,$direction,$button,$source) = @_;
+    $x_root = 0 unless $x_root;
+    $y_root = 0 unless $y_root;
     $direction = 11 unless defined $direction;
+    $direction = name2val(NetMoveResize=>NetMoveResize(),$direction);
     $button = 0 unless $button;
     $source = 2 unless defined $source;
-    $self->NetClientMessage($window,_NET_WM_MOVERESIZE=>
-	    pack('LLLLL',$x,$y,$direction,$button,$source));
+    $source = name2val(NetSource=>NetSource(),$source);
+    NetClientMessage($X,$window,_NET_WM_MOVERESIZE=>[$x_root,$y_root,$direction,$button,$source]);
+}
+
+sub got_NET_WM_MOVERESIZE {
+    my($X,$window,$x_root,$y_root,$direction,$button,$source) = @_;
+    $x_root = 0 unless $x_root;
+    $y_root = 0 unless $y_root;
+    $direction = 0 unless $direction;
+    $direction = val2name(NetMoveResize=>NetMoveResize(),$direction);
+    $button = 0 unless $button;
+    $source = 0 unless $source;
+    $source = val2name(NetSource=>NetSource(),$source);
+    return ($window,$x_root,$y_root,$direction,$button,$source);
 }
 
 =back
@@ -1272,9 +1726,17 @@ use constant {
     _NET_RESTACK_WINDOW_TOPIF		=> 2,
     _NET_RESTACK_WINDOW_BOTTOMIF	=> 3,
     _NET_RESTACK_WINDOW_OPPOSITE	=> 4,
+
+    NetRestackWindow => [qw(
+	    Above
+	    Below
+	    TopIf
+	    BottomIf
+	    Opposite
+    )],
 };
 
-=item $ewmh->B<set_NET_RESTACK_WINDOW>($window,$detail,$sibling,$source)
+=item B<req_NET_RESTACK_WINDOW>(I<$X>,I<$window>,I<$detail>,I<$sibling>,I<$source>)
 
  _NET_RESTACK_WINDOW
    window = window to restack
@@ -1326,15 +1788,25 @@ then the window is placed at the bottom of the stack.
 
 =cut
 
-sub set_NET_RESTACK_WINDOW {
-    my ($self,$window,$detail,$sibling,$source) = @_;
-    $window = $self->{_NET_ACTIVE_WINDOW} unless $window;
-    $window = 0 unless $window;
+sub req_NET_RESTACK_WINDOW {
+    my ($X,$window,$detail,$sibling,$source) = @_;
     $detail = 0 unless $detail;
+    $detail = name2val(NetRestackWindow=>NetRestackWindow(),$detail);
     $source = 2 unless defined $source;
+    $source = name2val(NetSource=>NetSource(),$source);
     $sibling = 0 unless $sibling;
-    $self->NetClientMessage($window,_NET_RESTACK_WINDOW=>
-	    pack('LLLLL',$source,$sibling,$detail,0,0));
+    $sibling = 0 if $sibling eq 'None';
+    NetClientMessage($X,$window,_NET_RESTACK_WINDOW=>[$source,$sibling,$detail]);
+}
+
+sub got_NET_RESTACK_WINDOW {
+    my($X,$window,$source,$sibling,$detail) = @_;
+    $source = 0 unless $source;
+    $source = val2name(NetSource=>NetSource(),$source);
+    $sibling = 'None' unless $sibling;
+    $detail = 0 unless $detail;
+    $detail = val2name(NetRestackWindow=>NetRestackWindow(),$detail);
+    return ($X,$window,$detail,$sibling,$source);
 }
 
 =back
@@ -1368,7 +1840,7 @@ PropertyNotify events.
 
 =cut
 
-=item $ewmh->B<set_NET_REQUEST_FRAME_EXTENTS>($window)
+=item B<req_NET_REQUEST_FRAME_EXTENTS>(I<$X>,I<$window>)
 
 Request the frame extents for the specified window, C<$window>.  This
 issues the following client message:
@@ -1381,12 +1853,14 @@ issues the following client message:
 
 =cut
 
-sub set_NET_REQUEST_FRAME_EXTENTS {
-    my ($self,$window) = @_;
-    $window = $self->{NET_ACTIVE_WINDOW} unless $window;
-    $window = 0 unless $window;
-    $self->NetClientMessage($window,_NET_REQUEST_FRAME_EXTENTS=>
-	    pack('LLLLL',0,0,0,0,0));
+sub req_NET_REQUEST_FRAME_EXTENTS {
+    my ($X,$window) = @_;
+    NetClientMessage($X,$window,_NET_REQUEST_FRAME_EXTENTS=>[]);
+}
+
+sub got_NET_REQUEST_FRAME_EXTENTS {
+    my ($X,$window) = @_;
+    return ($window);
 }
 
 =back
@@ -1408,7 +1882,7 @@ L<wmaker(1)>.
 
 =cut
 
-=item $ewmh->B<get_NET_WM_NAME>($window) => $name
+=item B<get_NET_WM_NAME>(I<$X>,I<$window>) => I<$name>
 
 Returns the name associated with C<$window>, or C<undef> if the property
 does not exist on C<$window>.
@@ -1416,7 +1890,21 @@ does not exist on C<$window>.
 =cut
 
 sub get_NET_WM_NAME {
-    return $_[0]->getWMPropertyString($_[1],'_NET_WM_NAME');
+    return getWMPropertyString($_[0],$_[1],_NET_WM_NAME=>);
+}
+
+sub dmp_NET_WM_NAME {
+    return dmpWMPropertyString($_[0],_NET_WM_NAME=>name=>$_[1]);
+}
+
+=item B<set_NET_WM_NAME>(I<$X>,I<$window>,I<$name>)
+
+The C<_NET_WM_NAME> property should only be set by a client.
+
+=cut
+
+sub set_NET_WM_NAME {
+    return setWMPropertyString($_[0],$_[1],_NET_WM_NAME=>UTF8_STRING=>$_[2]);
 }
 
 =back
@@ -1436,7 +1924,7 @@ the Window Manager.
 
 =cut
 
-=item $ewmh->B<get_NET_WM_VISIBLE_NAME>($window) => $name
+=item B<get_NET_WM_VISIBLE_NAME>(I<$X>,I<$window>) => I<$name>
 
 Returns the visible name for C<$window>, or C<undef> if no such property
 exists on the window.
@@ -1444,7 +1932,21 @@ exists on the window.
 =cut
 
 sub get_NET_WM_VISIBLE_NAME {
-    return $_[0]->getWMPropertyString($_[1],'_NET_WM_VISIBLE_NAME');
+    return getWMPropertyString($_[0],$_[1],_NET_WM_VISIBLE_NAME=>);
+}
+
+sub dmp_NET_WM_VISIBLE_NAME {
+    return dmpWMPropertyString($_[0],_NET_WM_VISIBLE_NAME=>name=>$_[1]);
+}
+
+=item B<set_NET_WM_VISIBLE_NAME>(I<$x>,I<$window>,I<$name>)
+
+The C<_NET_WM_VISIBLE_NAME> property should only be set by a client.
+
+=cut
+
+sub set_NET_WM_VISIBLE_NAME {
+    return setWMPropertyString($_[0],$_[1],_NET_WM_VISIBLE_NAME=>UTF8_STRING=>$_[2]);
 }
 
 =back
@@ -1459,7 +1961,7 @@ to WM_ICON_NAME.
 
 =cut
 
-=item $ewmh->B<get_NET_WM_ICON_NAME>($window) => $name
+=item B<get_NET_WM_ICON_NAME>(I<$X>,I<$window>) => I<$name>
 
 Gets the name of the icon for window C<$window>, or C<undef> if this
 property is not specified on C<$window>.
@@ -1467,7 +1969,21 @@ property is not specified on C<$window>.
 =cut
 
 sub get_NET_WM_ICON_NAME {
-    return $_[0]->getWMPropertyString($_[1],'_NET_WM_ICON_NAME');
+    return getWMPropertyString($_[0],$_[1],_NET_WM_ICON_NAME=>);
+}
+
+sub dmp_NET_WM_ICON_NAME {
+    return dmpWMPropertyString($_[0],_NET_WM_ICON_NAME=>name=>$_[1]);
+}
+
+=item B<set_NET_WM_ICON_NAME>(I<$X>,I<$window>,I<$name>)
+
+The C<_NET_WM_ICON_NAME> property should only be set by a client.
+
+=cut
+
+sub set_NET_WM_ICON_NAME {
+    return setWMPropertyString($_[0],$_[1],_NET_WM_ICON_NAME=>UTF8_STRING=>$_[2]);
 }
 
 =back
@@ -1480,9 +1996,7 @@ displayed in UTF-8 encoding.
 
 =over
 
-=cut
-
-=item $ewmh->B<get_NET_WM_VISIBLE_ICON_NAME>($window) => $name
+=item B<get_NET_WM_VISIBLE_ICON_NAME>(I<$X>,I<$window>) => I<$name>
 
 Returns the visiable name of the icon for window, C<$window>, or
 C<undef> if no such propert exists in C<$window>.
@@ -1490,7 +2004,54 @@ C<undef> if no such propert exists in C<$window>.
 =cut
 
 sub get_NET_WM_VISIBLE_ICON_NAME {
-    return $_[0]->getWMPropertyString($_[1],'_NET_WM_VISIBLE_ICON_NAME');
+    return getWMPropertyString($_[0],$_[1],_NET_WM_VISIBLE_ICON_NAME=>);
+}
+
+sub dmp_NET_WM_VISIBLE_ICON_NAME {
+    return dmpWMPropertyString($_[0],_NET_WM_VISIBLE_ICON_NAME=>name=>$_[1]);
+}
+
+=item B<set_NET_WM_VISIBLE_ICON_NAME>(I<$X>,I<$window>,I<$name>)
+
+The C<_NET_WM_VISIBLE_NAME> property should only be set by a client.
+
+=cut
+
+sub set_NET_WM_VISIBLE_ICON_NAME {
+    return setWMPropertyString($_[0],$_[1],_NET_WM_VISIBLE_ICON_NAME=>UTF8_STRING=>$_[2]);
+}
+
+=back
+
+Note that FVWM misspells this property as C<_NET_WM_ICON_VISIBLE_NAME>
+instead of the newer C<_NET_WM_VISIBLE_ICON_NAME>.  The atom was renamed
+as some point for consistency and FVWM has not followed suit.
+
+=over
+
+=item B<get_NET_WM_ICON_VISIBLE_NAME>(I<$X>,I<$window>) => I<$name>
+
+Returns the visiable name of the icon for window, C<$window>, or
+C<undef> if no such propert exists in C<$window>.
+
+=cut
+
+sub get_NET_WM_ICON_VISIBLE_NAME {
+    return getWMPropertyString($_[0],$_[1],_NET_WM_ICON_VISIBLE_NAME=>);
+}
+
+sub dmp_NET_WM_ICON_VISIBLE_NAME {
+    return dmpWMPropertyString($_[0],_NET_WM_ICON_VISIBLE_NAME=>name=>$_[1]);
+}
+
+=item B<set_NET_WM_ICON_VISIBLE_NAME>(I<$X>,I<$window>,I<$name>)
+
+The C<_NET_WM_VISIBLE_NAME> property should only be set by a client.
+
+=cut
+
+sub set_NET_WM_ICON_VISIBLE_NAME {
+    return setWMPropertyString($_[0],$_[1],_NET_WM_ICON_VISIBLE_NAME=>UTF8_STRING=>$_[2]);
 }
 
 =back
@@ -1535,7 +2096,7 @@ updated on all windows.
 
 =cut
 
-=item $ewmh->B<get_NET_WM_DESKTOP>($window) => $desktop
+=item B<get_NET_WM_DESKTOP>(I<$X>,I<$window>) => I<$desktop>
 
 Returns the desktop index of the desktop associated with window,
 C<$window>, or C<undef> if no such property exists on C<$window>.
@@ -1543,23 +2104,46 @@ C<$window>, or C<undef> if no such property exists on C<$window>.
 =cut
 
 sub get_NET_WM_DESKTOP {
-    return $_[0]->getWMPropertyInt($_[1],'_NET_WM_DESKTOP');
+    return getWMPropertyUint($_[0],$_[1],_NET_WM_DESKTOP=>);
 }
 
-=item $ewmh->B<set_NET_WM_DESKTOP>($window, $desktop, $source)
+sub dmp_NET_WM_DESKTOP {
+    return dmpWMPropertyUint($_[0],_NET_WM_DESKTOP=>desktop=>$_[1]);
+}
+
+=item B<set_NET_WM_DESKTOP>(I<$X>,I<$window>,I<$desktop>)
+
+The C<_NET_WM_DESKTOP> property should only be set by a client before
+initial mapping of a top-level window or while a window is in the
+withdrawn state.
+
+=cut
+
+sub set_NET_WM_DESKTOP {
+    return setWMPropertyUint($_[0],$_[1],_NET_WM_DESKTOP=>CARDINAL=>$_[2]);
+}
+
+=item B<req_NET_WM_DESKTOP>(I<$X>,I<$window>, I<$desktop>, I<$source>)
 
 A client can request a change of desktop for a non-withdrawn window by
 sending a _NET_WM_DESKTOP client message to the root window.
 
 =cut
 
-sub set_NET_WM_DESKTOP {
-    my ($self,$window,$index,$source) = @_;
-    $window = $self->{_NET_ACTIVE_WINDOW} unless $window;
-    $window = 0 unless $window;
+sub req_NET_WM_DESKTOP {
+    my ($X,$window,$index,$source) = @_;
+    $index = 0 unless $index;
     $source = 2 unless defined $source;
-    $self->NetClientMessage($window,_NET_WM_DESKTOP=>
-	    pack('LLLLL',$index,$source,0,0,0));
+    $source = name2val(NetSource=>NetSource(),$source);
+    NetClientMessage($X,$window,_NET_WM_DESKTOP=>[$index,$source]);
+}
+
+sub got_NET_WM_DESKTOP {
+    my($X,$window,$index,$source) = @_;
+    $index = 0 unless $index;
+    $source = 0 unless $source;
+    $source = val2name(NetSource=>NetSource(),$source);
+    return ($window,$index,$source);
 }
 
 =back
@@ -1707,7 +2291,7 @@ or not they have WM_TRANSIENT_FOR set.
 
 =cut
 
-=item $ewmh->B<get_NET_WM_WINDOW_TYPE>($window) => { map{$_=>1} @names }
+=item B<get_NET_WM_WINDOW_TYPE>(I<$X>,I<$window>) => I<$types>
 
 Returns a reference to a hash of atom names associated with the window
 type for C<$window>, or C<undef> if the window has no such property.
@@ -1715,7 +2299,22 @@ type for C<$window>, or C<undef> if the window has no such property.
 =cut
 
 sub get_NET_WM_WINDOW_TYPE {
-    return $_[0]->getWMPropertyAtoms($_[1],'_NET_WM_WINDOW_TYPE');
+    return getWMPropertyAtoms($_[0],$_[1],_NET_WM_WINDOW_TYPE=>);
+}
+
+sub dmp_NET_WM_WINDOW_TYPE {
+    return dmpWMPropertyAtoms($_[0],_NET_WM_WINDOW_TYPE=>type=>$_[1]);
+}
+
+=item B<set_NET_WM_WINDOW_TYPE>(I<$X>,I<$window>,I<$types>)
+
+The C<_NET_WM_WINDOW_TYPE> property should only be set by a client before
+initial mapping of a top-level window.
+
+=cut
+
+sub set_NET_WM_WINDOW_TYPE {
+    return setWMPropertyAtoms($_[0],$_[1],_NET_WM_WINDOW_TYPE=>$_[2]);
 }
 
 =back
@@ -1895,7 +2494,7 @@ See also the implementation notes on urgency and fixed size windows.
 
 =cut
 
-=item $ewmh->B<get_NET_WM_STATE>($window) => { map{$_=>1} @names }
+=item B<get_NET_WM_STATE>(I<$X>,I<$window>) => I<$states> or undef
 
 Returns a hash reference to a hash with indices corresponding to the
 names of the atoms associated with the window state for window,
@@ -1904,10 +2503,32 @@ C<$window>, or C<undef> if the property does not exist on C<$window>.
 =cut
 
 sub get_NET_WM_STATE {
-    return $_[0]->getWMPropertyAtoms($_[1],'_NET_WM_STATE');
+    return getWMPropertyAtoms($_[0],$_[1],_NET_WM_STATE=>);
 }
 
-=item $ewmh->B<set_NET_WM_STATE>($window, $action, $source, $property1, $property2)
+sub dmp_NET_WM_STATE {
+    return dmpWMPropertyAtoms($_[0],_NET_WM_STATE=>state=>$_[1]);
+}
+
+=item B<set_NET_WM_STATE>(I<$X>,I<$window>,I<$states>)
+
+Taks a hash reference, I<$states>, to a hash with keys corresponding to
+the names of atoms associated with the window state for window,
+I<$window>; or an array of atom names or numbers, or C<undef> to delete
+the C<_NET_WM_STATE> property.
+
+The C<_NET_WM_STATE> property should only be set directly by a window
+manager, or by a client prior to initial mapping of a top-level window.
+Clients should use req_NET_WM_STATE() after a window has been mapped to
+request that the window manager alter the state.
+
+=cut
+
+sub set_NET_WM_STATE {
+    return setWMPropertyAtoms($_[0],$_[1],_NET_WM_STATE=>$_[2]);
+}
+
+=item B<req_NET_WM_STATE>(I<$X>,I<$window>, I<$action>, I<$source>, I<$property1>, I<$property2>)
 
 To change the state of a mapped window, the client must send a
 _NET_WM_STATE client message to the root window:
@@ -1949,17 +2570,19 @@ use constant {
     _NET_WM_STATE_REMOVE    => 0,
     _NET_WM_STATE_ADD	    => 1,
     _NET_WM_STATE_TOGGLE    => 2,
+
+    NetStateAction => [qw(Remove Add Toggle)],
 };
 
-sub set_NET_WM_STATE {
-    my ($self,$window,$action,$prop1,$prop2,$source) = @_;
-    $window = $self->{_NET_ACTIVE_WINDOW} unless $window;
-    $window = 0 unless $window;
+sub req_NET_WM_STATE {
+    my ($X,$window,$action,$prop1,$prop2,$source) = @_;
+    $action = 0 unless $action;
+    $action = name2val(NetStateAction=>NetStateAction(),$action);
+    $prop1 = 0 unless $prop1; $prop1 = ($prop1 =~ m{^\d+$}) ? $prop1 : $X->atom($prop1);
+    $prop2 = 0 unless $prop2; $prop2 = ($prop2 =~ m{^\d+$}) ? $prop2 : $X->atom($prop2);
     $source = 2 unless defined $source;
-    $prop1 = 0 unless $prop1; $prop1 = $prop1 ? $self->atom($prop1) : 0;
-    $prop2 = 0 unless $prop2; $prop2 = $prop1 ? $self->atom($prop2) : 0;
-    $self->NetClientMessage($window,_NET_WM_STATE=>
-	    pack('LLLLL',$action,$prop1,$prop2,$source,0));
+    $source = name2val(NetSource=>NetSource(),$source);
+    NetClientMessage($X,$window,_NET_WM_STATE=>[$action,$prop1,$prop2,$source]);
 }
 
 =back
@@ -2071,7 +2694,7 @@ called "Stacking order" for details)).
 
 =cut
 
-=item $ewmh->B<get_NET_WM_ALLOWED_ACTIONS>($window) => { map{$_=>1} @names }
+=item B<get_NET_WM_ALLOWED_ACTIONS>(I<$X>,I<$window>) => I<$actions>
 
 Returns a reference to a hash containing the atom names of allowed
 acitions for C<$window> as indices, or C<undef> if no such property
@@ -2080,7 +2703,22 @@ exists on C<$window>.
 =cut
 
 sub get_NET_WM_ALLOWED_ACTIONS {
-    return $_[0]->getWMPropertyAtoms($_[1], '_NET_WM_ALLOWED_ACTIONS');
+    return getWMPropertyAtoms($_[0],$_[1],_NET_WM_ALLOWED_ACTIONS=>);
+}
+
+sub dmp_NET_WM_ALLOWED_ACTIONS {
+    return dmpWMPropertyAtoms($_[0],_NET_WM_ALLOWED_ACTIONS=>allowed=>$_[1]);
+}
+
+=item B<set_NET_WM_ALLOWED_ACTIONS>(I<$X>,I<$window>,I<$actions>)
+
+The C<_NET_WM_ALLOWED_ACTIONS> property should only be set by a client before
+initial mapping of a top-level window.
+
+=cut
+
+sub set_NET_WM_ALLOWED_ACTIONS {
+    return setWMPropertyAtoms($_[0],$_[1],_NET_WM_ALLOWED_ACTIONS=>$_[2]);
 }
 
 =back
@@ -2098,16 +2736,51 @@ Managers supporting older versions of the Specification.
 
 =cut
 
-=item $ewmh->B<get_NET_WM_STRUT>($window) => [ $l, $r, $t, $b ]
+=item ->B<get_NET_WM_STRUT>(I<$X>,I<$window>) => I<$strut>
 
-Returns a refernce to a list of coordinates representing the strut for
-window, C<$window>, or C<undef> if no such property exists on
-C<$window>.
+Returns a reference to a hash of coordinates representing the strut for
+window, I<$window>, or C<undef> if no C<_NET_WM_STRUT> property exists
+on I<$window>.  I<$strut>, when defined, is a reference to an unsigned
+integer valued hash containing the following keys:
+
+ left    pixels reserved at the left of the screen
+ right   pixels reserved at the right of the screen
+ top     pixels reserved at the top of the screen
+ bottom  pixels reserved at the bottom of the screen
 
 =cut
 
 sub get_NET_WM_STRUT {
-    return $_[0]->getWMPropertyInts($_[1], '_NET_WM_STRUT');
+    return getWMPropertyHashUints($_[0],$_[1],_NET_WM_STRUT=>[qw(left right top bottom)]);
+}
+
+sub dmp_NET_WM_STRUT {
+    return dmpWMPropertyHashUints($_[0],_NET_WM_STRUT=>[qw(left right top bottom)],$_[1]);
+}
+
+=item B<set_NET_WM_STRUT>(I<$X>,I<$window>,I<$strut>)
+
+Sets the C<_NET_WM_STRUT> property on window, I<$window>, to the strut
+represented by I<$strut>, or, when I<$strut> is C<undef>, deletes the
+C<_NET_WM_STRUT> property from I<$window>.  I<$strut>, when defined, can
+be a reference to an unsigned integer valued hash containing the
+following keys:
+
+ left    pixels reserved at the left of the screen
+ right   pixels reserved at the right of the screen
+ top     pixels reserved at the top of the screen
+ bottom  pixels reserved at the bottom of the screen
+
+I<$strut> may also be a reference to an array of field values in the
+order in which they appear above.
+
+The C<_NET_WM_STRUT> property should only be set by a client before
+initial mapping of a top-level window.
+
+=cut
+
+sub set_NET_WM_STRUT {
+    return setWMPropertyHashUints($_[0],$_[1],_NET_WM_STRUT=>CARDINAL=>[qw(left right top bottom)],$_[2]);
 }
 
 =back
@@ -2169,8 +2842,7 @@ of a screen border SHOULD only set one strut.
 
 =cut
 
-=item $ewmh->B<get_NET_WM_STRUT_PARTIAL>($window) => [ $l, $r, $t, $b,
-$lsy, $ley, $rsy, $rey, $tsx, $tex, $bsx, $bex ]
+=item B<get_NET_WM_STRUT_PARTIAL>(I<$X>,I<$window>) => I<$partial>
 
 Returns a reference to a list of coordinates describing the partial
 strut for window, C<$window>, or C<undef> when the property does not
@@ -2179,7 +2851,22 @@ exist for C<$window>.
 =cut
 
 sub get_NET_WM_STRUT_PARTIAL {
-    return $_[0]->getWMPropertyInts($_[1], '_NET_WM_STRUT_PARTIAL');
+    return getWMPropertyHashUints($_[0],$_[1],_NET_WM_STRUT_PARTIAL=>[qw(left right top bottom left_start_y left_end_y right_start_y right_end_y top_start_x top_end_x bottom_start_x bottom_end_x)]);
+}
+
+sub dmp_NET_WM_STRUT_PARTIAL {
+    return dmpWMPropertyHashUints($_[0],_NET_WM_STRUT_PARTIAL=>[qw(left right top bottom left_start_y left_end_y right_start_y right_end_y top_start_x top_end_x bottom_start_x bottom_end_x)],$_[1]);
+}
+
+=item B<set_NET_WM_STRUT_PARTIAL>(I<$X>,I<$window>,I<$partial>)
+
+The C<_NET_WM_STRUT_PARTIAL> property should only be set by a client before
+initial mapping of a top-level window.
+
+=cut
+
+sub set_NET_WM_STRUT_PARTIAL {
+    return setWMPropertyHashUints($_[0],$_[1],_NET_WM_STRUT_PARTIAL=>CARDINAL=>[qw(left right top bottom left_start_y left_end_y right_start_y right_end_y top_start_x top_end_x bottom_start_x bottom_end_x)],$_[2]);
 }
 
 =back
@@ -2197,7 +2884,7 @@ nice animation like morphing the window into its icon.
 
 =cut
 
-=item $ewmh->B<get_NET_WM_ICON_GEOMETRY>($window) => [ $x, $y, $w, $h ]
+=item B<get_NET_WM_ICON_GEOMETRY>(I<$X>,I<$window>) => I<$geometry>
 
 Returns a reference to a list of coordinates specifying the geometry of
 the icon for window, C<$window>, or C<undef> if no such property exists
@@ -2206,7 +2893,22 @@ for C<$window>.
 =cut
 
 sub get_NET_WM_ICON_GEOMETRY {
-    return $_[0]->getWMPropertyInts($_[1], '_NET_WM_ICON_GEOMETRY');
+    return getWMPropertyHashInts($_[0],$_[1],_NET_WM_ICON_GEOMETRY=>[qw(x y width height)]);
+}
+
+sub dmp_NET_WM_ICON_GEOMETRY {
+    return dmpWMPropertyHashInts($_[0],_NET_WM_ICON_GEOMETRY=>[qw(x y width height)],$_[1]);
+}
+
+=item B<set_NET_WM_ICON_GEOMETRY>(I<$X>,I<$window>,I<$geometry>)
+
+The C<_NET_WM_ICON_GEOMETRY> property should only be set by a client before
+initial mapping of a top-level window.
+
+=cut
+
+sub set_NET_WM_ICON_GEOMETRY {
+    return setWMPropertyHashInts($_[0],$_[1],_NET_WM_ICON_GEOMETRY=>CARDINAL=>[qw(x y width height)]);
 }
 
 =back
@@ -2226,7 +2928,7 @@ rows, left to right and top to bottom.
 
 =cut
 
-=item $ewmh->B<get_NET_WM_ICON>($window) => [ @data ]
+=item B<get_NET_WM_ICON>(I<$X>,I<$window>) => I<$icons>
 
 Returns a reference to an array of data from this property for window,
 C<$window>, or C<undef> when there is no such property associated with
@@ -2235,7 +2937,54 @@ window, C<$window>.
 =cut
 
 sub get_NET_WM_ICON {
-    return $_[0]->getWMPropertyInts($_[1], '_NET_WM_ICON');
+    my($X,$window) = @_;
+    return getWMPropertyDecode($X,$window,_NET_WM_ICON=>sub{
+	    my @vals = unpack('L*',shift);
+	    my @icons = ();
+	    while (@vals) {
+		my %icon = ();
+		($icon{width},$icon{height}) = splice(@vals,0,2);
+		$icon{width} = 0 unless $icon{width};
+		$icon{height} = 0 unless $icon{height};
+		$icon{data} = [ splice(@vals,0,$icon{width}*$icon{height}) ];
+		push @icons, \%icon;
+	    }
+	    return \@icons;
+    });
+}
+
+sub dmp_NET_WM_ICON {
+    my($X,$icons) = @_;
+    return dmpWMPropertyDisplay($X,_NET_WM_ICON=>sub{
+	foreach my $icon (@$icons) {
+	    foreach (qw(width height)) {
+		printf "\t%-20s: %s\n",$_=>$icon->{$_};
+	    }
+	    printf "\t%-20s: %s\n",data=>join('',map{sprintf('%08x',$_)}@{$icon->{data}});
+	}
+    });
+}
+
+=item B<set_NET_WM_ICON>(I<$x>,I<$window>,I<$icons>)
+
+The C<_NET_WM_ICON> property should only be set by a client before
+initial mapping of a top-level window.
+
+=cut
+
+sub set_NET_WM_ICON {
+    my($X,$window,$icons) = @_;
+    return setWMPropertyEncode($X,$window,_NET_WM_ICON=>sub{
+	    my @vals = ();
+	    foreach my $icon (@$icons) {
+		next unless
+		    $icon->{width} and
+		    $icon->{height} and
+		    scalar(@{$icon->{data}}) == $icon->{width}*$icon->{height};
+		push @vals, $icon->{width}, $icon->{height}, @{$icon->{data}};
+	    }
+	    return CARDINAL=>32,pack('L*',@vals);
+    });
 }
 
 =back
@@ -2259,7 +3008,7 @@ See also the implementation notes on killing hung processes.
 
 =cut
 
-=item $ewmh->B<get_NET_WM_PID>($window) => $pid
+=item B<get_NET_WM_PID>(I<$X>,I<$window>) => I<$pid>
 
 Returns the process id of the process associated with the window,
 C<$window>, or C<undef> when no such property exists for C<$window>.
@@ -2267,7 +3016,22 @@ C<$window>, or C<undef> when no such property exists for C<$window>.
 =cut
 
 sub get_NET_WM_PID {
-    return $_[0]->getWMPropertyInt($_[1], '_NET_WM_PID');
+    return getWMPropertyUint($_[0],$_[1],_NET_WM_PID=>);
+}
+
+sub dmp_NET_WM_PID {
+    return dmpWMPropertyUint($_[0],_NET_WM_PID=>pid=>$_[1]);
+}
+
+=item B<set_NET_WM_PID>(I<$X>,I<$window>,I<$pid>)
+
+The C<_NET_WM_PID> property should only be set by a client before
+initial mapping of a top-level window.
+
+=cut
+
+sub set_NET_WM_PID {
+    return setWMPropertyUint($_[0],$_[1],_NET_WM_PID=>CARDINAL=>$_[2]);
 }
 
 =back
@@ -2283,7 +3047,7 @@ for iconified windows.
 
 =cut
 
-=item $ewmh->B<get_NET_WM_HANDLED_ICONS>($window) => $scalar
+=item B<get_NET_WM_HANDLED_ICONS>(I<$X>,I<$window>) => I<$bool>
 
 Returns a defined scalar value representing the presence of handled
 icons for window, C<$window>, or C<undef> when no such property exists
@@ -2292,7 +3056,22 @@ for C<$window>.
 =cut
 
 sub get_NET_WM_HANDLED_ICONS {
-    return $_[0]->getWMPropertyInt($_[1], '_NET_WM_HANDLED_ICONS');
+    return getWMPropertyUint($_[0],$_[1],_NET_WM_HANDLED_ICONS=>);
+}
+
+sub dmp_NET_WM_HANDLED_ICONS {
+    return dmpWMPropertyUint($_[0],_NET_WM_HANDLED_ICONS=>handled=>$_[1]);
+}
+
+=item B<set_NET_WM_HANDLED_ICONS>(I<$X>,I<$window>,I<$bool>)
+
+The C<_NET_WM_HANDLED_ICONS> property should only be set by a client before
+initial mapping of a top-level window.
+
+=cut
+
+sub set_NET_WM_HANDLED_ICONS {
+    return setWMPropertyUint($_[0],$_[1],_NET_WM_HANDLED_ICONS=>CARDINAL=>$_[2]);
 }
 
 =back
@@ -2333,7 +3112,7 @@ a "pop-up" window activated by a timer or some other event.
 
 =cut
 
-=item $ewmh->B<get_NET_WM_USER_TIME>($window) => $time
+=item B<get_NET_WM_USER_TIME>(I<$X>,I<$window>) => I<$time>
 
 Returns the user time associated with window, C<$window>, or C<undef> if
 no such property is associated with C<$window>.
@@ -2341,7 +3120,21 @@ no such property is associated with C<$window>.
 =cut
 
 sub get_NET_WM_USER_TIME {
-    return $_[0]->getWMPropertyInt($_[1], '_NET_WM_USER_TIME');
+    return getWMPropertyUint($_[0],$_[1],_NET_WM_USER_TIME=>);
+}
+
+sub dmp_NET_WM_USER_TIME {
+    return dmpWMPropertyUint($_[0],_NET_WM_USER_TIME=>time=>$_[1]);
+}
+
+=item B<set_NET_WM_USER_TIME>(I<$X>,I<$window>,I<$time>)
+
+The C<_NET_WM_HANDLED_ICONS> property should only be set by a client.
+
+=cut
+
+sub set_NET_WM_USER_TIME {
+    return setWMPropertyUint($_[0],$_[1],_NET_WM_USER_TIME=>CARDINAL=>$_[2]);
 }
 
 =back
@@ -2363,7 +3156,7 @@ battery power.
 
 =cut
 
-=item $ewmh->B<get_NET_WM_USER_TIME_WINDOW>($window) => $window
+=item B<get_NET_WM_USER_TIME_WINDOW>(I<$X>,I<$window>) => I<$timewin>
 
 Returns the window associated with the user time for window, C<$window>,
 or C<undef> if no such property is associated with C<$window>.
@@ -2371,7 +3164,22 @@ or C<undef> if no such property is associated with C<$window>.
 =cut
 
 sub get_NET_WM_USER_TIME_WINDOW {
-    return $_[0]->getWMPropertyInt($_[1], '_NET_WM_USER_TIME_WINDOW');
+    return getWMPropertyUint(@_[0..1],_NET_WM_USER_TIME_WINDOW=>);
+}
+
+sub dmp_NET_WM_USER_TIME_WINDOW {
+    return dmpWMPropertyUint($_[0],_NET_WM_USER_TIME_WINDOW=>window=>$_[1]);
+}
+
+=item B<set_NET_WM_USER_TIME_WINDOW>(I<$X>,I<$window>,I<$timewin>)
+
+The C<_NET_WM_USER_TIME_WINDOW> property should only be set by a client before
+initial mapping of a top-level window.
+
+=cut
+
+sub set_NET_WM_USER_TIME_WINDOW {
+    return setWMPropertyUint(@_[0..1],_NET_WM_USER_TIME_WINDOW=>WINDOW=>$_[2]);
 }
 
 =back
@@ -2386,7 +3194,7 @@ respective borders added by the Window Manager.
 
 =cut
 
-=item $ewmh->B<get_NET_FRAME_EXTENTS>($window) => [ $l, $r, $t, $b ]
+=item B<get_NET_FRAME_EXTENTS>(I<$X>,I<$window>) => I<$extents>
 
 Returns a reference to the list of frame extents for window, C<$window>,
 or C<undef> if no such property is associated with C<$window>.
@@ -2394,7 +3202,21 @@ or C<undef> if no such property is associated with C<$window>.
 =cut
 
 sub get_NET_FRAME_EXTENTS {
-    return $_[0]->getWMPropertyInts($_[1], '_NET_FRAME_EXTENTS');
+    return getWMPropertyHashUints($_[0],$_[1],_NET_FRAME_EXTENTS=>[qw(left right top bottom)]);
+}
+
+sub dmp_NET_FRAME_EXTENTS {
+    return dmpWMPropertyHashUints($_[0],_NET_FRAME_EXTENTS=>[qw(left right top bottom)],$_[1]);
+}
+
+=item B<set_NET_FRAME_EXTENTS>(I<$X>,I<$window>,I<$extents>)
+
+The C<_NET_FRAME_EXTENTS> property should only be set directly by a window manager.
+
+=cut
+
+sub set_NET_FRAME_EXTENTS {
+    return setWMPropertyHashUints($_[0],$_[1],_NET_FRAME_EXTENTS=>CARDINAL=>[qw(left right top bottom)],$_[2]);
 }
 
 =back
@@ -2423,7 +3245,7 @@ behind the window.
 
 =cut
 
-=item $ewmh->B<get_NET_WM_OPAQUE_REGION>($window) => [ $x, $y, $w, $h ]
+=item B<get_NET_WM_OPAQUE_REGION>(I<$X>,I<$window>) => I<$region>
 
 Returns a reference to a list of regions of opaque geometries for
 window, C<$window>, or C<undef> if no such property is associated with
@@ -2432,7 +3254,22 @@ C<$window>.
 =cut
 
 sub get_NET_WM_OPAQUE_REGION {
-    return $_[0]->getWMPropertyInts($_[1], '_NET_WM_OPAQUE_REGION');
+    return getWMPropertyHashInts($_[0],$_[1],_NET_WM_OPAQUE_REGION=>[qw(x y width height)]);
+}
+
+sub dmp_NET_WM_OPAQUE_REGION {
+    return dmpWMPropertyHashInts($_[0],_NET_WM_OPAQUE_REGION=>[qw(x y width height)],$_[1]);
+}
+
+=item B<set_NET_WM_OPAQUE_REGION>(I<$X>,I<$window>,I<$region>)
+
+The C<_NET_WM_OPAQUE_REGION> property should only be set by a client before
+initial mapping of a top-level window.
+
+=cut
+
+sub set_NET_WM_OPAQUE_REGION {
+    return setWMPropertyHashInts($_[0],$_[1],_NET_WM_OPAQUE_REGION=>CARDINAL=>[qw(x y width height)],$_[2]);
 }
 
 =back
@@ -2459,7 +3296,19 @@ windows might always want to run composited to avoid exposes.
 
 =cut
 
-=item $ewmh->B<get_NET_WM_BYPASS_COMPOSITOR>($window) => $hint
+use constant {
+    _NET_BYPASS_NO_PREFERENCE	=> 0,
+    _NET_BYPASS_DISABLE		=> 1,
+    _NET_BYPASS_NO_DISABLE	=> 2,
+
+    NetBypass=>[qw(
+	    NoPreference
+	    Disable
+	    NoDisable
+	    )],
+};
+
+=item B<get_NET_WM_BYPASS_COMPOSITOR>(I<$X>,I<$window>) => I<$hint>
 
 Returns the scalar hint associated with window, C<$window>, or C<undef>
 if no such property is associated with C<$window>.
@@ -2467,7 +3316,22 @@ if no such property is associated with C<$window>.
 =cut
 
 sub get_NET_WM_BYPASS_COMPOSITOR {
-    return $_[0]->getWMPropertyInt($_[1], '_NET_WM_BYPASS_COMPOSITOR');
+    return getWMPropertyInterp($_[0],$_[1],_NET_WM_BYPASS_COMPOSITOR=>NetBypass=>NetBypass())
+}
+
+sub dmp_NET_WM_BYPASS_COMPOSITOR {
+    return dmpWMPropertyInterp($_[0],_NET_WM_BYPASS_COMPOSITOR=>bypass=>$_[1])
+}
+
+=item B<set_NET_WM_BYPASS_COMPOSITOR>(I<$X>,I<$window>,I<$hint>)
+
+The C<_NET_WM_BYPASS_COMPOSITOR> property should only be set by a client before
+initial mapping of a top-level window.
+
+=cut
+
+sub set_NET_WM_BYPASS_COMPOSITOR {
+    return setWMPropertyInterp($_[0],$_[1],_NET_WM_BYPASS_COMPOSITOR=>CARDINAL=>NetBypass=>NetBypass(),$_[2]);
 }
 
 =back
@@ -2527,7 +3391,7 @@ before or simply clear the list, returning to "normal" fullscreen.
 
 =cut
 
-=item $ewmh->B<get_NET_WM_FULLSCREEN_MONITORS>($window) => [ $t, $b, $l, $r ]
+=item B<get_NET_WM_FULLSCREEN_MONITORS>(I<$X>,I<$window>) => I<$monitors>
 
 Returns a reference to a list of top, bottom, left and right monitors
 for fullscreen operation for window, C<$window>, or C<undef> if no such
@@ -2536,21 +3400,354 @@ property is associated with C<$window>.
 =cut
 
 sub get_NET_WM_FULLSCREEN_MONITORS {
-    return $_[0]->getWMPropertyInts($_[1], '_NET_WM_FULLSCREEN_MONITORS');
+    return getWMPropertyHashUints($_[0],$_[1],_NET_WM_FULLSCREEN_MONITORS=>[qw(top bottom left right)]);
 }
 
-=item $ewmh->B<set_NET_WM_FULLSCREEN_MONITORS>($window,$t,$b,$l,$r,$source)
+sub dmp_NET_WM_FULLSCREEN_MONITORS {
+    return dmpWMPropertyHashUints($_[0],_NET_WM_FULLSCREEN_MONITORS=>[qw(top bottom left right)],$_[1]);
+}
+
+=item B<set_NET_WM_FULLSCREEN_MONITORS>(I<$X>,I<$window>,I<$monitors>)
+
+The C<_NET_WM_FULLSCREEN_MONITORS> property should only be set by a client before
+initial mapping of a top-level window.
+
+=cut
+
+sub set_NET_WM_FULLSCREEN_MONITORS {
+    return setWMPropertyHashUints($_[0],$_[1],_NET_WM_FULLSCREEN_MONITORS=>CARDINAL=>[qw(top bottom left right)],$_[2]);
+}
+
+=item B<req_NET_WM_FULLSCREEN_MONITORS>(I<$X>,I<$window>,I<$t>,I<$b>,I<$l>,I<$r>,I<$source>)
 
 Sets the top, bottom, left and right monitors for fullscreen operation
 for window, C<$window>.
 
 =cut
 
-sub set_NET_WM_FULLSCREEN_MONITORS {
-    my ($self,$window,$t,$b,$l,$r,$source) = @_;
+sub req_NET_WM_FULLSCREEN_MONITORS {
+    my ($X,$window,$t,$b,$l,$r,$source) = @_;
+    $t = 0 unless $t;
+    $b = 0 unless $b;
+    $l = 0 unless $l;
+    $r = 0 unless $r;
     $source = 2 unless defined $source;
-    $self->NetClientMessage($window,_NET_WM_FULLSCREEN_MONITORS=>
-	    pack('LLLLL',$t,$b,$l,$r,$source));
+    $source = name2val(NetSource=>NetSource(),$source);
+    NetClientMessage($X,$window,_NET_WM_FULLSCREEN_MONITORS=>[$t,$b,$l,$r,$source]);
+}
+
+=back
+
+=head3 _NET_WM_WINDOW_OPACITY, CARDINAL/32
+
+=over
+
+=item B<get_NET_WM_WINDOW_OPACITY>(I<$X>,I<$window>) => I<$opacity> or undef
+
+=cut
+
+sub get_NET_WM_WINDOW_OPACITY {
+    return getWMPropertyUint(@_[0..1],_NET_WM_WINDOW_OPACITY=>);
+}
+
+sub dmp_NET_WM_WINDOW_OPACITY {
+    return dmpWMPropertyUint($_[0],_NET_WM_WINDOW_OPACITY=>opacity=>$_[1]);
+}
+
+=item B<set_NET_WM_WINDOW_OPACITY>(I<$X>,I<$window>,I<$opacity>)
+
+=cut
+
+sub set_NET_WM_WINDOW_OPACITY {
+    return setWMPropertyUint(@_[0..1],_NET_WM_WINDOW_OPACITY=>CARDINAL=>$_[2]);
+}
+
+=back
+
+=head3 _NET_WM_SYNC_REQUEST_COUNTER, CARDINAL/32
+
+=over
+
+=item B<get_NET_WM_SYNC_REQUEST_COUNTER>(I<$X>,I<$window>) => I<$opacity> or undef
+
+=cut
+
+sub get_NET_WM_SYNC_REQUEST_COUNTER {
+    return getWMPropertyUint(@_[0..1],_NET_WM_SYNC_REQUEST_COUNTER=>);
+}
+
+sub dmp_NET_WM_SYNC_REQUEST_COUNTER {
+    return dmpWMPropertyUint($_[0],_NET_WM_SYNC_REQUEST_COUNTER=>counter=>$_[1]);
+}
+
+=item B<set_NET_WM_SYNC_REQUEST_COUNTER>(I<$X>,I<$window>,I<$opacity>)
+
+=cut
+
+sub set_NET_WM_SYNC_REQUEST_COUNTER {
+    return setWMPropertyUint(@_[0..1],_NET_WM_SYNC_REQUEST_COUNTER=>CARDINAL=>$_[2]);
+}
+
+=back
+
+=head3 _NET_DESKTOP_PIXMAPS, PIXMAP[]/32
+
+=over
+
+=item B<get_NET_DESKTOP_PIXMAPS>(I<$X>,I<$root>) => I<$pixmaps> or undef
+
+=cut
+
+sub get_NET_DESKTOP_PIXMAPS {
+    return getWMRootPropertyUints($_[0],_NET_DESKTOP_PIXMAPS=>$_[1]);
+}
+
+sub dmp_NET_DESKTOP_PIXMAPS {
+    my($X,$pixmaps) = @_;
+    return dmpWMRootPropertyDisplay($X,_NET_DESKTOP_PIXMAPS=>sub{
+	printf "\t%-20s: %s\n",pixmaps=>join(', ',map{sprintf('0x%08x',$_)}@$pixmaps);
+    });
+}
+
+=item B<set_NET_DESKTOP_PIXMAPS>(I<$X>,I<$pixmaps>)
+
+=cut
+
+sub set_NET_DESKTOP_PIXMAPS {
+    return setWMRootPropertyUints($_[0],_NET_CLIENT_LIST=>PIXMAP=>$_[1]);
+}
+
+=back
+
+=head3 _NET_SYSTEM_TRAY_ORIENTATION, orientation CARDINAL/32
+
+The tray manager should set this hint on the selection owner window.
+
+The property should be set by the tray manager to indicates the current
+orientation of thet tray.  Tray icons may use this hint in order to
+maintain the icon's aspect ration and also as an indication of how the
+icon cntents should be laid out.
+
+ #define _NET_SYSTEM_TRAY_ORIENTATION_HORZ 0
+ #define _NET_SYSTEM_TRAY_ORIENTATION_VERT 1
+
+=cut
+
+use constant {
+    _NET_SYSTEM_TRAY_ORIENTATION_HORZ	=> 0,
+    _NET_SYSTEM_TRAY_ORIENTATION_VERT	=> 1,
+
+    NetWMTrayOrientation => [qw(
+	    Horizontal
+	    Vertical
+    )],
+};
+
+=over
+
+=item B<get_NET_SYSTEM_TRAY_ORIENTATION>(I<$X>,I<$window>) => I<$orientation> or undef
+
+=cut
+
+sub get_NET_SYSTEM_TRAY_ORIENTATION {
+    return getWMPropertyInterp(@_[0..1],_NET_SYSTEM_TRAY_ORIENTATION=>NetWMTrayOrientation=>NetWMTrayOrientation());
+}
+
+sub dmp_NET_SYSTEM_TRAY_ORIENTATION {
+    return dmpWMPropertyInterp($_[0],_NET_SYSTEM_TRAY_ORIENTATION=>orientation=>$_[1]);
+}
+
+=item B<set_NET_SYSTEM_TRAY_ORIENTATION>(I<$X>,I<$window>,I<$orientation>)
+
+=cut
+
+sub set_NET_SYSTEM_TRAY_ORIENTATION {
+    return setWMPropertyInterp(@_[0..1],_NET_SYSTEM_TRAY_ORIENTATION=>CARDINAL=>NetWMTrayOrientation=>NetWMTrayOrientation(),$_[2]);
+}
+
+=back
+
+=head3 _NET_SYSTEM_TRAY_VISUAL visual_id VISUALID/32
+
+The tray manager should set this hint on the selection owner window.
+
+The property should be set by the tray manager to indicate the preferred
+visual for icon windows.  To avoid ambiguity about the colormap to use
+the visual must either be the default visual for the screen or it must
+eb a TrueColor visual.  If this property is set to a visual with an
+alpha channel, the tray manager must use the Composite extension to
+composite the icon against the background using PictOpOver.
+
+=over
+
+=item B<get_NET_SYSTEM_TRAY_VISUAL>(I<$X>,I<$window>) => I<$visual_id> or undef
+
+=cut
+
+sub get_NET_SYSTEM_TRAY_VISUAL {
+    return getWMPropertyUint(@_[0..1],_NET_SYSTEM_TRAY_VISUAL=>);
+}
+
+sub dmp_NET_SYSTEM_TRAY_VISUAL {
+    return dmpWMPropertyUint($_[0],_NET_SYSTEM_TRAY_VISUAL=>visual_id=>$_[1]);
+}
+
+=item B<set_NET_SYSTEM_TRAY_VISUAL>(I<$X>,I<$window>,I<$visual_id>)
+
+=cut
+
+sub set_NET_SYSTEM_TRAY_VISUAL {
+    return setWMPropertyUint(@_[0..1],_NET_SYSTEM_TRAY_VISUAL=>VISUALID=>$_[2]);
+}
+
+=back
+
+=head3 _XEMBED_INFO
+
+The protocol is started by the embedder. The window ID of the client
+window is passed (by unspecified means) to the embedding application,
+and the embedder calls XReparentWindow() to reparent the client window
+into the embedder window.
+
+Implementations may choose to support an alternate method of beginning
+the protocol where the window ID of the embedder is passed to client
+application and the client creates a window within the embedder, or
+reparents an existing window into the embedder's window. Which method of
+starting XEmbed is used a matter up to higher level agreement and
+outside the scope of this specification.
+
+In either case the client window must have a property called
+_XEMBED_INFO on it. This property has type _XEMBED_INFO and format 32.
+The contents of the property are:
+
+ version  CARD32    the protocol version
+ flags    CARD32    a bitfield of flags
+
+The version field indicates the maximum version of the protocol that the
+client supports.  The embedder should retrieve this field and set the
+data2 difled of the XEMBED_EMBEDDED_NOTIFY to Min (version, max version
+supported by embedder).  The version number corresponding to the current
+verison of the protocol is 0.
+
+The currently defined bit in the flag field is:
+
+ #define XEMBED_MAPPED   (1<<0)
+
+=over
+
+=item XEMBED_MAPPED
+
+If set the client should be mapped.  The embedder must track the flags
+field by selecting the PropertyNotify events on the client and map and
+unmap the client appropriately.  (The embedder can leave the client
+unmapped when this bit is set, but should immediately unmap the client
+upon detecting that the bit has been unset.)
+
+=over
+
+=item Rationale:
+
+the reason for using this bit rather than MapRequest events is so that
+the client can reliably control it's map state before the inception of
+the protocol without worry that the client window will become visible as
+a child of the root window.
+
+=back
+
+To support future expansion, all fields not currently defined must be
+set to zero.  To add proprietary externsions to the XEMBED protocol, an
+application must use a separate property, rather than using unused bits
+in the struct field or extending the _XEMBED_INFO property.
+
+At the start of the protocol, the embedder first sends an
+XEMBED_EMBEDDED_NOTIFY message, then sends XEBMED_FOCUS_IN,
+XEMBED_WINDOW_ACTIVATE, and XEMBED_MODALITY_ON messages as necessary to
+synchronize the state of the client with that of the embedder.  Before
+any of these messages are reecived, the state of the client is:
+
+ Not focused
+ Not active
+ Modality off
+
+If the embedder is geometry managed and can change its size, it should
+obey the client's WMNormalHints settings. Note that most toolkits will
+not have equivalents for all the hints in the WMNormalHints settings,
+clients must not assume that the requested hints will be obeyed exactly.
+The width_inc, height_inc, min_aspect, and max_aspect fields are
+examples of fields from WMNormalHints that are unlikely to be supported
+by embedders.
+
+The protocol ends in one of three ways:
+
+=over
+
+=item 1.
+
+The embedder can unmap the client and reparent the client window to the
+root window. If the client receives an ReparentNotify event, it should
+check the parent field of the XReparentEvent structure. If this is the
+root window of the window's screen, then the protocol is finished and
+there is no further interaction. If it is a window other than the root
+window, then the protocol continues with the new parent acting as the
+embedder window.
+
+=item 2.
+
+The client can reparent its window out of the embedder window. If the
+embedder receives a ReparentNotify signal with the window field being
+the current client and the parent field being a different window, this
+indicates the end of the protocol.  [ GTK+ doesn't currently handle
+this; but it seems useful to allow the protocol to be ended in a
+non-destructive fashion from either end. ]
+
+=item 3.
+
+The client can destroy its window.
+
+=back
+
+=back
+
+=over
+
+=item B<get_XEMBED_INFO>(I<$X>,I<$window>) => I<$info> or undef
+
+=cut
+
+use constant {
+    XEmbedInfo => [qw(
+	    Mapped
+    )],
+};
+
+sub get_XEMBED_INFO {
+    return getWMPropertyDecode(@_[0..1],_XEMBED_INFO=>sub{
+	    my($version,$flags) = unpack('LL',shift);
+	    my %info = ();
+	    $info{version} = $version;
+	    $info{flags} = bits2names(XEmbedInfo=>XEmbedInfo(),$flags);
+	    return \%info;
+    });
+}
+
+sub dmp_XEMBED_INFO {
+    return dmpWMPropertyHashUints($_[0],_XEMBED_INFO=>[qw(version flags)],$_[1]);
+}
+
+=item B<set_XEMBED_INFO>(I<$X>,I<$window>,I<$info>)
+
+=cut
+
+sub set_XEMBED_INFO {
+    my $info = $_[2];
+    return setWMPropertiesEncode(@_[0..1],_XEMBED_INFO=>sub{
+	    my($version,$flags);
+	    $version = $info->{version};
+	    $version = 0 unless $version;
+	    $flags = names2bits(XEmbedInfo=>XEmbedInfo(),$info->{flags});
+	    $flags = 0 unless $flags;
+	    return _XEMBED_INFO=>32,pack('LL',$version,$flags);
+    });
 }
 
 =back

@@ -1,162 +1,155 @@
 package X11::Protocol::Util;
-use base qw(X11::Protocol::AnyEvent);
 use X11::Protocol;
 use Encode;
 use Encode::Unicode;
 use Encode::X11;
 use Exporter;
+use Carp qw(cluck);
 use strict;
 use warnings;
 use vars '$VERSION', '@ISA', '@EXPORT_OK', '%EXPORT_TAGS';
 $VERSION = 0.01;
 @ISA = ('Exporter');
 
-@EXPORT_OK = qw(
-        :encdec
-        :string
-        :text
-        :uint
-        :int
-        :atom
-        :bits
-        :all
-
-        getWMRootPropertyDecode
-        getWMRootPropertyString
-        getWMRootPropertyStrings
-        getWMRootPropertyTermString
-        getWMRootPropertyTermStrings
-        getWMRootPropertyUint
-        getWMRootPropertyUints
-        getWMRootPropertyInt
-        getWMRootPropertyInts
-        getWMRootPropertyAtom
-        getWMRootPropertyAtoms
-
-        getWMPropertyDecode
-        getWMPropertyString
-        getWMPropertyStrings
-        getWMPropertyTermString
-        getWMPropertyTermStrings
-        getWMPropertyUint
-        getWMPropertyUints
-        getWMPropertyInt
-        getWMPropertyInts
-        getWMPropertyAtom
-        getWMPropertyAtoms
-        getWMPropertyBits
-
-        setWMRootPropertyEncode
-        setWMRootPropertyText
-        setWMRootPropertyTexts
-        setWMRootPropertyTermText
-        setWMRootPropertyTermTexts
-        setWMRootPropertyString
-        setWMRootPropertyStrings
-        setWMRootPropertyTermString
-        setWMRootPropertyTermStrings
-        setWMRootPropertyUint
-        setWMRootPropertyUints
-        setWMRootPropertyInt
-        setWMRootPropertyInts
-        setWMRootPropertyAtom
-        setWMRootPropertyAtoms
-
-        setWMPropertyEncode
-        setWMPropertyText
-        setWMPropertyTexts
-        setWMPropertyTermText
-        setWMPropertyTermTexts
-        setWMPropertyString
-        setWMPropertyStrings
-        setWMPropertyTermString
-        setWMPropertyTermStrings
-        setWMPropertyUint
-        setWMPropertyUints
-        setWMPropertyInt
-        setWMPropertyInts
-        setWMPropertyAtom
-        setWMPropertyAtoms
-);
-
 %EXPORT_TAGS = (
-        ':encdec' => [qw(
-                getWMRootPropertyDecode
+        encdec => [qw(
+		dmpWMPropertyDisplay
+		dmpWMRootPropertyDisplay
                 getWMPropertyDecode
-                setWMRootPropertyEncode
+                getWMRootPropertyDecode
                 setWMPropertyEncode
+                setWMRootPropertyEncode
             )],
-        ':string' => [qw(
-                getWMRootPropertyString
-                getWMRootPropertyStrings
-                getWMRootPropertyTermString
-                getWMRootPropertyTermStrings
+        string => [qw(
+		dmpWMPropertyString
+		dmpWMPropertyStrings
+		dmpWMPropertyTermString
+		dmpWMPropertyTermStrings
+		dmpWMRootPropertyString
+		dmpWMRootPropertyStrings
+		dmpWMRootPropertyTermString
+		dmpWMRootPropertyTermStrings
                 getWMPropertyString
                 getWMPropertyStrings
                 getWMPropertyTermString
                 getWMPropertyTermStrings
-                setWMRootPropertyString
-                setWMRootPropertyStrings
-                setWMRootPropertyTermString
-                setWMRootPropertyTermStrings
+                getWMRootPropertyString
+                getWMRootPropertyStrings
+                getWMRootPropertyTermString
+                getWMRootPropertyTermStrings
                 setWMPropertyString
                 setWMPropertyStrings
                 setWMPropertyTermString
                 setWMPropertyTermStrings
+                setWMRootPropertyString
+                setWMRootPropertyStrings
+                setWMRootPropertyTermString
+                setWMRootPropertyTermStrings
             )],
-        ':text' => [qw(
-                setWMRootPropertyText
-                setWMRootPropertyTexts
-                setWMRootPropertyTermText
-                setWMRootPropertyTermTexts
-                setWMPropertyText
-                setWMPropertyTexts
+        text => [qw(
                 setWMPropertyTermText
                 setWMPropertyTermTexts
+                setWMPropertyText
+                setWMPropertyTexts
+                setWMRootPropertyTermText
+                setWMRootPropertyTermTexts
+                setWMRootPropertyText
+                setWMRootPropertyTexts
             )],
-        ':uint' => [qw(
-                getWMRootPropertyUint
-                getWMRootPropertyUints
+        uint => [qw(
+		dmpWMPropertyHashUints
+		dmpWMPropertyInterp
+		dmpWMPropertyUint
+		dmpWMPropertyUints
+		dmpWMRootPropertyHashUints
+		dmpWMRootPropertyInterp
+		dmpWMRootPropertyUint
+		dmpWMRootPropertyUints
+                getWMPropertyHashUints
+                getWMPropertyInterp
+		getWMPropertyRecursive
                 getWMPropertyUint
                 getWMPropertyUints
-                setWMRootPropertyUint
-                setWMRootPropertyUints
+                getWMRootPropertyHashUints
+                getWMRootPropertyInterp
+		getWMRootPropertyRecursive
+                getWMRootPropertyUint
+                getWMRootPropertyUints
+                setWMPropertyHashUints
+                setWMPropertyInterp
+		setWMPropertyRecursive
                 setWMPropertyUint
                 setWMPropertyUints
+                setWMRootPropertyHashUints
+                setWMRootPropertyInterp
+		setWMRootPropertyRecursive
+                setWMRootPropertyUint
+                setWMRootPropertyUints
             )],
-        ':int' => [qw(
-                getWMRootPropertyInt
-                getWMRootPropertyInts
+        int => [qw(
+		dmpWMPropertyHashInts
+		dmpWMPropertyInt
+		dmpWMPropertyInts
+		dmpWMRootPropertyHashInts
+		dmpWMRootPropertyInt
+		dmpWMRootPropertyInts
+                getWMPropertyHashInts
                 getWMPropertyInt
                 getWMPropertyInts
-                setWMRootPropertyInt
-                setWMRootPropertyInts
+                getWMRootPropertyHashInts
+                getWMRootPropertyInt
+                getWMRootPropertyInts
+                setWMPropertyHashInts
                 setWMPropertyInt
                 setWMPropertyInts
+                setWMRootPropertyHashInts
+                setWMRootPropertyInt
+                setWMRootPropertyInts
             )],
-        ':atom' => [qw(
-                getWMRootPropertyAtom
-                getWMRootPropertyAtoms
+        atom => [qw(
+		dmpWMPropertyAtom
+		dmpWMPropertyAtoms
+		dmpWMRootPropertyAtom
+		dmpWMRootPropertyAtoms
                 getWMPropertyAtom
                 getWMPropertyAtoms
-                setWMRootPropertyAtom
-                setWMRootPropertyAtoms
+                getWMRootPropertyAtom
+                getWMRootPropertyAtoms
                 setWMPropertyAtom
                 setWMPropertyAtoms
+                setWMRootPropertyAtom
+                setWMRootPropertyAtoms
             )],
-        ':bits' => [qw(
+        bits => [qw(
+		dmpWMPropertyBitnames
+		dmpWMRootPropertyBitnames
+                getWMPropertyBitnames
                 getWMPropertyBits
+                getWMRootPropertyBitnames
+                setWMPropertyBitnames
+                setWMRootPropertyBitnames
             )],
-        ':all' => [qw(
-                :encdec
-                :string
-                :text
-                :uint
-                :int
-                :atom
-                :bits
+        conv => [qw(
+                name2val
+                val2name
+                names2bits
+                bits2names
             )],
 );
+
+{
+    my %seen;
+    push @{$EXPORT_TAGS{all}},
+	grep {!$seen{$_}++} @{$EXPORT_TAGS{$_}}
+	    foreach keys %EXPORT_TAGS;
+
+    foreach my $pfx (qw(get set dmp req)) {
+	push @{$EXPORT_TAGS{$pfx}},
+	     grep {/^$pfx/} @{$EXPORT_TAGS{all}};
+    }
+}
+
+Exporter::export_ok_tags('all');
 
 
 
@@ -177,6 +170,100 @@ L<X11::Protocol::ICCCM(3pm)> module.
 =head1 METHODS
 
 The module provides the following methods:
+
+=head2 Interpretation of numbers and masks
+
+The following methods are used to convert bit mask values to names and
+vise versa;, values to names and vise versa:
+
+=over
+
+=cut
+
+my %NAMENUMS = ();
+my %NAMEVALS = ();
+
+=item B<name2val>(I<$kind>,I<$vals>,I<$name>) => I<$val>
+
+=cut
+
+sub name2val {
+    my($kind,$vals,$name) = @_;
+    my $nums = $NAMENUMS{$kind};
+    unless ($nums) {
+        $nums = {};
+        my $i = 0;
+        foreach (@$vals) {
+            $nums->{$_} = $i if defined $_;
+            $i += 1;
+        }
+        $NAMENUMS{$kind} = $nums;
+    }
+    my $val = $name;
+    $val = 0 unless defined $val;
+    $val = $nums->{$val} if defined $nums->{$val};
+    return $val;
+}
+
+=item B<val2name>(I<$kind>,I<$vals>,I<$val>) => I<$name>
+
+=cut
+
+sub val2name {
+    my($kind,$vals,$val) = @_;
+    $NAMEVALS{$kind} = $vals unless $NAMEVALS{$kind};
+    my $name = $val;
+    $name = $vals->[$val] if defined $vals->[$val];
+    return $name;
+}
+
+=item B<names2bits>(I<$kind>,I<$vals>,I<$names>) => I<$bits>
+
+=cut
+
+sub names2bits {
+    my($kind,$vals,$names) = @_;
+    my $mask = $NAMENUMS{$kind};
+    unless ($mask) {
+        $mask = {};
+        my $i = 0;
+        foreach (@$vals) {
+            $mask->{$_} = $i if defined $_;
+            $i += 1;
+        }
+        $NAMENUMS{$kind} = $mask;
+    }
+    my $bits = 0;
+    foreach (@$names) {
+        $_ = $mask->{$_} if defined $mask->{$_};
+        next unless m{^\d+$};
+        $bits |= 1<<$_;
+    }
+    return $bits;
+}
+
+=item B<bits2names>(I<$kind>,I<$vals>,I<$bits>) => I<$names>
+
+=cut
+
+sub bits2names {
+    my($kind,$vals,$bits) = @_;
+    $NAMEVALS{$kind} = $vals unless $NAMEVALS{$kind};
+    my @names = ();
+    for(my $i=0;$i<31;$i++) {
+        if ($bits&(1<<$i)) {
+            if (defined $vals->[$i]) {
+                push @names, $vals->[$i];
+            } else {
+                push @names, $i;
+            }
+        }
+    }
+    return \@names;
+}
+
+
+=back
 
 =head2 Getting Properties
 
@@ -227,6 +314,9 @@ decoded data.  This method is used by subsequent methods below:
 sub getWMRootPropertyDecode {
     my ($X,$prop,$decode,$root) = @_;
     if (my($data,$rtype,$format) = getRootProperty($X,$root,$prop)) {
+	$rtype = $X->atom_name($rtype);
+	$X->{proptypes}{$prop} = $rtype;
+	$X->{propformats}{$prop} = $format;
 	return &{$decode}($data,$rtype,$format);
     }
     warn "Could not retrieve property $prop!";
@@ -373,6 +463,17 @@ sub getWMRootPropertyInts {
 	sub{ return [ unpack('l*',shift) ]; },$root);
 }
 
+=item B<getWMRootPropertyInterp>(I<$X>,I<$prop>,I<$kind>,I<$vals>,I<$root>) => I<$value>
+
+=cut
+
+sub getWMRootPropertyInterp {
+    my($X,$prop,$kind,$vals,$root) = @_;
+    return getWMRootPropertyDecode($X,$prop,sub{
+            return val2name($kind,$vals,unpack('L',shift))
+    });
+}
+
 =item B<getWMRootPropertyAtom>(I<$X>,I<$prop>,I<$root>) => I<$value>
 
 Returns I<$value> as a single scalar atom name.
@@ -398,10 +499,74 @@ I<@atoms> is the list of returned atoms, the hash reference is:
 sub getWMRootPropertyAtoms {
     my ($X,$prop,$root) = @_;
     return getWMRootPropertyDecode($X,$prop,
-	sub{ return { map{$X->atom_name($_)=>1} unpack('L',shift) }; },$root);
+	sub{ return { map{$X->atom_name($_)=>1} unpack('L*',shift) }; },$root);
 }
 
-=back
+=item B<getWMRootPropertyBitnames>(I<$X>,I<$prop>,I<$type>,I<$kind>,I<$vals>,I<$root>) => I<$bits>
+
+=cut
+
+sub getWMRootPropertyBitnames {
+    my($X,$prop,$kind,$vals,$root) = @_;
+    return getWMRootPropertyDecode($X,$prop,sub{
+            return bits2names($kind,$vals,unpack('L',shift))
+    },$root);
+}
+
+=item B<getWMRootPropertyHashUints>(I<$X>,I<$prop>,I<$keys>,I<$root>) => I<$hash>
+
+=cut
+
+sub getWMRootPropertyHashUints {
+    my($X,$prop,$keys,$root) = @_;
+    return getWMRootPropertyDecode($X,$prop,sub{
+            my @vals = unpack('L*',shift);
+            my %hash = ();
+            foreach (@$keys) { $hash{$_} = shift @vals }
+            return \%hash;
+    },$root);
+}
+
+=item B<getWMRootPropertyHashInts>(I<$X>,I<$prop>,I<$keys>,I<$root>) => I<$hash>
+
+=cut
+
+sub getWMRootPropertyHashInts {
+    my($X,$prop,$keys,$root) = @_;
+    return getWMRootPropertyDecode($X,$prop,sub{
+            my @vals = unpack('l*',shift);
+            my %hash = ();
+            foreach (@$keys) { $hash{$_} = shift @vals }
+            return \%hash;
+    },$root);
+}
+
+=item B<getWMRootPropertyRecursive>(I<$X>,I<$prop>,I<$root>) => I<$check>
+
+Returns I<$check> as the recursive root window property, I<$prop>, or
+C<undef> when the property, I<$prop>, does not exist on I<$root> or the
+window, I<$check>, does not have a recursive property pointing to itself.
+
+=cut
+
+sub getWMRootPropertyRecursive {
+    my($X,$prop,$window) = @_;
+    $window = $X->root unless $window;
+    my $check;
+    if ($check = getWMPropertyUint($X,$window,$prop)) {
+	if ($check ne $window) {
+	    my $other = getWMPropertyUint($X,$check,$prop);
+	    if (not $other) {
+		warn sprintf('%s is not recursive on 0x%08x!',$prop,$window); 
+	    }
+	    elsif ($check ne $other) {
+		warn sprintf('%s check failed: 0x%08x != 0x%08x',$prop,$check,$other); 
+		$check = undef;
+	    }
+	}
+    }
+    return $check;
+}
 
 =back
 
@@ -433,7 +598,7 @@ sub getProperty {
     if ($after) {
         ($res) = $X->robust_req(GetProperty=>$window,$atom,$type,1,($after+3)>>2);
         return () unless ref $res and $res->[2];
-        $data .= $ref->[0];
+        $data .= $res->[0];
     }
     return ($data, $rtype, $format);
 }
@@ -455,8 +620,11 @@ sub getWMPropertyDecode {
     my ($X,$window,$prop,$decode) = @_;
     $window = $X->{_NET_ACTIVE_WINDOW} unless $window;
     $window = $X->root unless $window;
-    if (my($data,$rtype) = getProperty($X,$window, $prop)) {
-	$X->{windows}{$window}{$prop} = &{$decode}($data,$rtype);
+    if (my($data,$rtype,$format) = getProperty($X,$window, $prop)) {
+	$rtype = $X->atom_name($rtype);
+	$X->{proptypes}{$prop} = $rtype;
+	$X->{propformats}{$prop} = $format;
+	$X->{windows}{$window}{$prop} = &{$decode}($data,$rtype,$format);
     } else {
 	delete $X->{windows}{$window}{$prop};
     }
@@ -604,6 +772,21 @@ sub getWMPropertyInts {
 	sub{ return [ unpack('l*',shift) ]; });
 }
 
+=item B<getWMPropertyInterp>(I<$X>,I<$window>,I<$prop>,I<$kind>,I<$vals>) => I<$value>
+
+Like getWMPropertyUint(), but the result is interpreted according to
+I<$kind>.
+
+=cut
+
+sub getWMPropertyInterp {
+    my ($X,$window,$prop,$kind,$vals) = @_;
+    return getWMPropertyDecode($X,$window,$prop,sub{
+            return val2name($kind,$vals,unpack('L',shift))
+    });
+}
+
+
 =item B<getWMPropertyAtom>(I<$X>,I<$window>,I<$prop>) => I<$value>
 
 Returns I<$value> as a single scalar atom name.
@@ -627,8 +810,48 @@ I<@atoms> is the list of returned atoms, the hash reference is:
 
 sub getWMPropertyAtoms {
     my ($X,$window,$prop) = @_;
-    return getWMPropertyDecode($X,$window,$prop,
-	sub{ return { map{$X->atom_name($_)=>1} unpack('L',shift) }; });
+    return getWMPropertyDecode($X,$window,$prop,sub{
+            return { map{$X->atom_name($_)=>1} unpack('L*',shift) };
+    });
+}
+
+=item B<getWMPropertyBitnames>(I<$X>,I<$window>,I<$prop>,I<$kind>,I<$vals>) => I<$bits>
+
+=cut
+
+sub getWMPropertyBitnames {
+    my($X,$window,$prop,$kind,$vals) = @_;
+    return getWMPropertyDecode($X,$window,$prop,sub{
+            return bits2names($kind,$vals,unpack('L',shift))
+    });
+}
+
+=item B<getWMPropertyHashUints>(I<$X>,I<$window>,I<$prop>,I<$keys>) => I<$hash>
+
+=cut
+
+sub getWMPropertyHashUints {
+    my($X,$window,$prop,$keys) = @_;
+    return getWMPropertyDecode($X,$window,$prop,sub{
+            my @vals = unpack('L*',shift);
+            my %hash = ();
+            foreach (@$keys) { $hash{$_} = shift @vals }
+            return \%hash;
+    });
+}
+
+=item B<getWMPropertyHashInts>(I<$X>,I<$window>,I<$prop>,I<$keys>) => I<$hash>
+
+=cut
+
+sub getWMPropertyHashInts {
+    my($X,$window,$prop,$keys) = @_;
+    return getWMPropertyDecode($X,$window,$prop,sub{
+            my @vals = unpack('l*',shift);
+            my %hash = ();
+            foreach (@$keys) { $hash{$_} = shift @vals }
+            return \%hash;
+    });
 }
 
 =item B<getWMPropertyBits>(I<$X>,I<$window>,I<$prop>) => I<$value>
@@ -642,6 +865,32 @@ sub getWMPropertyBits {
     my ($X,$window,$prop) = @_;
     return getWMPropertyDecode($X,$window,$prop,
 	sub{ return [ map{unpack('b*',pack('V',$_))} unpack('L*',shift) ]; });
+}
+
+=item B<getWMPropertyRecursive>(I<$X>,I<$window>,I<$prop>) => I<$check>
+
+Returns I<$check> as the recursive window property, I<$prop>, on
+I<$window>, or C<undef> when the property, I<$prop>, does not exist on
+I<$window> or the window, I<$check>, does not have a recursive property
+pointing to itself.
+
+=cut
+
+sub getWMPropertyRecursive {
+    my($X,$window,$prop,$check) = @_[0..2];
+    if ($check = getWMPropertyUint($X,$window,$prop)) {
+	if ($check ne $window) {
+	    my $other = getWMPropertyUint($X,$check,$prop);
+	    if (not $other) {
+		warn sprintf('%s is not recursive on 0x%08x!',$prop,$window); 
+	    }
+	    elsif ($check ne $other) {
+		warn sprintf('%s check failed: 0x%08x != 0x%08x',$prop,$check,$other); 
+		$check = undef;
+	    }
+	}
+    }
+    return $check;
 }
 
 =back
@@ -844,7 +1093,7 @@ sub _map_style {
 }
 
 sub setWMRootPropertyString {
-    my @args = @_; $arsg[2] = _map_style($args[2]);
+    my @args = @_; $args[2] = _map_style($args[2]);
     return setWMRootPropertyText(@args);
 }
 
@@ -859,7 +1108,7 @@ strings.
 =cut
 
 sub setWMRootPropertyStrings {
-    my @args = @_; $arsg[2] = _map_style($args[2]);
+    my @args = @_; $args[2] = _map_style($args[2]);
     return setWMRootPropertyTexts(@args);
 }
 
@@ -871,7 +1120,7 @@ of null-separated strings.
 =cut
 
 sub setWMRootPropertyTermString {
-    my @args = @_; $arsg[2] = _map_style($args[2]);
+    my @args = @_; $args[2] = _map_style($args[2]);
     return setWMRootPropertyTermText(@args);
 }
 
@@ -883,7 +1132,7 @@ of null-separated strings.
 =cut
 
 sub setWMRootPropertyTermStrings {
-    my @args = @_; $arsg[2] = _map_style($args[2]);
+    my @args = @_; $args[2] = _map_style($args[2]);
     return setWMRootPropertyTermTexts(@args);
 }
 
@@ -898,9 +1147,8 @@ results in a property of type, I<$type>.
 sub setWMRootPropertyUint {
     my($X,$prop,$type,$integer) = @_;
     setWMRootPropertyEncode($X,$prop,sub{
-	    my($type,$integer) = @_;
 	    return $type, 32, pack('L',$integer);
-    },$type,$integer);
+    });
 }
 
 =item B<setWMRootPropertyUints>(I<$X>,I<$prop>,I<$type>,I<@integers>)
@@ -914,9 +1162,8 @@ results in a property of type, I<$type>.
 sub setWMRootPropertyUints {
     my($X,$prop,$type,$integers) = @_;
     setWMRootPropertyEncode($X,$prop,sub{
-	    my($type,$integers) = @_;
 	    return $type, 32, pack('L*',@$integers);
-    },$type,$integer);
+    });
 }
 
 =item B<setWMRootPropertyInt>(I<$X>,I<$prop>,I<$type>,I<$integer>)
@@ -930,9 +1177,8 @@ results in a property of type, I<$type>.
 sub setWMRootPropertyInt {
     my($X,$prop,$type,$integer) = @_;
     setWMRootPropertyEncode($X,$prop,sub{
-	    my($type,$integer) = @_;
 	    return $type, 32, pack('l',$integer);
-    },$type,$integer);
+    });
 }
 
 =item B<setWMRootPropertyInts>(I<$X>,I<$prop>,I<$type>,I<@integers>)
@@ -946,9 +1192,19 @@ results in a property of type, I<$type>.
 sub setWMRootPropertyInts {
     my($X,$prop,$type,$integers) = @_;
     setWMRootPropertyEncode($X,$prop,sub{
-	    my($type,$integers) = @_;
 	    return $type, 32, pack('l*',@$integers);
-    },$type,$integer);
+    });
+}
+
+=item B<setWMRootPropertyInterp>(I<$X>,I<$prop>,I<$type>,I<$kind>,I<$vals>,I<$value>)
+
+=cut
+
+sub setWMRootPropertyInterp {
+    my($X,$prop,$type,$kind,$vals,$value) = @_;
+    setWMRootPropertyEncode($X,$prop,sub{
+            return $type, 32, pack('L',name2val($kind,$vals,$value));
+    });
 }
 
 =item B<setWMRootPropertyAtom>(I<$X>,I<$prop>,I<$atom>)
@@ -961,22 +1217,76 @@ This results in a C<ATOM> type property.
 sub setWMRootPropertyAtom {
     my($X,$prop,$atom) = @_;
     setWMRootPropertyEncode($X,$prop,sub{
-	    return ATOM=>32, pack('L',$X->atom(shift));
-    },$atom);
+	    return ATOM=>32, pack('L',$X->atom($atom));
+    });
 }
 
-=item B<setWMRootPropertyAtoms>(I<$X>,I<$prop>,I<@atoms>)
+=item B<setWMRootPropertyAtoms>(I<$X>,I<$prop>,I<$atoms>)
 
-Sets the property, I<$prop>, to the list of atoms named by I<@atoms>.
-This results in a C<ATOM> type property.
+Sets the property, I<$prop>, to the list or hash of atoms referenced by
+I<$atoms>.  This results in a C<ATOM> type property.
 
 =cut
 
 sub setWMRootPropertyAtoms {
     my($X,$prop,$atoms) = @_;
     setWMRootPropertyEncode($X,$prop,sub{
-	    return ATOM=>32, pack('L*',map{$X->atom($_)}@{$_[0]});
-    },$atoms);
+            my @names = ();
+            @names = @$atoms
+                if ref $atoms eq 'ARRAY';
+            @names = map{$atoms->{$_}?$_:()}keys %$atoms
+                if ref $atoms eq 'HASH';
+	    return ATOM=>32, pack('L*',map{$X->atom($_)}@names);
+    });
+}
+
+=item B<setWMRootPropertyBitnames>(I<$X>,I<$prop>,I<$type>,I<$kind>,I<$vals>,I<$bits>)
+
+=cut
+
+sub setWMRootPropertyBitnames {
+    my($X,$prop,$type,$kind,$vals,$bits) = @_;
+    setWMRootPropertyEncode($X,$prop,sub{
+            return $type,32,pack('L',names2bits($kind,$vals,$bits));
+    });
+}
+
+=item B<setWMRootPropertyHashUints>(I<$X>,I<$prop>,I<$type>,I<$keys>,I<$hash>)
+
+=cut
+
+sub setWMRootPropertyHashUints {
+    my($X,$prop,$type,$keys,$hash) = @_;
+    setWMRootPropertyEncode($X,$prop,sub{
+            my @vals = ();
+            if (ref $hash eq 'ARRAY') { push @vals,@$hash }
+            elsif (ref $hash eq 'HASH') { foreach (@$keys) { push @vals, $hash->{$_} } }
+            return $type,32,pack('L*',@vals);
+    });
+}
+
+=item B<setWMRootPropertyHashInts>(I<$X>,I<$prop>,I<$type>,I<$keys>,I<$hash>)
+
+=cut
+
+sub setWMRootPropertyHashInts {
+    my($X,$prop,$type,$keys,$hash) = @_;
+    setWMRootPropertyEncode($X,$prop,sub{
+            my @vals = ();
+            if (ref $hash eq 'ARRAY') { push @vals,@$hash }
+            elsif (ref $hash eq 'HASH') { foreach (@$keys) { push @vals, $hash->{$_} } }
+            return $type,32,pack('l*',@vals);
+    });
+}
+
+=item B<setWMRootPropertyRecursive>(I<$X>,I<$prop>,I<$check>)
+
+=cut
+
+sub setWMRootPropertyRecursive {
+    my($X,$prop,$type,$check) = @_;
+    setWMPropertyUint($X,$check,$prop,$type,$check);
+    setWMRootPropertyUint($X,$prop,$type,$check);
 }
 
 =back
@@ -1202,9 +1512,8 @@ results in a property of type, I<$type>.
 sub setWMPropertyUint {
     my($X,$window,$prop,$type,$integer) = @_;
     setWMPropertyEncode($X,$window,$prop,sub{
-	    my($type,$integer) = @_;
 	    return $type, 32, pack('L',$integer);
-    },$type,$integer);
+    });
 }
 
 =item B<setWMPropertyUints>(I<$X>,I<$window>,I<$prop>,I<@integers>)
@@ -1218,9 +1527,8 @@ results in a property of type, I<$type>.
 sub setWMPropertyUints {
     my($X,$window,$prop,$type,$integers) = @_;
     setWMPropertyEncode($X,$window,$prop,sub{
-	    my($type,$integers) = @_;
 	    return $type, 32, pack('L*',@$integers);
-    },$type,$integer);
+    });
 }
 
 =item B<setWMPropertyInt>(I<$X>,I<$window>,I<$prop>,I<$type>,I<$integer>)
@@ -1234,9 +1542,8 @@ results in a property of type, I<$type>.
 sub setWMPropertyInt {
     my($X,$window,$prop,$type,$integer) = @_;
     setWMPropertyEncode($X,$window,$prop,sub{
-	    my($type,$integer) = @_;
 	    return $type, 32, pack('l',$integer);
-    },$type,$integer);
+    });
 }
 
 =item B<setWMPropertyInts>(I<$X>,I<$window>,I<$prop>,I<@integers>)
@@ -1250,9 +1557,19 @@ results in a property of type, I<$type>.
 sub setWMPropertyInts {
     my($X,$window,$prop,$type,$integers) = @_;
     setWMPropertyEncode($X,$window,$prop,sub{
-	    my($type,$integers) = @_;
 	    return $type, 32, pack('l*',@$integers);
-    },$type,$integer);
+    });
+}
+
+=item B<setWMPropertyInterp>(I<$X>,I<$window>,I<$prop>,I<$type>,I<$kind>,I<$vals>,I<$value>)
+
+=cut
+
+sub setWMPropertyInterp {
+    my($X,$window,$prop,$type,$kind,$vals,$value) = @_;
+    setWMPropertyEncode($X,$window,$prop,sub{
+            return $type, 32, pack('L',name2val($kind,$vals,$value));
+    });
 }
 
 =item B<setWMPropertyAtom>(I<$X>,I<$window>,I<$prop>,I<$atom>)
@@ -1265,8 +1582,8 @@ This results in a C<ATOM> type property.
 sub setWMPropertyAtom {
     my($X,$window,$prop,$atom) = @_;
     setWMPropertyEncode($X,$window,$prop,sub{
-	    return ATOM=>32,pack('L',$X->atom(shift));
-    },$atom);
+	    return ATOM=>32,pack('L',$X->atom($atom));
+    });
 }
 
 =item B<setWMPropertyAtoms>(I<$X>,I<$window>,I<$prop>,I<$atoms>)
@@ -1279,9 +1596,64 @@ This results in a C<ATOM> type property.
 sub setWMPropertyAtoms {
     my($X,$window,$prop,$atoms) = @_;
     setWMPropertyEncode($X,$window,$prop,sub{
-	    return ATOM=>32,pack('L*',map{$X->atom($_)}@{$_[0]});
-    },$atoms);
+            my @names = ();
+            @names = @$atoms
+                if ref $atoms eq 'ARRAY';
+            @names = map{$atoms->{$_}?$_:()}keys %$atoms
+                if ref $atoms eq 'HASH';
+	    return ATOM=>32,pack('L*',map{$X->atom($_)}@names);
+    });
 }
+
+=item B<setWMPropertyBitnames>(I<$X>,I<$window>,I<$prop>,I<$type>,I<$kind>,I<$vals>,I<$bits>)
+
+=cut
+
+sub setWMPropertyBitnames {
+    my($X,$window,$prop,$type,$kind,$vals,$bits) = @_;
+    setWMPropertyEncode($X,$window,$prop,sub{
+            return $type,32,pack('L',names2bits($kind,$vals,$bits));
+    });
+}
+
+=item B<setWMPropertyHashUints>(I<$X>,I<$window>,I<$prop>,I<$type>,I<$keys>,I<$hash>)
+
+=cut
+
+sub setWMPropertyHashUints {
+    my($X,$window,$prop,$type,$keys,$hash) = @_;
+    setWMPropertyEncode($X,$window,$prop,sub{
+            my @vals = ();
+            if (ref $hash eq 'ARRAY') { push @vals,@$hash }
+            elsif (ref $hash eq 'HASH') { foreach (@$keys) { push @vals, $hash->{$_} } }
+            return $type,32,pack('L*',@vals);
+    });
+}
+
+=item B<setWMPropertyHashInts>(I<$X>,I<$window>,I<$prop>,I<$type>,I<$keys>,I<$hash>)
+
+=cut
+
+sub setWMPropertyHashInts {
+    my($X,$window,$prop,$type,$keys,$hash) = @_;
+    setWMPropertyEncode($X,$window,$prop,sub{
+            my @vals = ();
+            if (ref $hash eq 'ARRAY') { push @vals,@$hash }
+            elsif (ref $hash eq 'HASH') { foreach (@$keys) { push @vals, $hash->{$_} } }
+            return $type,32,pack('l*',@vals);
+    });
+}
+
+=item B<setWMPropertyRecursive>(I<$X>,I<$window>,I<$prop>,I<$type>,I<$check>)
+
+=cut
+
+sub setWMPropertyRecursive {
+    my($X,$window,$prop,$type,$check) = @_;
+    setWMPropertyUint($X,$check,$prop,$type,$check);
+    setWMPropertyUint($X,$window,$prop,$type,$check);
+}
+
 
 =back
 
@@ -1317,11 +1689,355 @@ sub clientMessage {
 		name=>'ClientMessage',
 		window=>$window,
                 type=>$type,
-		format=32,
+		format=>32,
                 data=>$data));
 }
 
 =back
+
+=head2 Dumping Properties
+
+The following methods are used to dump properties on windows:
+
+=over
+
+=item B<dmpWMRootProperty>(I<$X>,I<$prop>)
+
+=cut
+
+sub dmpWMRootProperty {
+    my($X,$prop,$rtype,$format) = @_;
+    printf "    %s(%s/%d):\n", $prop, $rtype, $format;
+}
+
+=over
+
+=item B<dmpWMRootPropertyDisplay>(I<$X>,I<$prop>,I<$display>)
+
+=cut
+
+sub dmpWMRootPropertyDisplay {
+    my($X,$prop,$display) = @_;
+    my $rtype = $X->{proptypes}{$prop};
+    my $format = $X->{propformats}{$prop};
+    dmpWMRootProperty($X,$prop,$rtype,$format);
+    return &{$display}($rtype,$format);
+}
+
+=over
+
+=item B<dmpWMRootPropertyString>(I<$X>,I<$prop>,I<$label>,I<$data>)
+
+=cut
+
+sub dmpWMRootPropertyString {
+    my($X,$prop,$label,$data) = @_;
+    dmpWMRootPropertyDisplay($X,$prop,sub{
+	    printf "\t%-20s: %s\n",$label,$data;
+    });
+}
+
+=item B<dmpWMRootPropertyStrings>(I<$X>,I<$prop>,I<$label>,I<$data>)
+
+=cut
+
+sub dmpWMRootPropertyStrings {
+    my($X,$prop,$label,$data) = @_;
+    dmpWMRootPropertyDisplay($X,$prop,sub{
+	    printf "\t%-20s: %s\n",$label,"'".join("', '",@$data)."'";
+    });
+}
+
+=item B<dmpWMRootPropertyTermString>(I<$X>,I<$prop>,I<$label>,I<$data>)
+
+=cut
+
+sub dmpWMRootPropertyTermString {
+    my($X,$prop,$label,$data) = @_;
+    dmpWMRootPropertyDisplay($X,$prop,sub{
+	    printf "\t%-20s: %s\n",$label,$data;
+    });
+}
+
+=item B<dmpWMRootPropertyTermStrings>(I<$X>,I<$prop>,I<$label>,I<$data>)
+
+=cut
+
+sub dmpWMRootPropertyTermStrings {
+    my($X,$prop,$label,$data) = @_;
+    dmpWMRootPropertyDisplay($X,$prop,sub{
+	    printf "\t%-20s: %s\n",$label,"'".join("', '",@$data)."'";
+    });
+}
+
+=item B<dmpWMRootPropertyUint>(I<$X>,I<$prop>,I<$label>,I<$data>)
+
+=cut
+
+sub dmpWMRootPropertyUint {
+    my($X,$prop,$label,$data) = @_;
+    dmpWMRootPropertyDisplay($X,$prop,sub{
+	    my($rtype,$format) = @_;
+	    if ($rtype =~ m{WINDOW|PIXMAP|VISUALID}) {
+		if ($data =~ m{^\d+$}) {
+		    printf "\t%-20s: 0x%08x\n",$label,$data;
+		} else {
+		    printf "\t%-20s: %s\n",$label,$data;
+		}
+	    } else {
+		printf "\t%-20s: %s\n",$label,$data;
+	    }
+    });
+}
+
+=item B<dmpWMRootPropertyUints>(I<$X>,I<$prop>,I<$label>,I<$data>)
+
+=cut
+
+sub dmpWMRootPropertyUints {
+    my($X,$prop,$label,$data) = @_;
+    dmpWMRootPropertyDisplay($X,$prop,sub{
+	    my($rtype,$format) = @_;
+	    my @strs = ();
+	    foreach (@$data) {
+		if ($rtype =~ m{WINDOW|PIXMAP|VISUALID}) {
+		    if (m{^\d+$}) {
+			push @strs, sprintf('0x%08x',$_);
+		    } else {
+			push @strs, $_;
+		    }
+		} else {
+		    push @strs, $_;
+		}
+	    }
+	    printf "\t%-20s: %s\n",$label,join(', ',@strs);
+    });
+}
+
+=item B<dmpWMRootPropertyInt>(I<$X>,I<$prop>,I<$label>,I<$data>)
+
+=cut
+
+sub dmpWMRootPropertyInt {
+    dmpWMRootPropertyUint(@_);
+}
+
+=item B<dmpWMRootPropertyInts>(I<$X>,I<$prop>,I<$label>,I<$data>)
+
+=cut
+
+sub dmpWMRootPropertyInts {
+    dmpWMRootPropertyUints(@_);
+}
+
+=item B<dmpWMRootPropertyInterp>(I<$X>,I<$prop>,I<$label>,I<$data>)
+
+=cut
+
+sub dmpWMRootPropertyInterp {
+    my($X,$prop,$label,$data) = @_;
+    dmpWMRootPropertyDisplay($X,$prop,sub{
+	printf "\t%-20s: %s\n",$label,$data;
+    });
+}
+
+=item B<dmpWMRootPropertyAtom>(I<$X>,I<$prop>,I<$label>,I<$data>)
+
+=cut
+
+sub dmpWMRootPropertyAtom {
+    my($X,$prop,$label,$data) = @_;
+    dmpWMRootPropertyDisplay($X,$prop,sub{
+	printf "\t%-20s: %s\n",$label,$data;
+    });
+}
+
+=item B<dmpWMRootPropertyAtoms>(I<$X>,I<$prop>,I<$label>,I<$data>)
+
+=cut
+
+sub dmpWMRootPropertyAtoms {
+    my($X,$prop,$label,$data) = @_;
+    dmpWMRootPropertyDisplay($X,$prop,sub{
+	printf "\t%-20s: %s\n",$label,join(', ',sort keys %$data);
+    });
+}
+
+=item B<dmpWMRootPropertyBitnames>(I<$X>,I<$prop>,I<$label>I<$data>)
+
+=cut
+
+sub dmpWMRootPropertyBitnames {
+    my($X,$prop,$label,$data) = @_;
+    dmpWMRootPropertyDisplay($X,$prop,sub{
+	printf "\t%-20s: %s\n",$label,join(' ',@$data);
+    });
+}
+
+=item B<dmpWMRootPropertyHashUints>(I<$X>,I<$prop>,I<$label>I<$keys>,I<$data>)
+
+=cut
+
+sub dmpWMRootPropertyHashUints {
+    my($X,$prop,$keys,$data) = @_;
+    dmpWMRootPropertyDisplay($X,$prop,sub{
+	foreach (@$keys) {
+	    next unless defined $data->{$_};
+	    printf "\t%-20s: %s\n",$_,$data->{$_};
+	}
+    });
+}
+
+=item B<dmpWMRootPropertyHashInts>(I<$X>,I<$prop>,I<$label>,I<$keys>,I<$data>)
+
+=cut
+
+sub dmpWMRootPropertyHashInts {
+    dmpWMRootPropertyHashUints(@_);
+}
+
+=back
+
+=back
+
+=item B<dmpWMProperty>(I<$X>,I<$prop>)
+
+=cut
+
+sub dmpWMProperty {
+    dmpWMRootProperty(@_);
+}
+
+=over
+
+=item B<dmpWMPropertyDisplay>(I<$X>,I<$prop>,I<$display>,I<$data>)
+
+=cut
+
+sub dmpWMPropertyDisplay {
+    dmpWMRootPropertyDisplay(@_);
+}
+
+=over
+
+=item B<dmpWMPropertyString>(I<$X>,I<$prop>,I<$data>)
+
+=cut
+
+sub dmpWMPropertyString {
+    dmpWMRootPropertyString(@_);
+}
+
+=item B<dmpWMPropertyStrings>(I<$X>,I<$prop>,I<$data>)
+
+=cut
+
+sub dmpWMPropertyStrings {
+    dmpWMRootPropertyStrings(@_);
+}
+
+=item B<dmpWMPropertyTermString>(I<$X>,I<$prop>,I<$data>)
+
+=cut
+
+sub dmpWMPropertyTermString {
+    dmpWMRootPropertyTermString(@_);
+}
+
+=item B<dmpWMPropertyTermStrings>(I<$X>,I<$prop>,I<$data>)
+
+=cut
+
+sub dmpWMPropertyTermStrings {
+    dmpWMRootPropertyTermStrings(@_);
+}
+
+=item B<dmpWMPropertyUint>(I<$X>,I<$prop>,I<$data>)
+
+=cut
+
+sub dmpWMPropertyUint {
+    dmpWMRootPropertyUint(@_);
+}
+
+=item B<dmpWMPropertyUints>(I<$X>,I<$prop>,I<$data>)
+
+=cut
+
+sub dmpWMPropertyUints {
+    dmpWMRootPropertyUints(@_);
+}
+
+=item B<dmpWMPropertyInt>(I<$X>,I<$prop>,I<$data>)
+
+=cut
+
+sub dmpWMPropertyInt {
+    dmpWMRootPropertyInt(@_);
+}
+
+=item B<dmpWMPropertyInts>(I<$X>,I<$prop>,I<$data>)
+
+=cut
+
+sub dmpWMPropertyInts {
+    dmpWMRootPropertyInts(@_);
+}
+
+=item B<dmpWMPropertyInterp>(I<$X>,I<$prop>,I<$data>)
+
+=cut
+
+sub dmpWMPropertyInterp {
+    dmpWMRootPropertyInterp(@_);
+}
+
+=item B<dmpWMPropertyAtom>(I<$X>,I<$prop>,I<$data>)
+
+=cut
+
+sub dmpWMPropertyAtom {
+    dmpWMRootPropertyAtom(@_);
+}
+
+=item B<dmpWMPropertyAtoms>(I<$X>,I<$prop>,I<$data>)
+
+=cut
+
+sub dmpWMPropertyAtoms {
+    dmpWMRootPropertyAtoms(@_);
+}
+
+=item B<dmpWMPropertyBitnames>(I<$X>,I<$prop>,I<$data>)
+
+=cut
+
+sub dmpWMPropertyBitnames {
+    dmpWMRootPropertyBitnames(@_);
+}
+
+=item B<dmpWMPropertyHashUints>(I<$X>,I<$prop>,I<$data>)
+
+=cut
+
+sub dmpWMPropertyHashUints {
+    dmpWMRootPropertyHashUints(@_);
+}
+
+=item B<dmpWMPropertyHashInts>(I<$X>,I<$prop>,I<$data>)
+
+=cut
+
+sub dmpWMPropertyHashInts {
+    dmpWMRootPropertyHashInts(@_);
+}
+
+=back
+
+=back
+
+=back
+
 
 =cut
 
@@ -1338,91 +2054,35 @@ follows:
 
 =item :encdec
 
-Special encoding and decoding subroutines as follows:
-
-    getWMRootPropertyDecode
-    getWMPropertyDecode
-    setWMRootPropertyEncode
-    setWMPropertyEncode
+Special encoding and decoding subroutines.
 
 =item :string
 
-String encoding and decoding subroutines as follows:
-
-    getWMRootPropertyString
-    getWMRootPropertyStrings
-    getWMRootPropertyTermString
-    getWMRootPropertyTermStrings
-    getWMPropertyString
-    getWMPropertyStrings
-    getWMPropertyTermString
-    getWMPropertyTermStrings
-    setWMRootPropertyString
-    setWMRootPropertyStrings
-    setWMRootPropertyTermString
-    setWMRootPropertyTermStrings
-    setWMPropertyString
-    setWMPropertyStrings
-    setWMPropertyTermString
-    setWMPropertyTermStrings
+String encoding and decoding subroutines.
 
 =item :text
 
-Text encoding and decoding subroutines as follows:
-
-    setWMRootPropertyText
-    setWMRootPropertyTexts
-    setWMRootPropertyTermText
-    setWMRootPropertyTermTexts
-    setWMPropertyText
-    setWMPropertyTexts
-    setWMPropertyTermText
-    setWMPropertyTermTexts
+Text encoding and decoding subroutines.
 
 =item :uint
 
-Unsigned integer encoding and decoding subroutines as follows:
-
-    getWMRootPropertyUint
-    getWMRootPropertyUints
-    getWMPropertyUint
-    getWMPropertyUints
-    setWMRootPropertyUint
-    setWMRootPropertyUints
-    setWMPropertyUint
-    setWMPropertyUints
+Unsigned integer encoding and decoding subroutines.
 
 =item :int
 
-Signed integer encoding and decoding subroutines as follows:
-
-    getWMRootPropertyInt
-    getWMRootPropertyInts
-    getWMPropertyInt
-    getWMPropertyInts
-    setWMRootPropertyInt
-    setWMRootPropertyInts
-    setWMPropertyInt
-    setWMPropertyInts
+Signed integer encoding and decoding subroutines.
 
 =item :atom
 
-Atom encoding and decoding subroutines as follows:
-
-    getWMRootPropertyAtom
-    getWMRootPropertyAtoms
-    getWMPropertyAtom
-    getWMPropertyAtoms
-    setWMRootPropertyAtom
-    setWMRootPropertyAtoms
-    setWMPropertyAtom
-    setWMPropertyAtoms
+Atom encoding and decoding subroutines.
 
 =item :bits
 
-Bits encoding and decoding subroutines as follows:
+Bits encoding and decoding subroutines.
 
-    getWMPropertyBits
+=item :conv
+
+Bit mask and value conversion and interpretation subroutines.
 
 =item :all
 
@@ -1439,4 +2099,4 @@ Brian Bidulock <bidulock@cpan.org>
 L<X11::Protocol(3pm)>,
 L<X11::Protocol::AnyEvent(3pm)>.
 
-# vim: set sw=4 tw=74 fo=tcqlorn:
+# vim: set sw=4 tw=72 fo=tcqlorn foldmarker==head,=head foldmethod=marker:

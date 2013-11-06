@@ -612,6 +612,17 @@ reference to a hash containing the following keys:
 =cut
 
 use constant {
+    WM_NORMAL_HINTS_USPOSITION	=> (1<<0),
+    WM_NORMAL_HINTS_USSIZE	=> (1<<1),
+    WM_NORMAL_HINTS_PPOSITION	=> (1<<2),
+    WM_NORMAL_HINTS_PSIZE	=> (1<<3),
+    WM_NORMAL_HINTS_PMINSIZE	=> (1<<4),
+    WM_NORMAL_HINTS_PMAXSIZE	=> (1<<5),
+    WM_NORMAL_HINTS_PRESIZEINC	=> (1<<6),
+    WM_NORMAL_HINTS_PASPECT	=> (1<<7),
+    WM_NORMAL_HINTS_PBASESIZE	=> (1<<8),
+    WM_NORMAL_HINTS_PWINGRAVITY	=> (1<<9),
+
     WMSizeHints=>[qw(
 	USPosition
 	USSize
@@ -623,19 +634,6 @@ use constant {
 	PAspect
 	PBaseSize
 	PWinGravity)],
-};
-
-use constant {
-    WM_NORMAL_HINTS_USPOSITION	=> (1<<0),
-    WM_NORMAL_HINTS_USSIZE	=> (1<<1),
-    WM_NORMAL_HINTS_PPOSITION	=> (1<<2),
-    WM_NORMAL_HINTS_PSIZE	=> (1<<3),
-    WM_NORMAL_HINTS_PMINSIZE	=> (1<<4),
-    WM_NORMAL_HINTS_PMAXSIZE	=> (1<<5),
-    WM_NORMAL_HINTS_PRESIZEINC	=> (1<<6),
-    WM_NORMAL_HINTS_PASPECT	=> (1<<7),
-    WM_NORMAL_HINTS_PBASESIZE	=> (1<<8),
-    WM_NORMAL_HINTS_PWINGRAVITY	=> (1<<9),
 };
 
 =over
@@ -1025,19 +1023,6 @@ described under L</WM_STATE>.
 =cut
 
 use constant {
-    WMHints => [qw(
-	InputHint
-	StateHint
-	IconPixmapHint
-	IconWindowHint
-	IconPositionHint
-	IconMaskHint
-	WindowGroupHint
-	MessageHint
-	UrgencyHint)],
-};
-
-use constant {
     WM_HINTS_INPUTHINT		    => (1<<0),
     WM_HINTS_STATEHINT		    => (1<<1),
     WM_HINTS_ICONPIXMAPHINT	    => (1<<2),
@@ -1047,6 +1032,18 @@ use constant {
     WM_HINTS_WINDOWGROUPHINT	    => (1<<6),
     WM_HINTS_MESSAGEHINT	    => (1<<7),
     WM_HINTS_URGENCYHINT	    => (1<<8),
+
+    WMHints => [qw(
+	InputHint
+	StateHint
+	IconPixmapHint
+	IconWindowHint
+	IconPositionHint
+	IconMaskHint
+	WindowGroupHint
+	MessageHint
+	UrgencyHint
+    )],
 };
 
 =over
@@ -1885,20 +1882,19 @@ The state names are as follows:
 =cut
 
 use constant {
-    WMState => [qw(
-	WithdrawnState
-	NormalState
-	ZoomState
-	IconicState
-	InactiveState)],
-};
-
-use constant {
     WM_STATE_WITHDRAWNSTATE	=> 0,
     WM_STATE_NORMALSTATE	=> 1,
     WM_STATE_ZOOMSTATE		=> 2,
     WM_STATE_ICONICSTATE	=> 3,
     WM_STATE_INACTIVESTATE	=> 4,
+
+    WMState => [qw(
+	WithdrawnState
+	NormalState
+	ZoomState
+	IconicState
+	InactiveState
+    )],
 };
 
 =over
