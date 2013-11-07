@@ -137,21 +137,6 @@ $VERSION = 0.01;
             )],
 );
 
-{
-    my %seen;
-    push @{$EXPORT_TAGS{all}},
-	grep {!$seen{$_}++} @{$EXPORT_TAGS{$_}}
-	    foreach keys %EXPORT_TAGS;
-
-    foreach my $pfx (qw(get set dmp req)) {
-	push @{$EXPORT_TAGS{$pfx}},
-	     grep {/^$pfx/} @{$EXPORT_TAGS{all}};
-    }
-}
-
-Exporter::export_ok_tags('all');
-
-
 
 =head1 NAME
 
@@ -2038,8 +2023,21 @@ sub dmpWMPropertyHashInts {
 
 =back
 
-
 =cut
+
+{
+    my %seen;
+    push @{$EXPORT_TAGS{all}},
+	grep {!$seen{$_}++} @{$EXPORT_TAGS{$_}}
+	    foreach keys %EXPORT_TAGS;
+
+    foreach my $pfx (qw(get set dmp req)) {
+	push @{$EXPORT_TAGS{$pfx}},
+	     grep {/^$pfx/} @{$EXPORT_TAGS{all}};
+    }
+}
+
+Exporter::export_ok_tags('all');
 
 1;
 

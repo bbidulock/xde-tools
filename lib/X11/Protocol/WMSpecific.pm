@@ -10,150 +10,6 @@ use vars '$VERSION', '@ISA', '@EXPORT_OK', '%EXPORT_TAGS';
 $VERSION = 0.01;
 @ISA = ('Exporter');
 
-%EXPORT_TAGS = (
-    common => [qw(
-	wm_check
-    )],
-    fluxbox => [qw(
-	getKWM_DOCKWINDOW
-	setKWM_DOCKWINDOW
-	dmpKWM_DOCKWINDOW
-	get_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR
-	set_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR
-	dmp_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR
-	get_BLACKBOX_PID
-	set_BLACKBOX_PID
-	dmp_BLACKBOX_PID
-	get_FLUXBOX_ACTION
-	set_FLUXBOX_ACTION
-	dmp_FLUXBOX_ACTION
-	get_FLUXBOX_GROUP_LEFT
-	set_FLUXBOX_GROUP_LEFT
-	dmp_FLUXBOX_GROUP_LEFT
-    )],
-    blackbox => [qw(
-    )],
-    openbox => [qw(
-	req_OB_CONTROL
-	get_OB_CONFIG_FILE
-	set_OB_CONFIG_FILE
-	dmp_OB_CONFIG_FILE
-	get_OB_THEME
-	set_OB_THEME
-	dmp_OB_THEME
-	get_OB_VERSION
-	set_OB_VERSION
-	dmp_OB_VERSION
-	get_OPENBOX_PID
-	set_OPENBOX_PID
-	dmp_OPENBOX_PID
-	get_OB_APP_CLASS
-	set_OB_APP_CLASS
-	dmp_OB_APP_CLASS
-	get_OB_APP_GROUP_CLASS
-	set_OB_APP_GROUP_CLASS
-	dmp_OB_APP_GROUP_CLASS
-	get_OB_APP_GROUP_NAME
-	set_OB_APP_GROUP_NAME
-	dmp_OB_APP_GROUP_NAME
-	get_OB_APP_NAME
-	set_OB_APP_NAME
-	dmp_OB_APP_NAME
-	get_OB_APP_ROLE
-	set_OB_APP_ROLE
-	dmp_OB_APP_ROLE
-	get_OB_APP_TITLE
-	set_OB_APP_TITLE
-	dmp_OB_APP_TITLE
-	get_OB_APP_TYPE
-	set_OB_APP_TYPE
-	dmp_OB_APP_TYPE
-    )],
-    icewm => [qw(
-	req_ICEWM_ACTION
-	get_ICEWM_TRAY
-	dmp_ICEWM_TRAY
-	set_ICEWM_TRAY
-	req_ICEWM_TRAY
-	got_ICEWM_TRAY
-    )],
-    pekwm => [qw(
-	get_PEKWM_FRAME_DECOR
-	set_PEKWM_FRAME_DECOR
-	dmp_PEKWM_FRAME_DECOR
-	get_PEKWM_FRAME_SKIP
-	set_PEKWM_FRAME_SKIP
-	dmp_PEKWM_FRAME_SKIP
-	get_PEKWM_FRAME_ID
-	set_PEKWM_FRAME_ID
-	dmp_PEKWM_FRAME_ID
-	get_PEKWM_FRAME_ACTIVE
-	set_PEKWM_FRAME_ACTIVE
-	dmp_PEKWM_FRAME_ACTIVE
-	get_PEKWM_FRAME_ORDER
-	set_PEKWM_FRAME_ORDER
-	dmp_PEKWM_FRAME_ORDER
-    )],
-    jwm => [qw(
-	req_JWM_RELOAD
-	req_JWM_RESTART
-	req_JWM_EXIT
-    )],
-    wmaker => [qw(
-	get_GNUSTEP_WM_ATTR
-	dmp_GNUSTEP_WM_ATTR
-	req_WINDOWMAKER_COMMAND
-	get_WINDOWMAKER_ICON_TILE
-	set_WINDOWMAKER_ICON_TILE
-	dmp_WINDOWMAKER_ICON_TILE
-	get_WINDOWMAKER_MENU
-	set_WINDOWMAKER_MENU
-	dmp_WINDOWMAKER_MENU
-	req_WINDOWMAKER_MENU
-	get_WINDOWMAKER_NOTICEBOARD
-	dmp_WINDOWMAKER_NOTICEBOARD
-	set_WINDOWMAKER_NOTICEBOARD
-	get_WINDOWMAKER_STATE
-	set_WINDOWMAKER_STATE
-	dmp_WINDOWMAKER_STATE
-	req_WINDOWMAKER_WM_FUNCTION
-	get_WINDOWMAKER_WM_PROTOCOLS
-	set_WINDOWMAKER_WM_PROTOCOLS
-	dmp_WINDOWMAKER_WM_PROTOCOLS
-    )],
-    fvwm => [qw(
-    )],
-    mwm => [qw(
-	get_MOTIF_WM_HINTS
-	dmp_MOTIF_WM_HINTS
-	set_MOTIF_WM_HINTS
-	get_MOTIF_WM_INFO
-	dmp_MOTIF_WM_INFO
-	set_MOTIF_WM_INFO
-	get_MOTIF_DRAG_WINDOW
-	dmp_MOTIF_DRAG_WINDOW
-	set_MOTIF_DRAG_WINDOW
-	get_MOTIF_DRAG_ATOM_PAIRS
-	dmp_MOTIF_DRAG_ATOM_PAIRS
-	set_MOTIF_DRAG_ATOM_PAIRS
-    )],
-);
-
-{
-    my %seen;
-    push @{$EXPORT_TAGS{all}},
-	grep {!$seen{$_}++} @{$EXPORT_TAGS{$_}}
-	    foreach keys %EXPORT_TAGS;
-
-    foreach my $pfx (qw(get set dmp req)) {
-	push @{$EXPORT_TAGS{$pfx}},
-	     grep {/^$pfx/} @{$EXPORT_TAGS{all}};
-    }
-}
-
-Exporter::export_tags('common');
-Exporter::export_ok_tags('all');
-
 =head1 NAME
 
 X11::Protocol::WMSpecific -- window manager specific things
@@ -184,6 +40,12 @@ The following methods are provided by this module:
 =back
 
 =head2 General
+
+=cut
+
+$EXPORT_TAGS{common} = [qw(
+    wm_check
+)];
 
 =over
 
@@ -340,74 +202,111 @@ sub wm_check {
 
 =back
 
+=head3 _XROOTPMAP_ID
+
+=over
+
+=item B<get_XROOTPMAP_ID>(I<$X>,I<$root>) => I<$pixmap>
+
+=cut
+
+sub get_XROOTPMAP_ID {
+    return getWMRootPropertyUint($_[0],_XROOTPMAP_ID=>$_[1]);
+}
+
+=item B<set_XROOTPMAP_ID>(I<$X>,I<$pixmap>)
+
+=cut
+
+sub set_XROOTPMAP_ID {
+    return setWMRootPropertyUint($_[0],_XROOTPMAP_ID=>PIXMAP=>$_[1]);
+}
+
+=item B<dmp_XROOTPMAP_ID>(I<$X>,I<$pixmap>)
+
+=cut
+
+sub dmp_XROOTPMAP_ID {
+    return dmpWMRootPropertyUint($_[0],_XROOTPMAP_ID=>pixmap=>$_[1]);
+}
+
+=back
+
+=head3 ESETROOT_PMAP_ID
+
+=over
+
+=item B<getESETROOT_PMAP_ID>(I<$X>,I<$root>) => I<$pixmap>
+
+=cut
+
+sub getESETROOT_PMAP_ID {
+    return getWMRootPropertyUint($_[0],ESETROOT_PMAP_ID=>$_[1]);
+}
+
+=item B<setESETROOT_PMAP_ID>(I<$X>,I<$pixmap>)
+
+=cut
+
+sub setESETROOT_PMAP_ID {
+    return setWMRootPropertyUint($_[0],ESETROOT_PMAP_ID=>PIXMAP=>$_[1]);
+}
+
+=item B<dmpESETROOT_PMAP_ID>(I<$X>,I<$pixmap>)
+
+=cut
+
+sub dmpESETROOT_PMAP_ID {
+    return dmpWMRootPropertyUint($_[0],ESETROOT_PMAP_ID=>pixmap=>$_[1]);
+}
+
+=back
+
+=head3 _XSETROOT_ID
+
+=over
+
+=item B<get_XSETROOT_ID>(I<$X>,I<$root>) => I<$pixmap>
+
+=cut
+
+sub get_XSETROOT_ID {
+    return getWMRootPropertyUint($_[0],_XSETROOT_ID=>$_[1]);
+}
+
+=item B<set_XSETROOT_ID>(I<$X>,I<$pixmap>)
+
+=cut
+
+sub set_XSETROOT_ID {
+    return setWMRootPropertyUint($_[0],_XSETROOT_ID=>PIXMAP=>$_[1]);
+}
+
+=item B<dmp_XSETROOT_ID>(I<$X>,I<$pixmap>)
+
+=cut
+
+sub dmp_XSETROOT_ID {
+    return dmpWMRootPropertyUint($_[0],_XSETROOT_ID=>pixmap=>$_[1]);
+}
+
+=back
+
 =head2 Fluxbox
 
-=head3 KWM_DOCKWINDOW, WINDOW/32
-
-Provides a root window property that indicates the dock window to KDE
-dock applets.  This is an older one.
-
-=over
-
-=item B<getKWM_DOCKWINDOW>(I<$X>,I<$root>) => I<$window>
-
 =cut
 
-sub getKWM_DOCKWINDOW {
-    return getWMRootPropertyUint($_[0],KWM_DOCKWINDOW=>$_[1]);
-}
-
-=item B<setKWM_DOCKWINDOW>(I<$X>,I<$window>)
-
-=cut
-
-sub setKWM_DOCKWINDOW {
-    return setWMRootPropertyUint($_[0],KWM_DOCKWINDOW=>WINDOW=>$_[1]);
-}
-
-=item B<dmpKWM_DOCKWINDOW>(I<$X>,I<$window>)
-
-=cut
-
-sub dmpKWM_DOCKWINDOW {
-    return dmpWMRootPropertyUint($_[0],KWM_DOCKWINDOW=>window=>$_[1]);
-}
-
-=back
-
-=head3 _KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR, WINDOW/32
-
-Provides a root window property that indicates the dock window to KDE
-dock applets.  This is a newer one.  Standard system trays now use ICCCM
-2.0 C<MANAGER> selections.
-
-=over
-
-=item B<get_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR>(I<$X>,I<$root>) => I<$window>
-
-=cut
-
-sub get_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR {
-    return getWMRootPropertyUint($_[0],_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR=>$_[1]);
-}
-
-=item B<set_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR>(I<$X>,I<$window>)
-
-=cut
-
-sub set_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR {
-    return setWMRootPropertyUint($_[0],_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR=>WINDOW=>$_[1]);
-}
-
-=item B<dmp_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR>(I<$X>,I<$window>)
-
-=cut
-
-sub dmp_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR {
-    return dmpWMRootPropertyUint($_[0],_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR=>window=>$_[1]);
-}
-
-=back
+$EXPORT_TAGS{fluxbox} = [qw(
+    get_BLACKBOX_PID
+    set_BLACKBOX_PID
+    dmp_BLACKBOX_PID
+    get_FLUXBOX_ACTION
+    set_FLUXBOX_ACTION
+    dmp_FLUXBOX_ACTION
+    get_FLUXBOX_GROUP_LEFT
+    set_FLUXBOX_GROUP_LEFT
+    dmp_FLUXBOX_GROUP_LEFT
+)];
 
 =head3 _BLACKBOX_ATTRIBUTES
 
@@ -519,7 +418,54 @@ sub dmp_FLUXBOX_GROUP_LEFT {
 
 =head2 Blackbox
 
+=cut
+
+$EXPORT_TAGS{blackbox} = [qw(
+)];
+
 =head2 OpenBox
+
+=cut
+
+$EXPORT_TAGS{openbox} = [qw(
+    OB_CONTROL_RECONFIGURE
+    OB_CONTROL_RESTART
+    OB_CONTROL_EXIT
+    req_OB_CONTROL
+    get_OB_CONFIG_FILE
+    set_OB_CONFIG_FILE
+    dmp_OB_CONFIG_FILE
+    get_OB_THEME
+    set_OB_THEME
+    dmp_OB_THEME
+    get_OB_VERSION
+    set_OB_VERSION
+    dmp_OB_VERSION
+    get_OPENBOX_PID
+    set_OPENBOX_PID
+    dmp_OPENBOX_PID
+    get_OB_APP_CLASS
+    set_OB_APP_CLASS
+    dmp_OB_APP_CLASS
+    get_OB_APP_GROUP_CLASS
+    set_OB_APP_GROUP_CLASS
+    dmp_OB_APP_GROUP_CLASS
+    get_OB_APP_GROUP_NAME
+    set_OB_APP_GROUP_NAME
+    dmp_OB_APP_GROUP_NAME
+    get_OB_APP_NAME
+    set_OB_APP_NAME
+    dmp_OB_APP_NAME
+    get_OB_APP_ROLE
+    set_OB_APP_ROLE
+    dmp_OB_APP_ROLE
+    get_OB_APP_TITLE
+    set_OB_APP_TITLE
+    dmp_OB_APP_TITLE
+    get_OB_APP_TYPE
+    set_OB_APP_TYPE
+    dmp_OB_APP_TYPE
+)];
 
 =head3 _OB_CONTROL
 
@@ -871,6 +817,29 @@ sub set_OB_APP_TYPE {
 
 =head2 IceWM
 
+=cut
+
+$EXPORT_TAGS{icewm} = [qw(
+    ICEWM_ACTION_NOP
+    ICEWM_ACTION_PING
+    ICEWM_ACTION_LOGOUT
+    ICEWM_ACTION_CANCEL_LOGOUT
+    ICEWM_ACTION_REBOOT
+    ICEWM_ACTION_SHUTDOWN
+    ICEWM_ACTION_ABOUT
+    ICEWM_ACTION_WINDOWLIST
+    ICEWM_ACTION_RESTARTWM
+    req_ICEWM_ACTION
+    WIN_TRAY_IGNORE
+    WIN_TRAY_MINIMIZED
+    WIN_TRAY_EXCLUSIVE
+    get_ICEWM_TRAY
+    dmp_ICEWM_TRAY
+    set_ICEWM_TRAY
+    req_ICEWM_TRAY
+    got_ICEWM_TRAY
+)];
+
 =head3 _ICEWM_ACTION
 
 L<icewm(1)> provides for client message control; however, this is broken
@@ -882,6 +851,7 @@ the check window.
 The C<_ICEWM_ACTION> client message takes a single long argument.
 
 =cut
+
 
 use constant {
     ICEWM_ACTION_NOP		=> 0,
@@ -981,17 +951,15 @@ or symbolic constant values:
 =cut
 
 use constant {
+    WIN_TRAY_IGNORE	    => 0,
+    WIN_TRAY_MINIMIZED	    => 1,
+    WIN_TRAY_EXCLUSIVE	    => 2,
+
     IceWMTray => [qw(
 	Ignore
 	Minimized
 	Exclusive
     )],
-};
-
-use constant {
-    WIN_TRAY_IGNORE	    => 0,
-    WIN_TRAY_MINIMIZED	    => 1,
-    WIN_TRAY_EXCLUSIVE	    => 2,
 };
 
 =item B<get_ICEWM_TRAY>(I<$X>,I<$window>) => I<$option>
@@ -1021,7 +989,7 @@ the property in this way.  Clients should use req_ICEWM_TRAY().
 =cut
 
 sub set_ICEWM_TRAY {
-    return setWMPropertyInterp($_[0],$_[1],_ICEWM_TRAY=>IceWMTray=>IceWMTray(),$_[2]);
+    return setWMPropertyInterp($_[0],$_[1],_ICEWM_TRAY=>CARDINAL=>IceWMTray=>IceWMTray(),$_[2]);
 }
 
 =item B<req_ICEWM_TRAY>(I<$X>,I<$window>,I<$option>,I<$timestamp>)
@@ -1056,6 +1024,33 @@ sub got_ICEWM_TRAY {
 =back
 
 =head2 PeKWM
+
+=cut
+
+$EXPORT_TAGS{pekwm} = [qw(
+    PEKWM_DECOR_TITLEBAR
+    PEKWM_DECOR_BORDER
+    get_PEKWM_FRAME_DECOR
+    set_PEKWM_FRAME_DECOR
+    dmp_PEKWM_FRAME_DECOR
+    PEKWM_SKIP_MENUS
+    PEKWM_SKIP_FOCUS_TOGGLE
+    PEKWM_SKIP_SNAP
+    PEKWM_SKIP_PAGER
+    PEKWM_SKIP_TASKBAR
+    get_PEKWM_FRAME_SKIP
+    set_PEKWM_FRAME_SKIP
+    dmp_PEKWM_FRAME_SKIP
+    get_PEKWM_FRAME_ID
+    set_PEKWM_FRAME_ID
+    dmp_PEKWM_FRAME_ID
+    get_PEKWM_FRAME_ACTIVE
+    set_PEKWM_FRAME_ACTIVE
+    dmp_PEKWM_FRAME_ACTIVE
+    get_PEKWM_FRAME_ORDER
+    set_PEKWM_FRAME_ORDER
+    dmp_PEKWM_FRAME_ORDER
+)];
 
 =head3 _PEKWM_FRAME_DECOR
 
@@ -1228,6 +1223,14 @@ versions of the window manager.  Older version of L<jwm(1)> must obtain
 the PID from the child process used by a session manager to launch the
 window manager.
 
+=cut
+
+$EXPORT_TAGS{jwm} = [qw(
+    req_JWM_RELOAD
+    req_JWM_RESTART
+    req_JWM_EXIT
+)];
+
 =head3 _JWM_RELOAD
 
 =over
@@ -1282,6 +1285,60 @@ sub req_JWM_EXIT {
 
 
 =head2 WindowMaker
+
+=cut
+
+$EXPORT_TAGS{wmaker} = [qw(
+    GSWindowStyleAttr
+    GSWindowLevelAttr
+    GSMiniaturizedPixmapAttr
+    GSClosePixmapAttr
+    GSMiniaturizedMaskAttr
+    GSCloseMaskAttr
+    GSExtraFlagsAttr
+    GSDocumentEditedFlag
+    GSNoApplicationIconFlag
+    WMBorderlessWindowMask
+    WMTitledWindowMask
+    WMClosableWindowMask
+    WMMiniaturizableWindowMask
+    WMResizableWindowMask
+    WMIconWindowMask
+    WMMiniWindowMask
+    WMDesktopWindowLevel
+    WMNormalWindowLevel
+    WMFloatingWindowLevel
+    WMSubmenuWindowLevel
+    WMTornOffMenuWindowLevel
+    WMMainMenuWindowLevel
+    WMDockWindowLevel
+    WMStatusWindowLevel
+    WMModalPanelWindowLevel
+    WMPopUpMenuWindowLevel
+    WMScreenSaverWindowLevel
+    get_GNUSTEP_WM_ATTR
+    dmp_GNUSTEP_WM_ATTR
+    req_WINDOWMAKER_COMMAND
+    get_WINDOWMAKER_ICON_TILE
+    set_WINDOWMAKER_ICON_TILE
+    dmp_WINDOWMAKER_ICON_TILE
+    get_WINDOWMAKER_MENU
+    set_WINDOWMAKER_MENU
+    dmp_WINDOWMAKER_MENU
+    req_WINDOWMAKER_MENU
+    get_WINDOWMAKER_NOTICEBOARD
+    dmp_WINDOWMAKER_NOTICEBOARD
+    set_WINDOWMAKER_NOTICEBOARD
+    get_WINDOWMAKER_STATE
+    set_WINDOWMAKER_STATE
+    dmp_WINDOWMAKER_STATE
+    WMF_HIDE_OTHER_APPLICATIONS
+    WMF_HIDE_APPLICATION
+    req_WINDOWMAKER_WM_FUNCTION
+    get_WINDOWMAKER_WM_PROTOCOLS
+    set_WINDOWMAKER_WM_PROTOCOLS
+    dmp_WINDOWMAKER_WM_PROTOCOLS
+)];
 
 =head3 _GNUSTEP_WM_ATTR
 
@@ -1853,8 +1910,335 @@ sub dmp_WINDOWMAKER_WM_PROTOCOLS {
 
 =head2 FVWM
 
+=cut
+
+$EXPORT_TAGS{fvwm} = [qw(
+)];
+
+=head2 KWIN/KWM
+
+Many window managers (and in particular, L<fluxbox(1)>, L<openbox(1)>
+and L<fvwm(1)>) support the KDE desktop by performing a number of the
+actions and properties provided by KWin/KWM (the KDE window manager).
+As these mimic KWIN, we provide them under this section.
+
+=cut
+
+$EXPORT_TAGS{fvwm} = [qw(
+    getKWM_DOCKWINDOW
+    setKWM_DOCKWINDOW
+    dmpKWM_DOCKWINDOW
+    get_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR
+    set_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR
+    dmp_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR
+)];
+
+push @{$EXPORT_TAGS{fluxbox}}, qw(
+    getKWM_DOCKWINDOW
+    setKWM_DOCKWINDOW
+    dmpKWM_DOCKWINDOW
+    get_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR
+    set_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR
+    dmp_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR
+);
+
+push @{$EXPORT_TAGS{openbox}}, qw(
+    get_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR
+    set_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR
+    dmp_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR
+);
+
+=head3 _KDE_SPLASH_PROGRESS progress STRING[]/8
+
+This atom is used to sending client messages and has no corresponding
+property.
+
+=over
+
+=item B<req_KDE_SPLASH_PROGRESS>(I<$X>,I<$progress>)
+
+I<$progress> defaults to C<wm started>.
+
+=cut
+
+sub req_KDE_SPLASH_PROGRESS {
+    my($X,$progress) = @_;
+    $progress = "wm started" unless $progress;
+    $X->SendEvent($X->root,0,
+	    $X->pack_event_mask(qw(
+		    SubstructureNotify
+		    SubstructureRedirect)),
+	    $X->pack_event(
+		name=>'ClientMessage',
+		window=>$X->root,
+		type=>$X->atom('_KDE_SPLASH_PROGRESS'),
+		format=>8,
+		data=>substr(pack('Z*xxxxxxxxxxxxxxxxxxxx',$progress),0,20)));
+    return 1;
+}
+
+=back
+
+=head3 _KDE_NET_WM_FRAME_STRUT, left right top bottom CARDINAL[4]/32
+
+Several window managers (L<openbox(1)>, L<fvwm(1)>), set the
+C<_KDE_NET_WM_FRAME_STRUT> property on client windows.  This property is
+identical to C<_NET_FRAME_EXTENTS> in format and context: it contains
+the breadth of decorations placed on the window, in pixels, to the left,
+right, top and bottom of the client window.  An undecorated window has
+all four values set to zero.
+
+It appears that this property was necessary some time before
+C<_NET_FRAME_EXTENTS> was added to the NetWM/EWMH specification.  It
+exists in current versions and most window manager (even light weight
+window managers) have been updated to include it.
+
+=over
+
+=item B<get_KDE_NET_WM_FRAME_STRUT>(I<$X>,I<$window>) => I<$strut>
+
+=cut
+
+sub get_KDE_NET_WM_FRAME_STRUT {
+    return getWMPropertyHashUints(@_[0..1],_KDE_NET_WM_FRAME_STRUT=>[qw(left right top bottom)]);
+}
+
+=item B<set_KDE_NET_WM_FRAME_STRUT>(I<$X>,I<$window>,I<$strut>)
+
+=cut
+
+sub set_KDE_NET_WM_FRAME_STRUT {
+    return setWMPropertyHashUints(@_[0..1],_KDE_NET_WM_FRAME_STRUT=>CARDINAL=>[qw(left right top bottom)],$_[2]);
+}
+
+=item B<dmp_KDE_NET_WM_FRAME_STRUT>(I<$X>,I<$strut>)
+
+=cut
+
+sub dmp_KDE_NET_WM_FRAME_STRUT {
+    return dmpWMPropertyHashUints($_[0],_KDE_NET_WM_FRAME_STRUT=>[qw(left right top bottom)],$_[1]);
+}
+
+=back
+
+=head3 _KDE_WM_CHANGE_STATE
+
+This atom defines a client message type.  This message is sent to the
+root window whenever the C<WM_STATE> changes state to and from normal
+and iconic state.
+
+ destination = root
+ propagate = False
+ event_mask = SubstructureNotifyMask|SubstructureRedirectMask
+ type = ClientMessage
+ message_type = _KDE_WM_CHANGE_STATE
+ window = window changing state
+ format = 32
+ data.l[0] = wmstate (NormalState(1), IconicState(3))
+ data.l[1] = 1
+ other data.l[] elements = 0
+
+=over
+
+=item B<req_KDE_WM_CHANGE_STATE>(I<$X>,I<$window>,I<$state>)
+
+=cut
+
+sub req_KDE_WM_CHANGE_STATE {
+    my($X,$window,$state) = @_;
+    $state = 0 unless defined $state;
+    $state = name2val(WMState=>WMState(),$state);
+    NetClientMessage($X,$window,_KDE_WM_CHANGE_STATE=>[$state,1]);
+}
+
+=back
+
+=head3 KWM_DOCKWINDOW, KWM_DOCKWINDOW/32
+
+Provides a root window property that indicates the dock window to KDE
+dock applets.  This is an older one.
+
+=over
+
+=item B<getKWM_DOCKWINDOW>(I<$X>,I<$root>) => I<$window>
+
+=cut
+
+push @{$EXPORT_TAGS{common}}, qw(wm_check);
+
+sub getKWM_DOCKWINDOW {
+    return getWMRootPropertyUint($_[0],KWM_DOCKWINDOW=>$_[1]);
+}
+
+=item B<setKWM_DOCKWINDOW>(I<$X>,I<$window>)
+
+=cut
+
+sub setKWM_DOCKWINDOW {
+    return setWMRootPropertyUint($_[0],KWM_DOCKWINDOW=>KWM_DOCKWINDOW=>$_[1]);
+}
+
+=item B<dmpKWM_DOCKWINDOW>(I<$X>,I<$window>)
+
+=cut
+
+sub dmpKWM_DOCKWINDOW {
+    return dmpWMRootPropertyUint($_[0],KWM_DOCKWINDOW=>window=>$_[1]);
+}
+
+=back
+
+=head3 _KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR root WINDOW/32
+
+Provides a root window property that indicates the dock window to KDE
+dock applets.  This is a newer one.  Standard system trays now use ICCCM
+2.0 C<MANAGER> selections.
+
+When this property is set on a top-level client window that is being
+mapped for the first time, the window manager adds the window to the
+C<_KDE_NET_SYSTEM_TRAY_WINDOWS> root window property and does not
+further manage (or map) the window.  The expectation is that the KDE
+system tray will reparent and map the window as appropriate.
+
+=over
+
+=item B<get_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR>(I<$X>,I<$window>) => I<$bool>
+
+=cut
+
+sub get_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR {
+    return getWMPropertyInterp(@_[0..1],_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR=>Window=>[qw(None)]);
+}
+
+=item B<set_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR>(I<$X>,I<$window>,I<$bool>)
+
+=cut
+
+sub set_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR {
+    return setWMPropertyInterp(@_[0..1],_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR=>WINDOW=>Window=>[qw(None)],$_[2]);
+}
+
+=item B<dmp_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR>(I<$X>,I<$bool>)
+
+=cut
+
+sub dmp_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR {
+    return dmpWMPropertyInterp($_[0],_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR=>traywindow=>$_[1]);
+}
+
+=back
+
+=head3 _KDE_NET_SYSTEM_TRAY_WINDOWS, windows WINDOW[]/32
+
+Defines a root window property that identifies each top-level window
+that has the C<_KET_NET_WM_SYSTEM_TRAY_WINDOW_FOR> property set.  The
+window manager does not reparent these windows but simply allows the KDE
+system tray to do what it wants with them.
+
+=over
+
+=item B<get_KDE_NET_SYSTEM_TRAY_WINDOWS>(I<$X>,I<$root>) => I<$windows>
+
+=cut
+
+sub get_KDE_NET_SYSTEM_TRAY_WINDOWS {
+    return getWMRootPropertyUints($_[0],_KDE_NET_SYSTEM_TRAY_WINDOWS=>$_[1]);
+}
+
+=item B<set_KDE_NET_SYSTEM_TRAY_WINDOWS>(I<$X>,I<$windows>)
+
+=cut
+
+sub set_KDE_NET_SYSTEM_TRAY_WINDOWS {
+    return setWMRootPropertyUints($_[0],_KDE_NET_SYSTEM_TRAY_WINDOWS=>WINDOW=>$_[1]);
+}
+
+=item B<dmp_KDE_NET_SYSTEM_TRAY_WINDOWS>(I<$X>,I<$windows>)
+
+=cut
+
+sub dmp_KDE_NET_SYSTEM_TRAY_WINDOWS {
+    return dmpWMRootPropertyUints($_[0],_KDE_NET_SYSTEM_TRAY_WINDOWS=>windows=>$_[1]);
+}
+
+=back
+
+=head3 _KDE_NET_WM_WINDOW_TYPE_OVERRIDE
+
+This is deprecated.  By setting this property on a top-level window
+before it is mapped, it tells the window manager not to provide any
+decorations or function for the window.  It is equivalent to setting
+C<_MOTIF_WM_HINTS> indicating no decorations and no functions.
+
+=over
+
+=item B<get_KDE_NET_WM_WINDOW_TYPE_OVERRIDE>(I<$X>,I<$window>) => I<$bool>
+
+=cut
+
+sub get_KDE_NET_WM_WINDOW_TYPE_OVERRIDE {
+    return getWMPropertyInterp(@_[0..1],_KDE_NET_WM_WINDOW_TYPE=>Boolean=>[qw(False True)]);
+}
+
+=item B<set_KDE_NET_WM_WINDOW_TYPE_OVERRIDE>(I<$X>,I<$window>,I<$bool>)
+
+=cut
+
+sub set_KDE_NET_WM_WINDOW_TYPE_OVERRIDE {
+    return setWMPropertyInterp(@_[0..1],_KDE_NET_WM_WINDOW_TYPE_OVERRIDE=>CARDINAL=>Boolean=>[qw(False True)],$_[2]);
+}
+
+=item B<dmp_KDE_NET_WM_WINDOW_TYPE_OVERRIDE>(I<$X>,I<$bool>)
+
+=cut
+
+sub dmp_KDE_NET_WM_WINDOW_TYPE_OVERRIDE {
+    return dmpWMPropertyInterp($_[0],_KDE_NET_WM_WINDOW_TYPE_OVERRIDE=>override=>$_[1]);
+}
+
+=back
 
 =head2 MWM
+
+=cut
+
+$EXPORT_TAGS{mwm} = [qw(
+    MWM_HINTS_FUNCTIONS
+    MWM_HINTS_DECORATIONS
+    MWM_HINTS_INPUT_MODE
+    MWM_HINTS_STATUS
+    MWM_FUNC_ALL
+    MWM_FUNC_RESIZE
+    MWM_FUNC_MOVE
+    MWM_FUNC_MINIMIZE
+    MWM_FUNC_MAXIMIZE
+    MWM_FUNC_CLOSE
+    MWM_DECOR_ALL
+    MWM_DECOR_BORDER
+    MWM_DECOR_RESIZEH
+    MWM_DECOR_TITLE
+    MWM_DECOR_MENU
+    MWM_DECOR_MINIMIZE
+    MWM_DECOR_MAXIMIZE
+    MWM_INPUT_MODELESS
+    MWM_INPUT_PRIMARY_APPLICATION_MODAL
+    MWM_INPUT_SYSTEM_MODAL
+    MWM_INPUT_FULL_APPLICATION_MODAL
+    MWM_INPUT_APPLICATION_MODAL
+    MWM_TEAROFF_WINDOW
+    get_MOTIF_WM_HINTS
+    dmp_MOTIF_WM_HINTS
+    set_MOTIF_WM_HINTS
+    get_MOTIF_WM_INFO
+    dmp_MOTIF_WM_INFO
+    set_MOTIF_WM_INFO
+    get_MOTIF_DRAG_WINDOW
+    dmp_MOTIF_DRAG_WINDOW
+    set_MOTIF_DRAG_WINDOW
+    get_MOTIF_DRAG_ATOM_PAIRS
+    dmp_MOTIF_DRAG_ATOM_PAIRS
+    set_MOTIF_DRAG_ATOM_PAIRS
+)];
 
 =head3 _MOTIF_BINDINGS
 
@@ -2157,6 +2541,21 @@ sub set_MOTIF_DRAG_ATOM_PAIRS {
 =back
 
 =cut
+
+{
+    my %seen;
+    push @{$EXPORT_TAGS{all}},
+	grep {!$seen{$_}++} @{$EXPORT_TAGS{$_}}
+	    foreach keys %EXPORT_TAGS;
+
+    foreach my $pfx (qw(get set dmp req)) {
+	push @{$EXPORT_TAGS{$pfx}},
+	     grep {/^$pfx/} @{$EXPORT_TAGS{all}};
+    }
+}
+
+Exporter::export_tags('common');
+Exporter::export_ok_tags('all');
 
 1;
 

@@ -86,13 +86,6 @@ $VERSION = 0.01;
     )],
 );
 
-foreach my $pfx (qw(get set dmp req)) {
-    push @{$EXPORT_TAGS{$pfx}},
-	 grep {/^$pfx/} @{$EXPORT_TAGS{all}};
-}
-
-Exporter::export_ok_tags('all');
-
 =head1 NAME
 
 XDE::WMH -- provides methods for controlling window manager hints.
@@ -179,10 +172,6 @@ sub get_WIN_SUPPORTING_WM_CHECK {
     return getWMRootPropertyRecursive($_[0],_WIN_SUPPORTING_WM_CHECK=>$_[1]);
 }
 
-sub dmp_WIN_SUPPORTING_WM_CHECK {
-    return dmpWMRootPropertyUint($_[0],_WIN_SUPPORTING_WM_CHECK=>check=>$_[1]);
-}
-
 =item B<set_WIN_SUPPORTING_WM_CHECK>(I<$X>,I<$check>)
 
 Sets the supporting window manager check window by setting the
@@ -194,6 +183,16 @@ C<WM_Sn> selection should call this function.
 
 sub set_WIN_SUPPORTING_WM_CHECK {
     return setWMRootPropertyRecursive($_[0],_WIN_SUPPORTING_WM_CHECK=>WINDOW=>$_[1]);
+}
+
+=item B<dmp_WIN_SUPPORTING_WM_CHECK>(I<$X>,I<$check>)
+
+Prints to standard output the value of get_WIN_SUPPORTING_WM_CHECK().
+
+=cut
+
+sub dmp_WIN_SUPPORTING_WM_CHECK {
+    return dmpWMRootPropertyUint($_[0],_WIN_SUPPORTING_WM_CHECK=>check=>$_[1]);
 }
 
 =back
@@ -248,12 +247,7 @@ sub get_WIN_PROTOCOLS {
     return getWMRootPropertyAtoms($_[0],_WIN_PROTOCOLS=>$_[1]);
 }
 
-sub dmp_WIN_PROTOCOLS {
-    return dmpWMRootPropertyAtoms($_[0],_WIN_PROTOCOLS=>protocols=>$_[1]);
-}
-
 =item B<set_WIN_PROTOCOLS>(I<$X>,I<$names>)
-
 
 Sets the C<_WIN_PROTOCOLS> property to the atoms of the names of the
 array or hash referenced by I<$names>, or when I<$names> is undefined,
@@ -266,6 +260,16 @@ owner of the C<_WIN_SUPPORTING_WM_CHECK> window).
 
 sub set_WIN_PROTOCOLS {
     return setWMRootPropertyAtoms($_[0],_WIN_PROTOCOLS=>$_[1]);
+}
+
+=item B<dmp_WIN_PROTOCOLS>(I<$X>,I<$names>)
+
+Prints to standard output the value of get_WIN_PROTOCOLS().
+
+=cut
+
+sub dmp_WIN_PROTOCOLS {
+    return dmpWMRootPropertyAtoms($_[0],_WIN_PROTOCOLS=>protocols=>$_[1]);
 }
 
 =back
@@ -306,10 +310,6 @@ sub get_WIN_CLIENT_LIST {
     return getWMRootPropertyUints($_[0],_WIN_CLIENT_LIST=>$_[1]);
 }
 
-sub dmp_WIN_CLIENT_LIST {
-    return dmpWMRootPropertyUints($_[0],_WIN_CLIENT_LIST=>clients=>$_[1]);
-}
-
 =item B<set_WIN_CLIENT_LIST>(I<$X>,I<$clients>)
 
 Sets the C<_WIN_CLIENT_LIST> property to the array referenced by
@@ -323,6 +323,16 @@ directly in this way.
 
 sub set_WIN_CLIENT_LIST {
     return setWMRootPropertyUints($_[0],_WIN_CLIENT_LIST=>$_[1]);
+}
+
+=item B<dmp_WIN_CLIENT_LIST>(I<$X>,I<$clients>)
+
+Prints to standard output the value of get_WIN_CLIENT_LIST().
+
+=cut
+
+sub dmp_WIN_CLIENT_LIST {
+    return dmpWMRootPropertyUints($_[0],_WIN_CLIENT_LIST=>clients=>$_[1]);
 }
 
 =back
@@ -356,10 +366,6 @@ sub get_WIN_WORKSPACE {
     return getWMPropertyUint($_[0],$_[1],_WIN_WORKSPACE=>);
 }
 
-sub dmp_WIN_WORKSPACE {
-    return dmpWMPropertyUint($_[0],_WIN_WORKSPACE=>workspace=>$_[1]);
-}
-
 =item B<set_WIN_WORKSPACE>(I<$X>,I<$window>,I<$workspace>)
 
 Set the C<_WIN_WORKSPACE> property workspace, I<$workspace>, for the
@@ -377,6 +383,16 @@ to request that the window manager change the property.
 
 sub set_WIN_WORKSPACE {
     return setWMPropertyUint($_[0],$_[1],_WIN_WORKSPACE=>CARDINAL=>$_[2]);
+}
+
+=item B<dmp_WIN_WORKSPACE>(I<$X>,I<$workspace>)
+
+Prints to standard output the value of get_WIN_WORKSPACE().
+
+=cut
+
+sub dmp_WIN_WORKSPACE {
+    return dmpWMPropertyUint($_[0],_WIN_WORKSPACE=>workspace=>$_[1]);
 }
 
 =item B<req_WIN_WORKSPACE>(I<$X>,I<$window>,I<$workspace>,I<$timestamp>)
@@ -422,16 +438,16 @@ workspaces.
 
 =item B<get_WIN_WORKSPACE_COUNT>(I<$X>,I<$root>) => I<$count> or undef
 
+Returns the C<_WIN_WORKSPACE_COUNT> property, I<$count>, from the root
+window, or C<undef> when no C<_WIN_WORKSPACE_COUNT> property exists on
+I<$root>.
 When unspecified, I<$root> defaults to C<$X-E<gt>root>.
+When defined, I<$count> is a scalar integer.
 
 =cut
 
 sub get_WIN_WORKSPACE_COUNT {
     return getWMRootPropertyUint($_[0],_WIN_WORKSPACE_COUNT=>$_[1]);
-}
-
-sub dmp_WIN_WORKSPACE_COUNT {
-    return dmpWMRootPropertyUint($_[0],_WIN_WORKSPACE_COUNT=>count=>$_[1]);
 }
 
 =item B<set_WIN_WORKSPACE_COUNT>(I<$X>,I<$count>)
@@ -449,6 +465,16 @@ sub set_WIN_WORKSPACE_COUNT {
     return setWMRootPropertyUint($_[0],_WIN_WORKSPACE_COUNT=>CARDINAL=>$_[1]);
 }
 
+=item B<dmp_WIN_WORKSPACE_COUNT>(I<$X>,I<$count>)
+
+Prints to standard output the value of get_WIN_WORKSPACE_COUNT().
+
+=cut
+
+sub dmp_WIN_WORKSPACE_COUNT {
+    return dmpWMRootPropertyUint($_[0],_WIN_WORKSPACE_COUNT=>count=>$_[1]);
+}
+
 =back
 
 =head3 _WIN_WORKSPACE_NAMES, STRING[]/8
@@ -464,7 +490,6 @@ each desktop.
 
 Return the workspace names as a reference to a list of name strings, or
 C<undef> if the property does not exist.
-
 When unspecified, I<$root> defaults to C<$X-E<gt>root>.
 
 =cut
@@ -472,6 +497,24 @@ When unspecified, I<$root> defaults to C<$X-E<gt>root>.
 sub get_WIN_WORKSPACE_NAMES {
     return getWMRootPropertyTermStrings($_[0],_WIN_WORKSPACE_NAMES=>$_[1]);
 }
+
+=item B<set_WIN_WORKSPACE_NAMES>(I<$X>,I<$names>)
+
+Set the workspace names to the referenced list of names, C<$names>.
+(This simply sets the property and does not send a client message.)
+When unspecified, I<$root> defaults to C<$X-E<gt>root>.
+
+=cut
+
+sub set_WIN_WORKSPACE_NAMES {
+    return setWMRootPropertyTermStrings($_[0],_WIN_WORKSPACE_NAMES=>COMPOUND_TEXT=>$_[1]);
+}
+
+=item B<dmp_WIN_WORKSPACE_NAMES>(I<$X>,I<$names>)
+
+Prints to standard output the value of get_WIN_WORKSPACE_NAMES().
+
+=cut
 
 sub dmp_WIN_WORKSPACE_NAMES {
     my ($X,$names) = @_;
@@ -483,19 +526,6 @@ sub dmp_WIN_WORKSPACE_NAMES {
 	    }
     });
     return dmpWMRootPropertyTermStrings($_[0],_WIN_WORKSPACE_NAMES=>names=>$_[1]);
-}
-
-=item B<set_WIN_WORKSPACE_NAMES>(I<$X>,I<$names>)
-
-Set the workspace names to the referenced list of names, C<$names>.
-(This simply sets the property and does not send a client message.)
-
-When unspecified, I<$root> defaults to C<$X-E<gt>root>.
-
-=cut
-
-sub set_WIN_WORKSPACE_NAMES {
-    return setWMRootPropertyTermStrings($_[0],_WIN_WORKSPACE_NAMES=>COMPOUND_TEXT=>$_[1]);
 }
 
 =back
@@ -538,11 +568,7 @@ sub get_WIN_WORKAREA {
     return getWMRootPropertyHashUints($_[0],_WIN_WORKAREA=>[qw(minX minY maxX maxY)],$_[1]);
 }
 
-sub dmp_WIN_WORKAREA {
-    return dmpWMRootPropertyHashUints($_[0],_WIN_WORKAREA=>[qw(minX minY maxX maxY)],$_[1]);
-}
-
-=item B<set_WIN_WORKARES>(I<$X>,I<$rectangle>)
+=item B<set_WIN_WORKAREA>(I<$X>,I<$rectangle>)
 
 Sets the C<_WIN_WORKAREA> available work area to the rectangle,
 I<$rectangle>, or when I<$rectangle> is unspecified, deletes the
@@ -555,6 +581,16 @@ manager.
 
 sub set_WIN_WORKAREA {
     return setWMRootPropertyHashUints($_[0],_WIN_WORKAREA=>CARDINAL=>[qw(minX maxX minY maxY)],$_[1]);
+}
+
+=item B<dmp_WIN_WORKAREA>(I<$X>,I<$rectangle>)
+
+Prints to standard output the value of get_WIN_WORKAREA().
+
+=cut
+
+sub dmp_WIN_WORKAREA {
+    return dmpWMRootPropertyHashUints($_[0],_WIN_WORKAREA=>[qw(minX minY maxX maxY)],$_[1]);
 }
 
 =back
@@ -578,14 +614,14 @@ This atom is only ever set by the client.
 
 =item B<get_WIN_CLIENT_MOVING>(I<$X>,I<$window>) => I<$bool>
 
+Returns the C<_WIN_CLIENT_MOVING> property, I<$bool>, from the window,
+I<$window>, or C<undef> when the property does not exist on I<$window>.
+When defined, I<$bool> is a boolean value (0 or 1).
+
 =cut
 
 sub get_WIN_CLIENT_MOVING {
     return getWMPropertyUint($_[0],$_[1],'_WIN_CLIENT_MOVING');
-}
-
-sub dmp_WIN_CLIENT_MOVING {
-    return dmpWMPropertyUint($_[0],_WIN_CLIENT_MOVING=>moving=>$_[1]);
 }
 
 =item B<set_WIN_CLIENT_MOVING>(I<$X>,I<$window>,I<$bool>)
@@ -598,6 +634,16 @@ the window, I<$window>.
 
 sub set_WIN_CLIENT_MOVING {
     return setWMPropertyUint($_[0],$_[1],_WIN_CLIENT_MOVING=>CARDINAL=>$_[2]);
+}
+
+=item B<dmp_WIN_CLIENT_MOVING>(I<$X>,I<$bool>)
+
+Prints to standard output the value of get_WIN_CLIENT_MOVING().
+
+=cut
+
+sub dmp_WIN_CLIENT_MOVING {
+    return dmpWMPropertyUint($_[0],_WIN_CLIENT_MOVING=>moving=>$_[1]);
 }
 
 =back
@@ -656,6 +702,28 @@ application.
 =over
 
 =cut
+
+push @{$EXPORT_TAGS{const}}, qw(
+    WIN_STATE_STICKY
+    WIN_STATE_MINIMIZED
+    WIN_STATE_MAXIMIZED_VERT
+    WIN_STATE_MAXIMIZED_HORZ
+    WIN_STATE_HIDDEN
+    WIN_STATE_SHADED
+    WIN_STATE_HIDDEN_WORKSPACE
+    WIN_STATE_HIDDEN_TRANSIENT
+    WIN_STATE_FIXED_POSITION
+    WIN_STATE_ARRANGE_IGNORE
+    WIN_STATE_SKIP_TASKBAR
+    WIN_STATE_MODAL
+    WIN_STATE_BELOW
+    WIN_STATE_ABOVE
+    WIN_STATE_FULLSCREEN
+    WIN_STATE_WASHIDDEN
+    WIN_STATE_WASMINIMIZED
+    WIN_STATE_WITHDRAWN
+    WindowState
+);
 
 use constant {
     WIN_STATE_STICKY		=> (1<<0),
@@ -739,10 +807,6 @@ sub get_WIN_STATE {
     return getWMPropertyBitnames($_[0],$_[1],_WIN_STATE=>WindowState=>WindowState());
 }
 
-sub dmp_WIN_STATE {
-    return dmpWMPropertyBitnames($_[0],_WIN_STATE=>state=>$_[1]);
-}
-
 =item B<set_WIN_STATE>(I<$X>,I<$window>,I<$state>)
 
 Sets the C<_WIN_STATE> property state, I<$state>, for the specified
@@ -758,6 +822,16 @@ used instead.
 
 sub set_WIN_STATE {
     return setWMPropertyBitnames($_[0],$_[1],_WIN_STATE=>CARDINAL=>WindowState=>WindowState(),$_[2]);
+}
+
+=item B<dmp_WIN_STATE>(I<$X>,I<$state>)
+
+Prints to standard output the value of get_WIN_STATE().
+
+=cut
+
+sub dmp_WIN_STATE {
+    return dmpWMPropertyBitnames($_[0],_WIN_STATE=>state=>$_[1]);
 }
 
 =item B<req_WIN_STATE>(I<$X>,I<$window>,I<$toggles>,I<$settings>,I<$timestamp>)
@@ -836,6 +910,17 @@ sub got_WIN_STATE {
 
 =cut
 
+push @{$EXPORT_TAGS{const}}, qw(
+    WIN_HINTS_SKIP_FOCUS
+    WIN_HINTS_SKIP_WINLIST
+    WIN_HINTS_SKIP_TASKBAR
+    WIN_HINTS_GROUP_TRANSIENT
+    WIN_HINTS_FOCUS_ON_CLICK
+    WIN_HINTS_DO_NOT_COVER
+    WIN_HINTS_DOCK_HORIZONTAL
+    WindowHints
+);
+
 use constant {
     WIN_HINTS_SKIP_FOCUS	=> (1<<0),
     WIN_HINTS_SKIP_WINLIST	=> (1<<1),
@@ -881,16 +966,22 @@ sub get_WIN_HINTS {
     return getWMPropertyBitnames($_[0],$_[1],_WIN_HINTS=>WindowHints=>WindowHints());
 }
 
-sub dmp_WIN_HINTS {
-    return dmpWMPropertyBitnames($_[0],_WIN_HINTS=>hints=>$_[1]);
-}
-
 =item B<set_WIN_HINTS>(I<$X>,I<$window>,I<$hints>)
 
 =cut
 
 sub set_WIN_HINTS {
     return setWMPropertyBitnames($_[0],$_[1],_WIN_HINTS=>CARDINAL=>WindowHints=>WindowHints(),$_[2]);
+}
+
+=item B<dmp_WIN_HINTS>(I<$X>,I<$hints>)
+
+Prints to standard output the value of get_WIN_HINTS().
+
+=cut
+
+sub dmp_WIN_HINTS {
+    return dmpWMPropertyBitnames($_[0],_WIN_HINTS=>hints=>$_[1]);
 }
 
 =item B<req_WIN_HINTS>(I<$X>,I<$window>,I<$hints>,I<$timestamp>)
@@ -956,9 +1047,33 @@ wishes to exist in. The values for this property are:
  WIN_LAYER_FULLSCREEN	=> 14	'FullScreen'	# IceWM
  WIN_LAYER_ABOVEALL	=> 15	'AboveAll'	# IceWM
 
+Once a window has been mapped, the client should request that the window
+manager change the property using the following client message:
+
+ xev.type = ClientMessage;
+ xev.window = client_window;
+ xev.message_type = XInternAtom(disp, XA_WIN_LAYER, False);
+ xev.format = 32;
+ xev.data.l[0] = new_layer;
+ xev.data.l[1] = timestamp;
+ XSendEvent(disp, root, False, SubstructureNotifyMask, (XEvent *) &xev);
+
 =over
 
 =cut
+
+push @{$EXPORT_TAGS{const}}, qw(
+    WIN_LAYER_DESKTOP
+    WIN_LAYER_BELOW
+    WIN_LAYER_NORMAL
+    WIN_LAYER_ONTOP
+    WIN_LAYER_DOCK
+    WIN_LAYER_ABOVEDOCK
+    WIN_LAYER_MENU
+    WIN_LAYER_FULLSCREEN
+    WIN_LAYER_ABOVEALL
+    WindowLayer
+);
 
 use constant {
     WIN_LAYER_DESKTOP		=> 0,
@@ -996,10 +1111,6 @@ sub get_WIN_LAYER {
     return getWMPropertyInterp($_[0],$_[1],_WIN_LAYER=>WindowLayer=>WindowLayer());
 }
 
-sub dmp_WIN_LAYER {
-    return dmpWMPropertyInterp($_[0],_WIN_LAYER=>layer=>$_[1]);
-}
-
 =item B<set_WIN_LAYER>(I<$X>,I<$window>,I<$layer>)
 
 Sets the C<_WIN_LAYER> property layer, I<$layer>, for the specified
@@ -1017,6 +1128,16 @@ sub set_WIN_LAYER {
     return setWMPropertyInterp($_[0],$_[1],_WIN_LAYER=>WindowLayer=>WindowLayer(),$_[2]);
 }
 
+=item B<dmp_WIN_LAYER>(I<$X>,I<$layer>)
+
+Prints to standard output the value of get_WIN_LAYER().
+
+=cut
+
+sub dmp_WIN_LAYER {
+    return dmpWMPropertyInterp($_[0],_WIN_LAYER=>layer=>$_[1]);
+}
+
 =item B<req_WIN_LAYER>(I<$X><I<$window>,I<$layer>,I<$timestamp>)
 
 Sends a C<_WIN_LAYER> client message to the root window to change the
@@ -1026,14 +1147,6 @@ defaults to C<CurrentTime>.  See L</_WIN_LAYER>, above, for the possible
 values of I<$layer>.
 
 =cut
-
-# xev.type = ClientMessage;
-# xev.window = client_window;
-# xev.message_type = XInternAtom(disp, XA_WIN_LAYER, False);
-# xev.format = 32;
-# xev.data.l[0] = new_layer;
-# xev.data.l[1] = timestamp;
-# XSendEvent(disp, root, False, SubstructureNotifyMask, (XEvent *) &xev);
 
 sub req_WIN_LAYER {
     my($X,$window,$layer,$timestamp) = @_;
@@ -1055,6 +1168,8 @@ sub got_WIN_LAYER {
 =back
 
 =head3 _WIN_WORKSPACES, CARDINAL[]/32
+
+This property is cumbersome enough to be largely unusable.
 
 =over
 
@@ -1083,14 +1198,11 @@ sub get_WIN_WORKSPACES {
     });
 }
 
-sub dmp_WIN_WORKSPACES {
-    my($X,$workspaces) = @_;
-    return dmpWMPropertyDisplay($X,_WIN_WORKSPACES=>sub{
-	printf "\t%-20s: %s\n",workspaces=>join(', ',@$workspaces);
-    });
-}
-
 =item B<set_WIN_WORKSPACES>(I<$X>,I<$window>,I<$bitmask>)
+
+Sets a bit mask of the workspaces on which a specified window,
+C<$window> is to appear, I<$bitmask>, or when undefined, removes the
+C<_WIN_WORKSPACES> property from C<$window>.
 
 =cut
 
@@ -1107,6 +1219,19 @@ sub set_WIN_WORKSPACES {
                 $vals[$j] |= 1<<$i;
             }
             return CARDINAL=>32,pack('L*',@vals);
+    });
+}
+
+=item B<dmp_WIN_WORKSPACES>(I<$X>,I<$bitmask>)
+
+Prints to standard output the value of get_WIN_WORKSPACES().
+
+=cut
+
+sub dmp_WIN_WORKSPACES {
+    my($X,$workspaces) = @_;
+    return dmpWMPropertyDisplay($X,_WIN_WORKSPACES=>sub{
+	printf "\t%-20s: %s\n",workspaces=>join(', ',@$workspaces);
     });
 }
 
@@ -1201,10 +1326,6 @@ sub get_WIN_EXPANDED_SIZE {
     return getWMRootPropertyHashInts($_[0],_WIN_EXPANDED_SIZE=>[qw(x y w h)],$_[1]);
 }
 
-sub dmp_WIN_EXPANDED_SIZE {
-    return dmpWMRootPropertyHashInts($_[0],_WIN_EXPANDED_SIZE=>[qw(x y w h)],$_[1]);
-}
-
 =item B<set_WIN_EXPANDED_SIZE>(I<$X>,I<$window>,I<$geometry>)
 
 The C<_WIN_EXPANDED_SIZE> property should only be set by a client.
@@ -1213,6 +1334,16 @@ The C<_WIN_EXPANDED_SIZE> property should only be set by a client.
 
 sub set_WIN_EXPANDED_SIZE {
     return setWMRootPropertyHashInts($_[0],_WIN_EXPANDED_SIZE=>CARDINAL=>[qw(x y w h)],$_[1]);
+}
+
+=item B<dmp_WIN_EXPANDED_SIZE>(I<$X>,I<$geometry>)
+
+Prints to standard output the value of get_WIN_EXPANDED_SIZE().
+
+=cut
+
+sub dmp_WIN_EXPANDED_SIZE {
+    return dmpWMRootPropertyHashInts($_[0],_WIN_EXPANDED_SIZE=>[qw(x y w h)],$_[1]);
 }
 
 =back
@@ -1236,14 +1367,22 @@ sub get_WIN_ICONS {
     return getWMPropertyUints($_[0],$_[1],_WIN_ICONS=>);
 }
 
-sub dmp_WIN_ICONS {
-    return dmpWMPropertyUints($_[0],_WIN_ICONS=>icons=>$_[1]);
-}
-
 =item B<set_WIN_ICONS>(I<$X>,I<$window>,I<$icons>)
+
+=cut
 
 sub set_WIND_ICONS {
     return setWMPropertyUints($_[0],$_[1],_WIN_ICONS=>$_[2]);
+}
+
+=item B<dmp_WIN_ICONS>(I<$X>,I<$icons>)
+
+Prints to standard output the value of get_WIN_ICONS().
+
+=cut
+
+sub dmp_WIN_ICONS {
+    return dmpWMPropertyUints($_[0],_WIN_ICONS=>icons=>$_[1]);
 }
 
 =back
@@ -1312,7 +1451,102 @@ and symbolic constants:
 
 =cut
 
+push @{$EXPORT_TAGS{const}}, qw(
+    WIN_APP_STATE_NONE
+    WIN_APP_STATE_ACTIVE1
+    WIN_APP_STATE_ACTIVE2
+    WIN_APP_STATE_ERROR1
+    WIN_APP_STATE_ERROR2
+    WIN_APP_STATE_FATAL_ERROR1
+    WIN_APP_STATE_FATAL_ERROR2
+    WIN_APP_STATE_IDLE1
+    WIN_APP_STATE_IDLE2
+    WIN_APP_STATE_WAITING1
+    WIN_APP_STATE_WAITING2
+    WIN_APP_STATE_WORKING1
+    WIN_APP_STATE_WORKING2
+    WIN_APP_STATE_NEED_USER_INPUT1
+    WIN_APP_STATE_NEED_USER_INPUT2
+    WIN_APP_STATE_STRUGGLING1
+    WIN_APP_STATE_STRUGGLING2
+    WIN_APP_STATE_DISK_TRAFFIC1
+    WIN_APP_STATE_DISK_TRAFFIC2
+    WIN_APP_STATE_NETWORK_TRAFFIC1
+    WIN_APP_STATE_NETWORK_TRAFFIC2
+    WIN_APP_STATE_OVERLOADED1
+    WIN_APP_STATE_OVERLOADED2
+    WIN_APP_STATE_PERCENT000_1
+    WIN_APP_STATE_PERCENT000_2
+    WIN_APP_STATE_PERCENT010_1
+    WIN_APP_STATE_PERCENT010_2
+    WIN_APP_STATE_PERCENT020_1
+    WIN_APP_STATE_PERCENT020_2
+    WIN_APP_STATE_PERCENT030_1
+    WIN_APP_STATE_PERCENT030_2
+    WIN_APP_STATE_PERCENT040_1
+    WIN_APP_STATE_PERCENT040_2
+    WIN_APP_STATE_PERCENT050_1
+    WIN_APP_STATE_PERCENT050_2
+    WIN_APP_STATE_PERCENT060_1
+    WIN_APP_STATE_PERCENT060_2
+    WIN_APP_STATE_PERCENT070_1
+    WIN_APP_STATE_PERCENT070_2
+    WIN_APP_STATE_PERCENT080_1
+    WIN_APP_STATE_PERCENT080_2
+    WIN_APP_STATE_PERCENT090_1
+    WIN_APP_STATE_PERCENT090_2
+    WIN_APP_STATE_PERCENT100_1
+    WIN_APP_STATE_PERCENT100_2
+    WindowAppState
+);
+
 use constant {
+    WIN_APP_STATE_NONE                 =>0,
+    WIN_APP_STATE_ACTIVE1              =>1,
+    WIN_APP_STATE_ACTIVE2              =>2,
+    WIN_APP_STATE_ERROR1               =>3,
+    WIN_APP_STATE_ERROR2               =>4,
+    WIN_APP_STATE_FATAL_ERROR1         =>5,
+    WIN_APP_STATE_FATAL_ERROR2         =>6,
+    WIN_APP_STATE_IDLE1                =>7,
+    WIN_APP_STATE_IDLE2                =>8,
+    WIN_APP_STATE_WAITING1             =>9,
+    WIN_APP_STATE_WAITING2             =>10,
+    WIN_APP_STATE_WORKING1             =>11,
+    WIN_APP_STATE_WORKING2             =>12,
+    WIN_APP_STATE_NEED_USER_INPUT1     =>13,
+    WIN_APP_STATE_NEED_USER_INPUT2     =>14,
+    WIN_APP_STATE_STRUGGLING1          =>15,
+    WIN_APP_STATE_STRUGGLING2          =>16,
+    WIN_APP_STATE_DISK_TRAFFIC1        =>17,
+    WIN_APP_STATE_DISK_TRAFFIC2        =>18,
+    WIN_APP_STATE_NETWORK_TRAFFIC1     =>19,
+    WIN_APP_STATE_NETWORK_TRAFFIC2     =>20,
+    WIN_APP_STATE_OVERLOADED1          =>21,
+    WIN_APP_STATE_OVERLOADED2          =>22,
+    WIN_APP_STATE_PERCENT000_1         =>23,
+    WIN_APP_STATE_PERCENT000_2         =>24,
+    WIN_APP_STATE_PERCENT010_1         =>25,
+    WIN_APP_STATE_PERCENT010_2         =>26,
+    WIN_APP_STATE_PERCENT020_1         =>27,
+    WIN_APP_STATE_PERCENT020_2         =>28,
+    WIN_APP_STATE_PERCENT030_1         =>29,
+    WIN_APP_STATE_PERCENT030_2         =>30,
+    WIN_APP_STATE_PERCENT040_1         =>31,
+    WIN_APP_STATE_PERCENT040_2         =>32,
+    WIN_APP_STATE_PERCENT050_1         =>33,
+    WIN_APP_STATE_PERCENT050_2         =>34,
+    WIN_APP_STATE_PERCENT060_1         =>35,
+    WIN_APP_STATE_PERCENT060_2         =>36,
+    WIN_APP_STATE_PERCENT070_1         =>37,
+    WIN_APP_STATE_PERCENT070_2         =>38,
+    WIN_APP_STATE_PERCENT080_1         =>39,
+    WIN_APP_STATE_PERCENT080_2         =>40,
+    WIN_APP_STATE_PERCENT090_1         =>41,
+    WIN_APP_STATE_PERCENT090_2         =>42,
+    WIN_APP_STATE_PERCENT100_1         =>43,
+    WIN_APP_STATE_PERCENT100_2         =>44,
+
     WindowAppState => [qw(
 	    None
 	    Active1
@@ -1362,55 +1596,11 @@ use constant {
     )],
 };
 
-use constant {
-    WIN_APP_STATE_NONE                 =>0,
-    WIN_APP_STATE_ACTIVE1              =>1,
-    WIN_APP_STATE_ACTIVE2              =>2,
-    WIN_APP_STATE_ERROR1               =>3,
-    WIN_APP_STATE_ERROR2               =>4,
-    WIN_APP_STATE_FATAL_ERROR1         =>5,
-    WIN_APP_STATE_FATAL_ERROR2         =>6,
-    WIN_APP_STATE_IDLE1                =>7,
-    WIN_APP_STATE_IDLE2                =>8,
-    WIN_APP_STATE_WAITING1             =>9,
-    WIN_APP_STATE_WAITING2             =>10,
-    WIN_APP_STATE_WORKING1             =>11,
-    WIN_APP_STATE_WORKING2             =>12,
-    WIN_APP_STATE_NEED_USER_INPUT1     =>13,
-    WIN_APP_STATE_NEED_USER_INPUT2     =>14,
-    WIN_APP_STATE_STRUGGLING1          =>15,
-    WIN_APP_STATE_STRUGGLING2          =>16,
-    WIN_APP_STATE_DISK_TRAFFIC1        =>17,
-    WIN_APP_STATE_DISK_TRAFFIC2        =>18,
-    WIN_APP_STATE_NETWORK_TRAFFIC1     =>19,
-    WIN_APP_STATE_NETWORK_TRAFFIC2     =>20,
-    WIN_APP_STATE_OVERLOADED1          =>21,
-    WIN_APP_STATE_OVERLOADED2          =>22,
-    WIN_APP_STATE_PERCENT000_1         =>23,
-    WIN_APP_STATE_PERCENT000_2         =>24,
-    WIN_APP_STATE_PERCENT010_1         =>25,
-    WIN_APP_STATE_PERCENT010_2         =>26,
-    WIN_APP_STATE_PERCENT020_1         =>27,
-    WIN_APP_STATE_PERCENT020_2         =>28,
-    WIN_APP_STATE_PERCENT030_1         =>29,
-    WIN_APP_STATE_PERCENT030_2         =>30,
-    WIN_APP_STATE_PERCENT040_1         =>31,
-    WIN_APP_STATE_PERCENT040_2         =>32,
-    WIN_APP_STATE_PERCENT050_1         =>33,
-    WIN_APP_STATE_PERCENT050_2         =>34,
-    WIN_APP_STATE_PERCENT060_1         =>35,
-    WIN_APP_STATE_PERCENT060_2         =>36,
-    WIN_APP_STATE_PERCENT070_1         =>37,
-    WIN_APP_STATE_PERCENT070_2         =>38,
-    WIN_APP_STATE_PERCENT080_1         =>39,
-    WIN_APP_STATE_PERCENT080_2         =>40,
-    WIN_APP_STATE_PERCENT090_1         =>41,
-    WIN_APP_STATE_PERCENT090_2         =>42,
-    WIN_APP_STATE_PERCENT100_1         =>43,
-    WIN_APP_STATE_PERCENT100_2         =>44,
-};
-
 =item B<get_WIN_APP_STATE>(I<$X>,I<$window>) => I<$state> or undef
+
+Gets the application state, I<$state>, associated with a given window,
+I<$window>.  The value is interpreted scalar as described under
+L</_WIN_APP_STATE>, above.
 
 =cut
 
@@ -1418,16 +1608,27 @@ sub get_WIN_APP_STATE {
     return getWMPropertyInterp($_[0],$_[1],_WIN_APP_STATE=>WindowAppState=>WindowAppState());
 }
 
-sub dmp_WIN_APP_STATE {
-    return dmpWMPropertyInterp($_[0],_WIN_APP_STATE=>state=>$_[1]);
-}
-
 =item B<set_WIN_APP_STATE>(I<$X>,I<$window>,I<$state>)
+
+Sets the application state, I<$state>, associated with a given window,
+I<$window>.  The value is interpreted scalar as described under
+L</_WIN_APP_STATE>, above.  THis property should only be set directly by
+the application.
 
 =cut
 
 sub set_WIN_APP_STATE {
     return setWMPropertyInterp($_[0],$_[1],_WIN_APP_STATE=>WindowAppState=>WindowAppState(),$_[2]);
+}
+
+=item B<dmp_WIN_APP_STATE>(I<$X>,I<$state>)
+
+Prints to standard output the value of get_WIN_APP_STATE().
+
+=cut
+
+sub dmp_WIN_APP_STATE {
+    return dmpWMPropertyInterp($_[0],_WIN_APP_STATE=>state=>$_[1]);
 }
 
 =back
@@ -1573,10 +1774,6 @@ sub get_WIN_DESKTOP_BUTTON_PROXY {
     return getWMRootPropertyUint($_[0],_WIN_DESKTOP_BUTTON_PROXY=>$_[1]);
 }
 
-sub dmp_WIN_DESKTOP_BUTTON_PROXY {
-    return dmpWMRootPropertyUint($_[0],_WIN_DESKTOP_BUTTON_PROXY=>proxy=>$_[1]);
-}
-
 =item B<get_WIN_DESKTOP_BUTTON_PROXY>(I<$X>,I<$proxy>)
 
 Sets the window, I<$proxy>, acting as the desktop button proxy, or,
@@ -1587,6 +1784,16 @@ property from the root window.
 
 sub set_WIN_DESKTOP_BUTTON_PROXY {
     return setWMRootPropertyUint($_[0],_WIN_DESKTOP_BUTTON_PROXY=>CARDINAL=>$_[1]);
+}
+
+=item B<dmp_WIN_DESKTOP_BUTTON_PROXY>(I<$X>,I<$proxy>)
+
+Prints to standard output the value of get_WIN_DESKTOP_BUTTON_PROXY().
+
+=cut
+
+sub dmp_WIN_DESKTOP_BUTTON_PROXY {
+    return dmpWMRootPropertyUint($_[0],_WIN_DESKTOP_BUTTON_PROXY=>proxy=>$_[1]);
 }
 
 =back
@@ -1627,6 +1834,11 @@ set an atom on the root window as follows:
  XChangeProperty(disp, root, atom_set, XA_CARDINAL, 32,
 	 PropModeReplace, (unsigned char *)val, 2);
 
+=head4 Methods
+
+In the methods that follow, I<$count> is a reference to an array of two
+values: columns and rows, respectively.
+
 =over
 
 =cut
@@ -1643,11 +1855,7 @@ sub get_WIN_AREA_COUNT {
     return getWMRootPropertyUints($_[0],_WIN_AREA_COUNT=>$_[1]);
 }
 
-sub dmp_WIN_AREA_COUNT {
-    return dmpWMRootPropertyUints($_[0],_WIN_AREA_COUNT=>'cols, rows',$_[1]);
-}
-
-=item B<set_WIN_AREA_COUNT>(I<$X>,I<$cols>,I<$rows>)
+=item B<set_WIN_AREA_COUNT>(I<$X>,I<$count>)
 
 Set the number of columns and rows of screens provided by the large
 desktop area.  When large desktops are not supported, this value will
@@ -1657,6 +1865,16 @@ always be (1,1).
 
 sub set_WIN_AREA_COUNT {
     return setWMRootPropertyUints($_[0],_WIN_AREA_COUNT=>$_[1]);
+}
+
+=item B<dmp_WIN_AREA_COUNT>(I<$X>,I<$count>)
+
+Prints to standard output the value of get_WIN_AREA_COUNT().
+
+=cut
+
+sub dmp_WIN_AREA_COUNT {
+    return dmpWMRootPropertyUints($_[0],_WIN_AREA_COUNT=>'cols, rows',$_[1]);
 }
 
 =back
@@ -1691,11 +1909,16 @@ client message like:
  xev.data.l[1] = new_active_area_y;
  XSendEvent(disp, root, False, SubstructureNotifyMask, (XEvent *) &xev);
 
+=head4 Methods
+
+In the methods that follow, I<$area> is a reference to an array of two
+values: column and row, respectively.
+
 =over
 
 =cut
 
-=item B<get_WIN_AREA>(I<$X>,I<$root>) => [ $col, $row ]
+=item B<get_WIN_AREA>(I<$X>,I<$root>) => I<$area>
 
 Return the current workspace area as a column index (starting at zero
 0), C<$col>, and a row index (starting at 0), C<$row>.  Returns the
@@ -1707,16 +1930,28 @@ sub get_WIN_AREA {
     return getWMRootPropertyUints($_[0],_WIN_AREA=>$_[1]);
 }
 
-sub dmp_WIN_AREA {
-    return dmpWMRootPropertyUints($_[0],_WIN_AREA=>'cols, rows',$_[1]);
-}
-
 =item B<set_WIN_AREA>(I<$X>,I<$area>)
+
+Sets the current workspace area as a column index (starting at zero
+0), C<$col>, and a row index (starting at 0), C<$row>.  I<$area>, when
+defined, is a reference to an array containing the two indices.  This
+property should only be set directly by a window manager.  Pagers should
+use req_WIN_AREA().
 
 =cut
 
 sub set_WIN_AREA {
     return setWMRootPropertyUints($_[0],_WIN_AREA=>$_[1]);
+}
+
+=item B<dmp_WIN_AREA>(I<$X>,I<$area>)
+
+Prints to standard output the value of get_WIN_AREA().
+
+=cut
+
+sub dmp_WIN_AREA {
+    return dmpWMRootPropertyUints($_[0],_WIN_AREA=>'cols, rows',$_[1]);
 }
 
 =item B<req_WIN_AREA>(I<$X>,I<$col>,I<$row>,I<$timestamp>)
@@ -1751,6 +1986,13 @@ sub got_WIN_AREA {
 
 =cut
 
+foreach my $pfx (qw(get set dmp req)) {
+    push @{$EXPORT_TAGS{$pfx}},
+	 grep {/^$pfx/} @{$EXPORT_TAGS{all}};
+}
+
+Exporter::export_ok_tags('all');
+
 1;
 
 __END__
@@ -1765,4 +2007,4 @@ L<XDE::Context(3pm)>, L<XDE::X11(3pm)>, L<XDE::ICCCM(3pm)>
 
 =cut
 
-# vim: set sw=4 tw=72 fo=tcqlorn:
+# vim: set sw=4 tw=72 fo=tcqlorn foldmarker==head,=head foldmethod=marker:

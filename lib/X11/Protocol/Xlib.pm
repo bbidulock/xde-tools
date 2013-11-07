@@ -8,8 +8,72 @@ use X11::Protocol::Enhanced;
 use X11::AtomConstants;
 use strict;
 use warnings;
-use vars '$VERSION';
+use vars '$VERSION', '@ISA', '@EXPORT_OK', '%EXPORT_TAGS';
 $VERSION = 0.01;
+@ISA = ('Exporter');
+
+%EXPORT_TAGS = (
+    icc => [qw(
+	XFetchName
+	XStoreName
+	XGetWMName
+	XSetWMName
+	XGetIconName
+	XSetIconName
+	XGetWMIconName
+	XSetWMIconName
+	XGetWMSizeHints
+	XSetWMSizeHints
+	XGetWMNormalHints
+	XSetWMNormalHints
+	XGetWMHints
+	XSetWMHints
+	XGetClassHint
+	XSetClassHint
+	XGetTransientForHint
+	XSetTransientForHint
+	XGetWMProtocols
+	XSetWMProtocols
+	XGetWMColormapWindows
+	XSetWMColormapWindows
+	XGetWMClientMachine
+	XSetWMClientMachine
+	XGetClientMachine
+	XSetClientMachine
+	XGetCommand
+	XSetCommand
+	XGetWMState
+	XSetWMState
+	XChangeWMState
+	XGetIconSizes
+	XSetIconSizes
+	XSetWMProperties
+	XReconfigureWMWindow
+	XIconifyWindow
+	XWithdrawWindow
+    )],
+    x11 => [qw(
+	XSelectInput
+	XQueryTree
+	XGetWindowAttributes
+	XGetGeometry
+    )],
+    props => [qw(
+	XStringListToTextProperty
+	XTextPropertyToStringList
+	XTextListToTextProperty
+	XTextPropertyToTextList
+	XGetTextProperty
+	XSetTextProperty
+    )],
+    events => [qw(
+	event_handler_ClientMessageWM_PROTOCOLS
+	event_handler_ClientMessageMANAGER
+	event_handler_DestroyNotify
+    )],
+    all => [qw(
+    )],
+);
 
 =head1 NAME
 
@@ -21,7 +85,7 @@ X11::Protocol::Xlib -- Xlib methods for X11::Protocol
 
  my $X = X11::Protocol::Xlib->new();
 
- if (my $sizes = $X->GetIconSizes($X->root)) {
+ if (my $sizes = XGetIconSizes($X,$X->root)) {
      while (my ($k,$v) = each %$sizes) {
 	 printf "%-20s: %d\n", $k, $v;
      }
@@ -89,7 +153,7 @@ sub new {
 
 =over
 
-=item $X->B<SelectInput>(I<$window>,I<$event_mask>)
+=item $X->B<XSelectInput>(I<$window>,I<$event_mask>) => I<$success>
 
 I<$event_mask> defaults to an empty mask.  When specified, I<$event_mask>
 may be an array reference to an array of event mask bit names or numbers;
@@ -98,7 +162,7 @@ or a integer bit mask.
 
 =cut
 
-sub SelectInput {
+sub XSelectInput {
     my($X,$window,$mask) = @_;
     $mask = 0 unless $mask;
     my $events;
@@ -107,16 +171,97 @@ sub SelectInput {
     } 
     elsif (ref $events eq 'HASH') {
 	$events = $X->pack_mask('EventMask',
-		map{$events->{$_}?$_:()} keys %$events);
+		grep {$events->{$_}} keys %$events);
     }
     else {
 	$events = $mask;
     }
-    $X->ChangeWindowAttributes($window,event_mask=>$events);
+    my ($res) = $X->robust_req(ChangeWindowAttributes=>$window,event_mask=>$events);
+    return 0 unless ref $res;
+    return 1;
+}
+
+=item B<XQueryTree>(I<$X>,I<$window>) => I<$info>
+
+I<$info>, when defined, is a referene to a hash containing the following
+keys:
+
+ root		- root window
+ parent		- parent window
+ children	- reference to an array of child windows
+
+=cut
+
+sub XQueryTree {
+    my($X,$window) = @_;
+    $window = $X->root unless $window;
+    my ($res) = $X->robust_req(QuertyTree=>$window);
+    return undef unless ref $res;
+    return {
+	root=>$res->[0],
+	parent=>$res->[1],
+	children=>splice(@$res,2),
+    };
+}
+
+=item B<XGetWindowAttributes>(I<$X>,I<$window>) => I<$attrs>
+
+I<$attrs>, when defined, is a reference to a hash containing the
+following keys:
+
+ x, y			- location of window
+ width, height		- width and height of window
+ border_width		- border width of window
+ depth			- depth of window
+ visual			- associated visual structure
+ root			- root of screen containing window
+ class			- InputOutput, InputOnly
+ bit_gravity		- one of the bit gravity values
+ win_gravity		- one of the window gravity values
+ backing_store		- NotUseful, WhenMapped, Always
+ backing_planes		- planes to be preserved if possible
+ backing_pixel		- value to be used when restoring planes
+ save_under		- boolean, should bits under be saved?
+ colormap		- color map associated with window
+ map_installed		- boolean, is color map currently installed?
+ map_state		- IsUnmapped, IsUnviewable, IsViewable
+ all_event_masks	- set of events all people have interest in
+ your_event_maks	- my event mask
+ do_not_propagate_mask	- set of events that should not propagate
+ screen			- screen containing window
+
+=cut
+
+sub XGetWindowAttributes {
+    my($X,$window) = @_;
+    $window = $X->root unless $window;
+    my ($res) = $X->robust_req(GetWindowAttributes=>$window);
+    return undef unless ref $res;
+    return { @$res };
+}
+
+=item B<XGetGeometry>(I<$X>,I<$drawable>) => I<$geom>
+
+I<$geom>, when defined, is a reference to a hash containing the
+following keys:
+
+ root			- root window of drawable
+ x, y			- upper-left corner relative to parent
+ width, height		- dimensions of drawabl
+ border_width		- border width in pixels
+ depth			- depth of drawable
+
+=cut
+
+sub XGetGeometry {
+    my($X,$window) = @_;
+    $window = $X->root unless $window;
+    my ($res) = $X->robust_req(GetGeometry=>$window);
+    return undef unless ref $res;
+    return { @$res };
 }
 
 =back
-
 
 =head2 TEXT PROPERTIES
 
@@ -136,18 +281,18 @@ Because of this, there are no I<Xmb*>, I<Xwc*> or I<Xutf8*> distinctions
 for the implementation of Xlib functions.  Pass the vanilla method either
 a text property hash reference as above, or a scalar perl (non-binary)
 character string, and the method will simply do the right thing.  The only
-exception is the GetTextProperty() and SetTextProperty() methods that
+exception is the XGetTextProperty() and XSetTextProperty() methods that
 alway require or produce the hash reference.
 
 For text properties other than those for which special get and set
 functions are provided in this module, and when it is necessary to control
-the encoding of the text property, use the TextListToTextProperty() and
-TextPropertyToTextList() methods in conjunction with the GetTextProperty()
-and SetTextProperty() methods, described below.
+the encoding of the text property, use the XTextListToTextProperty() and
+XTextPropertyToTextList() methods in conjunction with the XGetTextProperty()
+and XSetTextProperty() methods, described below.
 
 =over
 
-=item B<StringListToTextProperty>(I<$strings>) => I<$text>
+=item B<XStringListToTextProperty>(I<$strings>) => I<$text>
 
 Sets the text property, I<$text>, to be of type C<STRING> (format 8) with
 a value representing the concatenation of the specified list of
@@ -155,11 +300,11 @@ null-separated character strings.
 
 =cut
 
-sub StringListToTextProperty {
-    return TextListToTextProperty(shift,'StringStyle');
+sub XStringListToTextProperty {
+    return XTextListToTextProperty(shift,'StringStyle');
 }
 
-=item B<TextPropertyToStringList>(I<$text>) => I<$strings>
+=item B<XTextPropertyToStringList>(I<$text>) => I<$strings>
 
 Returns a reference to an array of strings, I<$strings>, representing the
 null-separated elements of the specified text property, I<$text>.  The
@@ -168,11 +313,11 @@ elements of the property are separated by null (encoding 0).
 
 =cut
 
-sub TextPropertyToStringList {
-    return TextPropertyToTextList(@_);
+sub XTextPropertyToStringList {
+    return XTextPropertyToTextList(@_);
 }
 
-=item B<TextListToTextProperty>(I<$strings>,I<$style>) => I<$text>
+=item B<XTextListToTextProperty>(I<$strings>,I<$style>) => I<$text>
 
 I<$style> may be one of the following:
 
@@ -186,7 +331,7 @@ are unnecessary, as this method accepts perl internal character strings.
 
 =cut
 
-sub TextListToTextProperty {
+sub XTextListToTextProperty {
     my($strings,$style) = @_;
     $strings = [ $strings ] if defined $strings and ref $strings ne 'ARRAY';
     return undef unless $strings;
@@ -230,14 +375,14 @@ sub TextListToTextProperty {
     return \%text;
 }
 
-=item B<TextPropertyToTextList>(I<$text>) => I<$strings>
+=item B<XTextPropertyToTextList>(I<$text>) => I<$strings>
 
 Note that the I<Xmb*>, I<Xwc*> and I<Xutf8*> distinctions of this method
 are unnecessary, as this method produces perl internal characeter strings.
 
 =cut
 
-sub TextPropertyToTextList {
+sub XTextPropertyToTextList {
     my $text = shift;
     return $text unless $text and ref $text eq 'HASH';
     return [ map{Encode::decode('iso-8859-1',$_)}unpack('(Z*)*',$text->{value}."\x00") ]
@@ -249,7 +394,7 @@ sub TextPropertyToTextList {
     return [ map{Encode::decode('UTF-8',$_)}unpack('(Z*)*',$text->{value}."\x00") ];
 }
 
-=item $X->B<GetTextProperty>(I<$window>,I<$prop>) => I<$text> or undef
+=item $X->B<XGetTextProperty>(I<$window>,I<$prop>) => I<$text> or undef
 
 Returns the text property, I<$text>, with name, I<$prop>, from a window,
 I<$window>, or C<undef> when no property of that name exists on
@@ -259,7 +404,7 @@ or C<WM_NAME>.
 
 =cut
 
-sub GetTextProperty {
+sub XGetTextProperty {
     my($X,$window,$prop,$type) = @_;
     $type = 0 unless $type;
     my $atom = ($prop =~ m{^\d+$}) ? $prop : $X->atom($prop);
@@ -285,7 +430,7 @@ sub GetTextProperty {
     };
 }
 
-=item $X->B<SetTextProperty>(I<$window>,I<$text>,I<$prop>)
+=item $X->B<XSetTextProperty>(I<$window>,I<$text>,I<$prop>)
 
 Sets the text property, I<$text>, with name, I<$prop>, on the window,
 I<$window>.
@@ -294,7 +439,7 @@ or C<WM_NAME>.
 
 =cut
 
-sub SetTextProperty {
+sub XSetTextProperty {
     my($X,$window,$text,$prop) = @_;
     if (defined $text) {
 	unless (ref $text) {
@@ -353,7 +498,7 @@ pay dividends.
 
 =over
 
-=item $X->B<FetchName>(I<$window>) => I<$name> or undef
+=item $X->B<XFetchName>(I<$window>) => I<$name> or undef
 
 Returns the C<WM_NAME> property name, I<$name>, for the window,
 I<$window>, or C<undef> when the C<WM_NAME> property does not exist for
@@ -361,14 +506,14 @@ I<$window>.  I<$name>, when defined, is a perl character string.
 
 =cut
 
-sub FetchName {
+sub XFetchName {
     my($X,$window) = @_;
-    my $list = TextPropertyToTextList($X->GetWMName($window));
+    my $list = XTextPropertyToTextList(XGetWMName($X,$window));
     return $list->[0] if $list;
     return undef;
 }
 
-=item $X->B<StoreName>(I<$window>,I<$name>)
+=item $X->B<XStoreName>(I<$window>,I<$name>)
 
 Sets the C<WM_NAME> property name, I<$name>, on the window, I<$window>;
 or, when I<$name> is C<undef>, deletes the C<WM_NAME> property from
@@ -376,11 +521,11 @@ I<$window>.  When defined, I<$name> is a perl character string.
 
 =cut
 
-sub StoreName {
-    $_[0]->SetWMName($_[1],TextListToTextProperty($_[2],'StdICCStyle'));
+sub XStoreName {
+    XSetWMName(@_[0..1],XTextListToTextProperty($_[2],'StdICCStyle'));
 }
 
-=item $X->B<GetWMName>(I<$window>) => I<$text> or undef
+=item $X->B<XGetWMName>(I<$window>) => I<$text> or undef
 
 Returns the C<WM_NAME> text property, I<$text>, for the window,
 I<$window>, or C<undef> when no C<WM_NAME> property exists for I<$window>.
@@ -389,11 +534,11 @@ PROPERTIES>).
 
 =cut
 
-sub GetWMName {
-    return $_[0]->GetTextProperty($_[1],X11::AtomConstants::WM_NAME()=>0);
+sub XGetWMName {
+    return XGetTextProperty(@_[0..1],X11::AtomConstants::WM_NAME()=>0);
 }
 
-=item $X->B<SetWMName>(I<$window>,I<$text>)
+=item $X->B<XSetWMName>(I<$window>,I<$text>)
 
 Sets the C<WM_NAME> text property name, I<$text>, on the window
 I<$window>; or, when I<$text> is C<undef>, deletes the C<WM_NAME> property
@@ -402,8 +547,8 @@ L</TEXT PROPERTIES>), or a perl character string.
 
 =cut
 
-sub SetWMName {
-    $_[0]->SetTextProperty($_[1],X11::AtomConstants::WM_NAME()=>$_[2]);
+sub XSetWMName {
+    return XSetTextProperty(@_[0..1],X11::AtomConstants::WM_NAME()=>$_[2]);
 }
 
 =back
@@ -421,7 +566,7 @@ windows; rather, they should rely on the window manager to do so.
 
 =over
 
-=item $X->B<GetIconName>(I<$window>) => I<$name> or undef
+=item $X->B<XGetIconName>(I<$window>) => I<$name> or undef
 
 Returns the C<WM_ICON_NAME> property icon name, I<$name>, for the window,
 I<$window>, or C<undef> when the C<WM_ICON_NAME> property does not exist
@@ -429,14 +574,14 @@ for I<$window>.  I<$name>, when defined, is a perl character string.
 
 =cut
 
-sub GetIconName {
+sub XGetIconName {
     my($X,$window) = @_;
-    my $list = TextPropertyToTextList($X->GetWMIconName($window));
+    my $list = XTextPropertyToTextList(XGetWMIconName($X,$window));
     return $list->[0] if $list;
     return undef;
 }
 
-=item $X->B<SetIconName>(I<$window>, I<$name>)
+=item $X->B<XSetIconName>(I<$window>, I<$name>)
 
 Sets the C<WM_ICON_NAME> property icon name, I<$name>, for the window,
 I<$window>; or, when I<$name> is C<undef>, deletes the C<WM_ICON_NAME>
@@ -445,11 +590,11 @@ string.
 
 =cut
 
-sub SetIconName {
-    $_[0]->SetWMIconName($_[1],TextListToTextProperty($_[2],'StdICCStyle'));
+sub XSetIconName {
+    $_[0]->XSetWMIconName($_[1],XTextListToTextProperty($_[2],'StdICCStyle'));
 }
 
-=item $X->B<GetWMIconName>(I<$window>) => I<$text> or undef
+=item $X->B<XGetWMIconName>(I<$window>) => I<$text> or undef
 
 Returns the C<WM_ICON_NAME> text property, I<$text>, for the window,
 I<$window>, or C<undef> when no C<WM_ICON_NAME> property exists for
@@ -458,11 +603,11 @@ I<$window>.  I<$text>, when defined, is a text property hash reference
 
 =cut
 
-sub GetWMIconName {
-    return $_[0]->GetTextProperty($_[1],X11::AtomConstants::WM_ICON_NAME()=>0);
+sub XGetWMIconName {
+    return $_[0]->XGetTextProperty($_[1],X11::AtomConstants::WM_ICON_NAME()=>0);
 }
 
-=item $X->B<SetWMIconName>(I<$window>, I<$text>)
+=item $X->B<XSetWMIconName>(I<$window>, I<$text>)
 
 Sets the C<WM_ICON_NAME> text property, I<$text>, for the window,
 I<$window>: or, when I<$text> is C<undef>, deletes the C<WM_ICON_NAME>
@@ -471,8 +616,8 @@ hash (see L</TEXT PROPERTIES>), or a perl character string.
 
 =cut
 
-sub SetWMIconName {
-    $_[0]->SetTextProperty($_[1],X11::AtomConstants::WM_ICON_NAME()=>$_[2]);
+sub XSetWMIconName {
+    $_[0]->XSetTextProperty($_[1],X11::AtomConstants::WM_ICON_NAME()=>$_[2]);
 }
 
 =back
@@ -638,7 +783,7 @@ use constant {
 
 =over
 
-=item $X->B<GetWMSizeHints>(I<$window>,I<$prop>) => I<$hints> or undef
+=item $X->B<XGetWMSizeHints>(I<$window>,I<$prop>) => I<$hints> or undef
 
 Returns the I<$prop> property size hints, I<$hints>, for the window,
 I<$window>, or C<undef> when no I<$prop> property exists for I<$window>.
@@ -647,7 +792,7 @@ L</WM_SIZE_HINTS>.
 
 =cut
 
-sub GetWMSizeHints {
+sub XGetWMSizeHints {
     my($X,$window,$prop) = @_;
     my($res) = $X->robust_req(
 	    GetProperty=>$window,
@@ -708,7 +853,7 @@ sub GetWMSizeHints {
     return \%hints;
 }
 
-=item $X->B<SetWMSizeHints>(I<$window>,I<$hints>,I<$prop>)
+=item $X->B<XSetWMSizeHints>(I<$window>,I<$hints>,I<$prop>)
 
 Sets the I<$prop> property size hints, I<$hints>, on the window,
 I<$window>; or, when I<$hints> is C<undef>, deletes the I<$prop> property
@@ -718,7 +863,7 @@ L</WM_SIZE_HINTS>.
 
 =cut
 
-sub SetWMSizeHints {
+sub XSetWMSizeHints {
     my($X,$window,$hints,$prop) = @_;
     return $X->DeleteProperty($window,$X->atom($prop))
 	unless $hints;
@@ -803,30 +948,30 @@ sub SetWMSizeHints {
 	    Replace=>pack('LLLLLlllllllllllll',$flag,@fields));
 }
 
-=item $X->B<GetWMNormalHints>(I<$window>) => I<$hints> or undef
+=item $X->B<XGetWMNormalHints>(I<$window>) => I<$hints> or undef
 
 This method is equivalent to:
 
- $X->GetWMSizeHints($window, 'WM_NORMAL_HINTS');
+ $X->XGetWMSizeHints($window, 'WM_NORMAL_HINTS');
 
 =cut
 
-sub GetWMNormalHints {
+sub XGetWMNormalHints {
     my($X,$window) = @_;
-    return $X->GetWMSizeHints($window,'WM_NORMAL_HINTS');
+    return $X->XGetWMSizeHints($window,'WM_NORMAL_HINTS');
 }
 
-=item $X->B<SetWMNormalHints>(I<$window>,I<$hints>)
+=item $X->B<XSetWMNormalHints>(I<$window>,I<$hints>)
 
 This method is equivalent to:
 
- $X->SetWMSizeHints($window,$hints,'WM_NORMAL_HINTS')
+ $X->XSetWMSizeHints($window,$hints,'WM_NORMAL_HINTS')
 
 =cut
 
-sub SetWMNormalHints {
+sub XSetWMNormalHints {
     my($X,$window,$hints) = @_;
-    return $X->SetWMSizeHints($window,$hints,'WM_NORMAL_HINTS');
+    return $X->XSetWMSizeHints($window,$hints,'WM_NORMAL_HINTS');
 }
 
 =back
@@ -1048,7 +1193,7 @@ use constant {
 
 =over
 
-=item $X->B<GetWMHints>(I<$window>) => I<$hints> or undef
+=item $X->B<XGetWMHints>(I<$window>) => I<$hints> or undef
 
 Returns the C<WM_HINTS> property hints, I<$hints>, for the window,
 I<$window>, or C<undef> when no C<WM_HINTS> property exists for
@@ -1057,7 +1202,7 @@ I<$hints>, when defined, is a reference to a hints hash: see L</WM_HINTS>.
 
 =cut
 
-sub GetWMHints {
+sub XGetWMHints {
     my($X,$window) = @_;
     my ($res) = $X->robust_req(
 	    GetProperty=>$window,
@@ -1092,7 +1237,7 @@ sub GetWMHints {
     return \%hints;
 }
 
-=item $X->B<SetWMHints>(I<$window>,I<$hints>)
+=item $X->B<XSetWMHints>(I<$window>,I<$hints>)
 
 Sets the C<WM_HINTS> property hints, I<$hints>, on the window, I<$window>;
 or, when I<$hints> is C<undef>, deletes the C<WM_HINTS> property from
@@ -1101,7 +1246,7 @@ I<$hints>, when defined, is a reference to a hints hash: see L</WM_HINTS>.
 
 =cut
 
-sub SetWMHints {
+sub XSetWMHints {
     my($X,$window,$hints) = @_;
     return $X->DeleteProperty($window,X11::AtomConstants::WM_HINTS())
 	unless $hints;
@@ -1226,7 +1371,7 @@ null-separated strings.
 
 =over
 
-=item $X->B<GetClassHint>(I<$window>) => I<$hints> or undef
+=item $X->B<XGetClassHint>(I<$window>) => I<$hints> or undef
 
 Returns the C<WM_CLASS> property class hints, I<$hints>, for the window,
 I<$window>, or C<undef> when the C<WM_CLASS> property does not exist for
@@ -1235,15 +1380,15 @@ I<$hints>, when defined, is a reference to a hints hash: see L</WM_CLASS>.
 
 =cut
 
-sub GetClassHint {
+sub XGetClassHint {
     my($X,$window) = @_;
-    my $text = $X->GetTextProperty($window,X11::AtomConstants::WM_CLASS()=>0);
+    my $text = $X->XGetTextProperty($window,X11::AtomConstants::WM_CLASS()=>0);
     return undef unless $text;
     if (substr($text->{value},-1,1) eq "\x00") {
 	$text->{value} = substr($text->{value},0,length($text->{value})-1);
 	$text->{nitems} -= 1;
     }
-    my $list = TextPropertyToTextList($text);
+    my $list = XTextPropertyToTextList($text);
     return undef unless $list;
     my %hints = ( res_name=>'', res_class=>'' );
     $hints{res_name}  = $list->[0] if $list->[0];
@@ -1251,7 +1396,7 @@ sub GetClassHint {
     return \%hints;
 }
 
-=item $X->B<SetClassHint>(I<$window>,I<$hints>)
+=item $X->B<XSetClassHint>(I<$window>,I<$hints>)
 
 Sets the C<WM_CLASS> property class hints, I<$hints>, on the window,
 I<$window>; or, when I<$hints> is C<undef>, deletes the C<WM_CLASS>
@@ -1260,20 +1405,20 @@ I<$hints>, when defined, is a reference to a hints hash: see L</WM_CLASS>.
 
 =cut
 
-sub SetClassHint {
+sub XSetClassHint {
     my($X,$window,$hints) = @_;
     my $text;
     if ($hints) {
 	$hints->{res_name}  = '' unless $hints->{res_name};
 	$hints->{res_class} = '' unless $hints->{res_class};
 	my $list = [ $hints->{res_name}, $hints->{res_class} ];
-	$text = TextListToTextProperty($list);
+	$text = XTextListToTextProperty($list);
 	if ($text) {
 	    $text->{value} .= "\x00";
 	    $text->{nitems} += 1;
 	}
     }
-    $X->SetTextProperty($window,X11::AtomConstants::WM_CLASS()=>$text);
+    $X->XSetTextProperty($window,X11::AtomConstants::WM_CLASS()=>$text);
 }
 
 =back
@@ -1299,7 +1444,7 @@ mapped.
 
 =over
 
-=item $X->B<GetTransientForHint>(I<$window>) => I<$owner> or undef
+=item $X->B<XGetTransientForHint>(I<$window>) => I<$owner> or undef
 
 Returns the C<WM_TRANSIENT_FOR> property owner window, I<$owner>, for the
 window, I<$window>, or C<undef> when no C<WM_TRANSIENT_FOR> property
@@ -1308,7 +1453,7 @@ I<$owner>, when defined, contains the XID of the owner window.
 
 =cut
 
-sub GetTransientForHint {
+sub XGetTransientForHint {
     my($X,$window) = @_;
     my($res) = $X->robust_req(
 	    GetProperty=>$window,
@@ -1320,7 +1465,7 @@ sub GetTransientForHint {
     return unpack('L',$value);
 }
 
-=item $X->B<SetTransientForHint>(I<$window>,I<$owner>)
+=item $X->B<XSetTransientForHint>(I<$window>,I<$owner>)
 
 Sets the C<WM_TRANSIENT_FOR> property owner windows, I<$owner>, for the
 window, I<$window>; or, when I<$owner> is C<undef>, deletes the
@@ -1329,7 +1474,7 @@ I<$owner>, when defined, contains the XID of the owner window.
 
 =cut
 
-sub SetTransientForHint {
+sub XSetTransientForHint {
     my($X,$window,$owner) = @_;
     return $X->DeleteProperty($window,X11::AtomConstants::WM_TRANSIENT_FOR())
 	unless defined $owner;
@@ -1370,7 +1515,7 @@ It is expected that this table will grow over time.
 
 =over
 
-=item $X->B<GetWMProtocols>(I<$window>) => I<$protocols> or undef
+=item $X->B<XGetWMProtocols>(I<$window>) => I<$protocols> or undef
 
 Returns the C<WM_PROTOCOLS> property protocols, I<$protocols>, for the
 window, I<$window>, or C<undef> when no C<WM_PROTOCOLS> property exists
@@ -1379,7 +1524,7 @@ of protocol names.
 
 =cut
 
-sub GetWMProtocols {
+sub XGetWMProtocols {
     my($X,$window) = @_;
     my($res) = $X->robust_req(
 	    GetProperty=>$window,
@@ -1400,7 +1545,7 @@ sub GetWMProtocols {
     return [ unpack('L*', $value) ];
 }
 
-=item $X->B<SetWMProtocols>(I<$window>, I<$protocols>)
+=item $X->B<XSetWMProtocols>(I<$window>, I<$protocols>)
 
 Sets the C<WM_PROTOCOLS> property protocols, I<$protocols>, on window,
 I<$window>.  I<$protocols>, when defined, is a reference to an array of
@@ -1408,7 +1553,7 @@ protocol names; when undefined, the property is deleted from I<$window>.
 
 =cut
 
-sub SetWMProtocols {
+sub XSetWMProtocols {
     my($X,$window,$protocols) = @_;
     return $X->DeleteProperty($window,$X->atom('WM_PROTOCOLS'))
 	unless $protocols;
@@ -1431,7 +1576,7 @@ For the details of this mechanism, see Color-maps.
 
 =over
 
-=item $X->B<GetWMColormapWindows>(I<$window>) => I<$windows> or undef
+=item $X->B<XGetWMColormapWindows>(I<$window>) => I<$windows> or undef
 
 Returns the C<WM_COLORMAP_WINDOWS> property colormap windows, I<$windows>,
 for the window, I<$window>, or C<undef> when no C<WM_COLORMAP_WINDOWS>
@@ -1440,7 +1585,7 @@ to an array containing the XIDs of the colormap windows.
 
 =cut
 
-sub GetWMColormapWindows {
+sub XGetWMColormapWindows {
     my($X,$window) = @_;
     my ($res) = $X->robust_req(
 	    GetProperty=>$window,
@@ -1461,7 +1606,7 @@ sub GetWMColormapWindows {
     return [ unpack('L*', $value) ];
 }
 
-=item $X->B<SetWMColormapWindows>(I<$window>,I<$windows>)
+=item $X->B<XSetWMColormapWindows>(I<$window>,I<$windows>)
 
 Sets the C<WM_COLORMAP_WINDOWS> property colormap windows, I<$windows> on
 the window, I<$window>; or, when I<$windows> is C<undef>, deletes the
@@ -1470,7 +1615,7 @@ reference to an array containing the XIDs of the colormap windows.
 
 =cut
 
-sub SetWMColormapWindows {
+sub XSetWMColormapWindows {
     my($X,$window,$windows) = @_;
     return $X->DeleteProperty($window,$X->atom('WM_COLORMAP_WINDOWS'))
 	unless $windows;
@@ -1490,7 +1635,7 @@ as seen from the machine running the server.
 
 =over
 
-=item $X->B<GetWMClientMachine>(I<$window>) => I<$text> or undef
+=item $X->B<XGetWMClientMachine>(I<$window>) => I<$text> or undef
 
 Returns the C<WM_CLIENT_MACHINE> property text, I<$text>, for the window,
 I<$window>, or C<undef> when no C<WM_CLIENT_MACHINE> property exists for
@@ -1499,19 +1644,19 @@ I<$window>.  I<$text>, when defined, is a text property hash reference
 
 =cut
 
-sub GetWMClientMachine {
-    return $_[0]->GetTextProperty($_[1],X11::AtomConstants::WM_CLIENT_MACHINE()=>0);
+sub XGetWMClientMachine {
+    return $_[0]->XGetTextProperty($_[1],X11::AtomConstants::WM_CLIENT_MACHINE()=>0);
 }
 
-=item $X->B<SetWMClientMachine>(I<$window>,I<$text>)
+=item $X->B<XSetWMClientMachine>(I<$window>,I<$text>)
 
 =cut
 
-sub SetWMClientMachine {
-    return $_[0]->SetTextProperty($_[1],X11::AtomConstants::WM_CLIENT_MACHINE()=>$_[2]);
+sub XSetWMClientMachine {
+    return $_[0]->XSetTextProperty($_[1],X11::AtomConstants::WM_CLIENT_MACHINE()=>$_[2]);
 }
 
-=item $X->B<GetClientMachine>(I<$window>) => $hostname
+=item $X->B<XGetClientMachine>(I<$window>) => $hostname
 
 Returns the C<WM_CLIENT_MACHINE> property hostname, I<$hostname>, for the
 window, I<$window>, or C<undef> when the C<WM_CLIENT_MACHINE> property
@@ -1520,14 +1665,14 @@ character string.
 
 =cut
 
-sub GetClientMachine {
+sub XGetClientMachine {
     my($X,$window) = @_;
-    my $list = TextPropertyToTextList($X->GetWMClientMachine($window));
+    my $list = XTextPropertyToTextList($X->XGetWMClientMachine($window));
     return $list->[0] if $list;
     return undef;
 }
 
-=item $X->B<SetClientMachine>(I<$window>,I<$hostname>)
+=item $X->B<XSetClientMachine>(I<$window>,I<$hostname>)
 
 Sets the C<WM_CLIENT_MACHINE> property hostname, I<$hostname>, on the
 window, I<$window>; or, when I<$hostname> is C<undef>, deletes the
@@ -1536,8 +1681,8 @@ is a perl character string.
 
 =cut
 
-sub SetClientMachine {
-    $_[0]->SetWMClientMachine($_[1],TextListToTextProperty($_[2],'StdICCStyle'));
+sub XSetClientMachine {
+    $_[0]->XSetWMClientMachine($_[1],XTextListToTextProperty($_[2],'StdICCStyle'));
 }
 
 =back
@@ -1593,7 +1738,7 @@ null-separated strings.
 
 =over
 
-=item $X->B<GetCommand>(I<$window>) => I<$argv> or undef
+=item $X->B<XGetCommand>(I<$window>) => I<$argv> or undef
 
 Returns the C<WM_COMMAND> property program arguments, I<$argv>, for the
 window, I<$window>, or C<undef> when the C<WM_COMMAND> property does not
@@ -1602,18 +1747,18 @@ of strings.
 
 =cut
 
-sub GetCommand {
+sub XGetCommand {
     my($X,$window) = @_;
-    my $text = $X->GetTextProperty($window,X11::AtomConstants::WM_COMMAND()=>0);
+    my $text = $X->XGetTextProperty($window,X11::AtomConstants::WM_COMMAND()=>0);
     return undef unless $text;
     if (substr($text->{value},-1,1) eq "\x00") {
 	$text->{value} = substr($text->{value},0,length($text->{value})-1);
 	$text->{nitems} -= 1;
     }
-    return TextPropertyToTextList($text);
+    return XTextPropertyToTextList($text);
 }
 
-=item $X->B<SetCommand>(I<$window>, I<$argv>)
+=item $X->B<XSetCommand>(I<$window>, I<$argv>)
 
 Sets the C<WM_COMMAND> property with program arguments, I<$argv>, for the
 window, I<$window>, or when I<$argv> is undefined, deletes the property
@@ -1622,14 +1767,14 @@ strings.
 
 =cut
 
-sub SetCommand {
+sub XSetCommand {
     my($X,$window,$argv) = @_;
-    my $text = TextListToTextProperty($argv);
+    my $text = XTextListToTextProperty($argv);
     if ($text) {
 	$text->{value} .= "\x00";
 	$text->{nitems} += 1;
     }
-    $X->SetTextProperty($window,X11::AtomConstants::WM_COMMAND()=>$text);
+    $X->XSetTextProperty($window,X11::AtomConstants::WM_COMMAND()=>$text);
 }
 
 =back
@@ -1899,7 +2044,7 @@ use constant {
 
 =over
 
-=item $X->B<GetWMState>(I<$window>) => $state or undef
+=item $X->B<XGetWMState>(I<$window>) => $state or undef
 
 Returns the C<WM_STATE> property state, I<$state>, for the window,
 I<$window>, or C<undef> when the C<WM_STATE> property does not exist for
@@ -1908,7 +2053,7 @@ I<$state>, when defined, is a reference to a state hash: see L</WM_STATE>.
 
 =cut
 
-sub GetWMState {
+sub XGetWMState {
     my($X,$window) = @_;
     my($res) = $X->robust_req(
 	    GetProperty=>$window,
@@ -1923,7 +2068,7 @@ sub GetWMState {
     return {state=>$state,icon=>$icon};
 }
 
-=item $X->B<SetWMState>(I<$window>,I<$state>)
+=item $X->B<XSetWMState>(I<$window>,I<$state>)
 
 Sets the C<WM_STATE> property state, I<$state>, on the window, I<$window>,
 or, when I<$state> is C<undef>, deletes the C<WM_STATE> property from
@@ -1932,7 +2077,7 @@ I<$state>, when defined, is a reference to a state hash: see L</WM_STATE>.
 
 =cut
 
-sub SetWMState {
+sub XSetWMState {
     my($X,$window,$wmstate) = @_;
     return $X->DeleteProperty($window,$X->atom('WM_STATE'))
 	unless $wmstate;
@@ -1947,19 +2092,19 @@ sub SetWMState {
 	    Replace=>pack('LL',$state,$icon));
 }
 
-=item $X->B<ChangeWMState>(I<$window>,I<$state>)
+=item $X->B<XChangeWMState>(I<$window>,I<$state>)
 
 =cut
 
-sub ChangeWMState {
+sub XChangeWMState {
     my($X,$window,$state) = @_;
     $state = 0 unless $state;
     $state = $X->do_interp(WMState=>$state) if $state =~ m{^\d+$};
     if ($state eq 'WithdrawnState') {
-	$X->WithdrawWindow($window);
+	$X->XWithdrawWindow($window);
     }
     elsif ($state eq 'IconicState') {
-	$X->IconifyWindow($window);
+	$X->XIconifyWindow($window);
     }
     elsif ($state eq 'NormalState') {
 	$X->MapWindow($window);
@@ -2009,7 +2154,7 @@ hash with the following keys:
 
 =over
 
-=item $X->B<GetIconSizes>(I<$root>) => I<$sizes> or undef
+=item $X->B<XGetIconSizes>(I<$root>) => I<$sizes> or undef
 
 Returns the C<WM_ICON_SIZE> property icon sizes, I<$sizes>, for the
 window, I<$root>, or C<undef> when the C<WM_ICON_SIZE> property does not
@@ -2021,7 +2166,7 @@ When unspecified, null or zero, I<$root> defaults to C<$X-E<gt>root>.
 
 =cut
 
-sub GetIconSizes {
+sub XGetIconSizes {
     my($X,$root) = @_;
     $root = $X->root unless $root;
     my ($res) = $X->robust_req(
@@ -2040,7 +2185,7 @@ sub GetIconSizes {
     return \%sizes;
 }
 
-=item $X->B<SetIconSizes>(I<$root>,I<$sizes>)
+=item $X->B<XSetIconSizes>(I<$root>,I<$sizes>)
 
 Sets the C<WM_ICON_SIZE> property icon sizes, I<$sizes>, on the window,
 I<$root>; or, when I<$sizes> is C<undef>, deletes the C<WM_ICON_SIZE>
@@ -2051,7 +2196,7 @@ When unspecified, null or zero, I<$root> defaults to C<$X-E<gt>root>.
 
 =cut
 
-sub SetIconSizes {
+sub XSetIconSizes {
     my($X,$root,$sizes) = @_;
     $root = $X->root unless $root;
     return $X->DeleteProperty($root,X11::AtomConstants::CARDINAL())
@@ -2487,19 +2632,19 @@ requests.
 
 =over
 
-=item $X->B<SetWMProperties>(I<$window>,I<$name>,I<$icon>,I<$argv>,I<$size>,I<$hints>,I<$class>)
+=item $X->B<XSetWMProperties>(I<$window>,I<$name>,I<$icon>,I<$argv>,I<$size>,I<$hints>,I<$class>)
 
 Provides a single programming interface for setting those essential window
 properties that are used for communicating with other clients
 (particularly window and session managers).
 
-When I<$name> is defined, SetWMName() is called to set the C<WM_NAME>
-property.  When I<$icon> is defined, SetWMIconName() is called to set the
-C<WM_ICON_NAME> property.  When I<$argv> is defined, SetCommand() is called
+When I<$name> is defined, XSetWMName() is called to set the C<WM_NAME>
+property.  When I<$icon> is defined, XSetWMIconName() is called to set the
+C<WM_ICON_NAME> property.  When I<$argv> is defined, XSetCommand() is called
 to set the C<WM_COMMAND> property.  When I<$size> is defined,
-SetWMNormalHints() is called to set the C<WM_NORMAL_HINTS> property.  When
-I<$hints> is defined, SetWMHints() is called to set the C<WM_HINTS>
-property.  When I<$class> is defined, SetClassHint() is called to set the
+XSetWMNormalHints() is called to set the C<WM_NORMAL_HINTS> property.  When
+I<$hints> is defined, XSetWMHints() is called to set the C<WM_HINTS>
+property.  When I<$class> is defined, XSetClassHint() is called to set the
 C<WM_CLASS> property.  If the C<$class-E<gt>{res_name}> is undefined,
 C<$ENV{RESOURCE_NAME}> will be used in its stead; when
 C<$ENV{RESOURCE_NAME}> is undefined, C<$argv-E<gt>[0]> will be used in
@@ -2507,12 +2652,12 @@ its stead, stripped of directory path prefixes.
 
 =cut
 
-sub SetWMProperties {
+sub XSetWMProperties {
     my($X,$window,$name,$icon,$argv,$size,$hints,$class) = @_;
-    $X->StoreName($window,$name) if defined $name;
-    $X->SetIconName($window,$icon) if defined $icon;
-    $X->SetCommand($window,$argv) if defined $argv;
-    $X->SetWMNormalHints($window,$hints) if defined $hints;
+    $X->XStoreName($window,$name) if defined $name;
+    $X->XSetIconName($window,$icon) if defined $icon;
+    $X->XSetCommand($window,$argv) if defined $argv;
+    $X->XSetWMNormalHints($window,$hints) if defined $hints;
     if (defined $class) {
 	$class->{res_name}  = '' unless $class->{res_name};
 	$class->{res_class} = '' unless $class->{res_class};
@@ -2524,7 +2669,7 @@ sub SetWMProperties {
 	    $class->{res_name} = $command;
 	}
 	$class->{res_name} = '' unless $class->{res_name};
-	$X->SetClassHint($window,$class);
+	$X->XSetClassHint($window,$class);
     }
 }
 
@@ -2532,7 +2677,7 @@ sub SetWMProperties {
 
 =over
 
-=item $X->B<ReconfigureWMWindow>(I<$window>, I<$screen>, I<$changes>) => $boolean
+=item $X->B<XReconfigureWMWindow>(I<$window>, I<$screen>, I<$changes>) => $boolean
 
 Issues a ConfigureWindow() request on the specified top-level window.  If
 the stacking mode is changed and the request fails with a C<Match> error,
@@ -2553,7 +2698,7 @@ Only the keys that are to be changed are included.
 
 =cut
 
-sub ReconfigureWMWindow {
+sub XReconfigureWMWindow {
     my($X,$window,$screen,$changes) = @_;
 
     my ($res) = $X->robust_req(ConfigureWindow=>$window,%$changes);
@@ -2580,14 +2725,14 @@ sub ReconfigureWMWindow {
 
 =over
 
-=item $X->B<IconifyWindow>(I<$window>, I<$screen>) => $boolean
+=item $X->B<XIconifyWindow>(I<$window>, I<$screen>) => $boolean
 
 Sends a C<WM_CHANGE> C<ClientMessage> event the root window of the
 specified screen to request that the window manager iconify a window.
 
 =cut
 
-sub IconifyWindow {
+sub XIconifyWindow {
     my($X,$window,$screen) = @_;
     my $root;
     if (defined $screen) {
@@ -2611,14 +2756,14 @@ sub IconifyWindow {
     return 1;
 }
 
-=item $X->B<WithdrawWindow>(I<$window>, I<$screen>) => $boolean
+=item $X->B<XWithdrawWindow>(I<$window>, I<$screen>) => $boolean
 
 Unmaps the window and sends a synthetic C<UnmapNotify> event to the root
 window of the specified screen.
 
 =cut
 
-sub WithdrawWindow {
+sub XWithdrawWindow {
     my($X,$window,$screen) = @_;
     my $root;
     if (defined $screen) {
@@ -2743,6 +2888,15 @@ sub event_handler_DestroyNotify {
 =back
 
 =cut
+
+{
+    my %seen;
+    push @{$EXPORT_TAGS{all}},
+	grep {!$seen{$_}++} @{$EXPORT_TAGS{$_}}
+	    foreach keys %EXPORT_TAGS;
+}
+
+Exporter::export_ok_tags('all');
 
 1;
 

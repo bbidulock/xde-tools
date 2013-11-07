@@ -61,13 +61,6 @@ $VERSION = 0.01;
     )],
 );
 
-foreach my $pfx (qw(get set dmp req)) {
-    push @{$EXPORT_TAGS{$pfx}},
-	 grep {/^$pfx/} @{$EXPORT_TAGS{all}};
-}
-
-Exporter::export_ok_tags('all');
-
 =head1 NAME
 
 X11::Protocol::ICCCM -- methods for controlling ICCCM window managers
@@ -141,10 +134,6 @@ sub getWM_NAME {
     return getWMPropertyString(@_[0..1],WM_NAME=>);
 }
 
-sub dmpWM_NAME {
-    return dmpWMPropertyString($_[0],WM_NAME=>name=>$_[1]);
-}
-
 =item B<setWM_NAME>(I<$X>,I<$window>,I<$name>)
 
 Sets the C<WM_NAME> property name, I<$name>, on the window, I<$window>;
@@ -155,6 +144,16 @@ I<$window>.  When defined, I<$name> is a perl character string.
 
 sub setWM_NAME {
     return setWMPropertyString(@_[0..1],WM_NAME=>COMPOUND_TEXT=>$_[2]);
+}
+
+=item B<dmpWM_NAME>(I<$X>,I<$name>)
+
+Prints to standard output the value of getWM_NAME().
+
+=cut
+
+sub dmpWM_NAME {
+    return dmpWMPropertyString($_[0],WM_NAME=>name=>$_[1]);
 }
 
 =back
@@ -184,10 +183,6 @@ sub getWM_ICON_NAME {
     return getWMPropertyString(@_[0..1],WM_ICON_NAME=>);
 }
 
-sub dmpWM_ICON_NAME {
-    return dmpWMPropertyString($_[0],WM_ICON_NAME=>name=>$_[1]);
-}
-
 =item B<setWM_ICON_NAME>(I<$X>,I<$window>,I<$name>)
 
 Sets the C<WM_ICON_NAME> property icon name, I<$name>, for the window,
@@ -199,6 +194,16 @@ string.
 
 sub setWM_ICON_NAME {
     return setWMPropertyString(@_[0..1],WM_ICON_NAME=>COMPOUND_TEXT=>$_[2]);
+}
+
+=item B<dmpWM_ICON_NAME>(I<$X>,I<$name>)
+
+Prints to standard output the value of getWM_ICON_NAME().
+
+=cut
+
+sub dmpWM_ICON_NAME {
+    return dmpWMPropertyString($_[0],WM_ICON_NAME=>name=>$_[1]);
 }
 
 =back
@@ -296,7 +301,7 @@ size is not to be used in place of the base size for this purpose.)
 In the methods that follow, I<$hints>, when defined, is a reference to a
 hash containing the following keys:
 
-    supplied		      supplied fields
+    supplied                  supplied fields
     user_position             user-specified initial position
     user_size                 user-specified initial size
     program_position          program-specified initial position
@@ -313,10 +318,38 @@ hash containing the following keys:
 The C<min_aspect> and C<max_aspect> fields, when defined, contain a
 reference to a hash containing the following keys:
 
-   x  aspect numerator
-   y  aspect denominator
+    x  aspect numerator
+    y  aspect denominator
+
+C<supplied> is an intepreted bit mask that can contain the following bit
+definitions:
+
+    USPosition      => WM_NORMAL_HINTS_USPOSITION   => (1<<0),
+    USSize          => WM_NORMAL_HINTS_USSIZE       => (1<<1),
+    PPosition       => WM_NORMAL_HINTS_PPOSITION    => (1<<2),
+    PSize           => WM_NORMAL_HINTS_PSIZE        => (1<<3),
+    PMinSize        => WM_NORMAL_HINTS_PMINSIZE     => (1<<4),
+    PMaxSize        => WM_NORMAL_HINTS_PMAXSIZE     => (1<<5),
+    PResizeInc      => WM_NORMAL_HINTS_PRESIZEINC   => (1<<6),
+    PAspect         => WM_NORMAL_HINTS_PASPECT      => (1<<7),
+    PBaseSize       => WM_NORMAL_HINTS_PBASESIZE    => (1<<8),
+    PWinGravity     => WM_NORMAL_HINTS_PWINGRAVITY  => (1<<9),
 
 =cut
+
+push @{$EXPORT_TAGS{const}}, qw(
+    WM_NORMAL_HINTS_USPOSITION
+    WM_NORMAL_HINTS_USSIZE
+    WM_NORMAL_HINTS_PPOSITION
+    WM_NORMAL_HINTS_PSIZE
+    WM_NORMAL_HINTS_PMINSIZE
+    WM_NORMAL_HINTS_PMAXSIZE
+    WM_NORMAL_HINTS_PRESIZEINC
+    WM_NORMAL_HINTS_PASPECT
+    WM_NORMAL_HINTS_PBASESIZE
+    WM_NORMAL_HINTS_PWINGRAVITY
+    WMSizeHints
+);
 
 use constant {
     WM_NORMAL_HINTS_USPOSITION	=> (1<<0),
@@ -463,15 +496,6 @@ sub getWM_NORMAL_HINTS {
     });
 }
 
-sub dmpWM_NORMAL_HINTS {
-    return dmpWMPropertyHashInts($_[0],WM_NORMAL_HINTS=>[qw(
-		user_position user_size program_position program_size
-		x y width height min_width min_height max_width
-		max_height width_inc height_inc min_aspect_num
-		min_aspect_den max_aspect_num max_aspect_den base_width
-		base_height win_gravity)],$_[1]);
-}
-
 =item B<setWM_NORMAL_HINTS>(I<$X>,I<$window>,I<$hints>)
 
 Sets the I<$prop> property size hints, I<$hints>, on the window,
@@ -533,6 +557,21 @@ sub setWM_NORMAL_HINTS {
 	    foreach (4..19) { $vals[$_] = 0 unless $vals[$_] }
 	    return CARDINAL=>32,pack('LLLLLlllllllllllll',$flags,@vals[4..20]);
     });
+}
+
+=item B<dmpWM_NORMAL_HINTS>(I<$X>,I<$hints>)
+
+Prints to standard output the value of getWM_NORMAL_HINTS().
+
+=cut
+
+sub dmpWM_NORMAL_HINTS {
+    return dmpWMPropertyHashInts($_[0],WM_NORMAL_HINTS=>[qw(
+		user_position user_size program_position program_size
+		x y width height min_width min_height max_width
+		max_height width_inc height_inc min_aspect_num
+		min_aspect_den max_aspect_num max_aspect_den base_width
+		base_height win_gravity)],$_[1]);
 }
 
 =back
@@ -725,6 +764,15 @@ hash that contains the following keys:
 
 =cut
 
+push @{$EXPORT_TAGS{const}}, qw(
+    WM_STATE_WITHDRAWNSTATE
+    WM_STATE_NORMALSTATE
+    WM_STATE_ZOOMSTATE
+    WM_STATE_ICONICSTATE
+    WM_STATE_INACTIVESTATE
+    WMState
+);
+
 use constant {
     WM_HINTS_INPUTHINT		    => (1<<0),
     WM_HINTS_STATEHINT		    => (1<<1),
@@ -826,40 +874,6 @@ sub getWM_HINTS {
     });
 }
 
-sub dmpWM_HINTS {
-    my($X,$hints) = @_;
-    return dmpWMPropertyDisplay($X,WM_HINTS=>sub{
-	    foreach (qw(input initial_state)) {
-		next unless defined $hints->{$_};
-		printf "\t%-20s: %s\n",$_,$hints->{$_};
-	    }
-	    foreach (qw(icon_pixmap icon_window)) {
-		next unless defined $hints->{$_};
-		if ($hints->{$_} =~ m{^\d+$}) {
-		    printf "\t%-20s: 0x%08x\n",$_,$hints->{$_};
-		} else {
-		    printf "\t%-20s: %s\n",$_,$hints->{$_};
-		}
-	    }
-	    foreach (qw(icon_x icon_y)) {
-		next unless defined $hints->{$_};
-		printf "\t%-20s: %s\n",$_,$hints->{$_};
-	    }
-	    foreach (qw(icon_mask window_group)) {
-		next unless defined $hints->{$_};
-		if ($hints->{$_} =~ m{^\d+$}) {
-		    printf "\t%-20s: 0x%08x\n",$_,$hints->{$_};
-		} else {
-		    printf "\t%-20s: %s\n",$_,$hints->{$_};
-		}
-	    }
-	    foreach (qw(message urgency)) {
-		next unless defined $hints->{$_};
-		printf "\t%-20s: %s\n",$_,$hints->{$_};
-	    }
-    });
-}
-
 =item B<setWM_HINTS>(I<$X>,I<$window>,I<$hints>)
 
 Sets the C<WM_HINTS> property hints, I<$hints>, on the window, I<$window>;
@@ -910,6 +924,46 @@ sub setWM_HINTS {
 	    $flags |= &WM_HINTS_URGENCYHINT	 if $vals[9];
 	    foreach (0..9) { $vals[$_] = 0 unless defined $vals[$_] }
 	    return CARDINAL=>32,pack('LLLLLllLL',$flags,@vals[0..7]);
+    });
+}
+
+=item B<dmpWM_HINTS>(I<$X>,I<$hints>)
+
+Prints to standard output the value of getWM_HINTS().
+
+=cut
+
+sub dmpWM_HINTS {
+    my($X,$hints) = @_;
+    return dmpWMPropertyDisplay($X,WM_HINTS=>sub{
+	    foreach (qw(input initial_state)) {
+		next unless defined $hints->{$_};
+		printf "\t%-20s: %s\n",$_,$hints->{$_};
+	    }
+	    foreach (qw(icon_pixmap icon_window)) {
+		next unless defined $hints->{$_};
+		if ($hints->{$_} =~ m{^\d+$}) {
+		    printf "\t%-20s: 0x%08x\n",$_,$hints->{$_};
+		} else {
+		    printf "\t%-20s: %s\n",$_,$hints->{$_};
+		}
+	    }
+	    foreach (qw(icon_x icon_y)) {
+		next unless defined $hints->{$_};
+		printf "\t%-20s: %s\n",$_,$hints->{$_};
+	    }
+	    foreach (qw(icon_mask window_group)) {
+		next unless defined $hints->{$_};
+		if ($hints->{$_} =~ m{^\d+$}) {
+		    printf "\t%-20s: 0x%08x\n",$_,$hints->{$_};
+		} else {
+		    printf "\t%-20s: %s\n",$_,$hints->{$_};
+		}
+	    }
+	    foreach (qw(message urgency)) {
+		next unless defined $hints->{$_};
+		printf "\t%-20s: %s\n",$_,$hints->{$_};
+	    }
     });
 }
 
@@ -999,10 +1053,6 @@ sub getWM_CLASS {
     return getWMPropertyTermStrings(@_[0..1],WM_CLASS=>);
 }
 
-sub dmpWM_CLASS {
-    return dmpWMPropertyTermStrings($_[0],WM_CLASS=>class=>$_[1]);
-}
-
 =item B<setWM_CLASS>(I<$X>,I<$window>,I<$class>)
 
 Sets the C<WM_CLASS> property class hints, I<$hints>, on the window,
@@ -1014,6 +1064,16 @@ I<$hints>, when defined, is a reference to a hints hash: see L</WM_CLASS>.
 
 sub setWM_CLASS {
     return setWMPropertyTermStrings(@_[0..1],WM_CLASS=>COMPOUND_TEXT=>$_[2]);
+}
+
+=item B<dmpWM_CLASS>(I<$X>,I<$class>)
+
+Prints to standard output the value of getWM_CLASS().
+
+=cut
+
+sub dmpWM_CLASS {
+    return dmpWMPropertyTermStrings($_[0],WM_CLASS=>class=>$_[1]);
 }
 
 =back
@@ -1052,10 +1112,6 @@ sub getWM_TRANSIENT_FOR {
     return getWMPropertyUint(@_[0..1],WM_TRANSIENT_FOR=>);
 }
 
-sub dmpWM_TRANSIENT_FOR {
-    return dmpWMPropertyUint($_[0],WM_TRANSIENT_FOR=>owner=>$_[1]);
-}
-
 =item B<setWM_TRANSIENT_FOR>(I<$X>,I<$window>,I<$owner>)
 
 Sets the C<WM_TRANSIENT_FOR> property owner windows, I<$owner>, for the
@@ -1067,6 +1123,16 @@ I<$owner>, when defined, contains the XID of the owner window.
 
 sub setWM_TRANSIENT_FOR {
     return setWMPropertyUint(@_[0..1],WM_TRANSIENT_FOR=>WINDOW=>$_[2]);
+}
+
+=item B<dmpWM_TRANSIENT_FOR>(I<$X>,I<$owner>)
+
+Prints to standard output the value of getWM_TRANSIENT_FOR().
+
+=cut
+
+sub dmpWM_TRANSIENT_FOR {
+    return dmpWMPropertyUint($_[0],WM_TRANSIENT_FOR=>owner=>$_[1]);
 }
 
 
@@ -1114,10 +1180,6 @@ sub getWM_PROTOCOLS {
     return getWMPropertyAtoms(@_[0..1],WM_PROTOCOLS=>);
 }
 
-sub dmpWM_PROTOCOLS {
-    return dmpWMPropertyAtoms($_[0],WM_PROTOCOLS=>protocols=>$_[1]);
-}
-
 =item B<setWM_PROTOCOLS>(I<$X>,I<$window>,I<$protocols>)
 
 Sets the C<WM_PROTOCOLS> property protocols, I<$protocols>, on window,
@@ -1128,6 +1190,16 @@ protocol names; when undefined, the property is deleted from I<$window>.
 
 sub setWM_PROTOCOLS {
     return setWMPropertyAtoms(@_[0..1],WM_PROTOCOLS=>$_[2]);
+}
+
+=item B<dmpWM_PROTOCOLS>(I<$X>,I<$protocols>)
+
+Prints to standard output the value of getWM_PROTOCOLS().
+
+=cut
+
+sub dmpWM_PROTOCOLS {
+    return dmpWMPropertyAtoms($_[0],WM_PROTOCOLS=>protocols=>$_[1]);
 }
 
 =back
@@ -1156,10 +1228,6 @@ sub getWM_COLORMAP_WINDOWS {
     return getWMPropertyUints(@_[0..1],WM_COLORMAP_WINDOWS=>);
 }
 
-sub dmpWM_COLORMAP_WINDOWS {
-    return dmpWMPropertyUints($_[0],WM_COLORMAP_WINDOWS=>windows=>$_[1]);
-}
-
 =item B<setWM_COLORMAP_WINDOWS>(I<$X>,I<$window>,I<$windows>)
 
 Sets the C<WM_COLORMAP_WINDOWS> property colormap windows, I<$windows> on
@@ -1171,6 +1239,16 @@ reference to an array containing the XIDs of the colormap windows.
 
 sub setWM_COLORMAP_WINDOWS {
     return setWMPropertyUints(@_[0..1],WM_COLORMAP_WINDOWS=>WINDOW=>$_[2]);
+}
+
+=item B<dmpWM_COLORMAP_WINDOWS>(I<$X>,I<$windows>)
+
+Prints to standard output the value of getWM_COLORMAP_WINDOWS().
+
+=cut
+
+sub dmpWM_COLORMAP_WINDOWS {
+    return dmpWMPropertyUints($_[0],WM_COLORMAP_WINDOWS=>windows=>$_[1]);
 }
 
 =back
@@ -1196,10 +1274,6 @@ sub getWM_CLIENT_MACHINE {
     return getWMPropertyString(@_[0..1],WM_CLIENT_MACHINE=>);
 }
 
-sub dmpWM_CLIENT_MACHINE {
-    return dmpWMPropertyString($_[0],WM_CLIENT_MACHINE=>hostname=>$_[1]);
-}
-
 =item B<setWM_CLIENT_MACHINE>(I<$X>,I<$window>,I<$hostname>)
 
 Sets the C<WM_CLIENT_MACHINE> property hostname, I<$hostname>, on the
@@ -1211,6 +1285,16 @@ is a perl character string.
 
 sub setWM_CLIENT_MACHINE {
     return setWMPropertyString(@_[0..1],WM_CLIENT_MACHINE=>COMPOUND_STRING=>$_[2]);
+}
+
+=item B<dmpWM_CLIENT_MACHINE>(I<$X>,I<$hostname>)
+
+Prints to standard output the value of getWM_CLIENT_MACHINE().
+
+=cut
+
+sub dmpWM_CLIENT_MACHINE {
+    return dmpWMPropertyString($_[0],WM_CLIENT_MACHINE=>hostname=>$_[1]);
 }
 
 =back
@@ -1293,13 +1377,6 @@ sub shell_command {
     return join(' ',$command,@parms);
 }
 
-sub dmpWM_COMMAND {
-    my($X,$argv) = @_;
-    return dmpWMPropertyDisplay($X,WM_COMMAND=>sub{
-	printf "\t%-20s: %s\n",command=>shell_command(@$argv);
-    });
-}
-
 
 =item B<setWM_COMMAND>(I<$X>,I<$window>,I<$argv>)
 
@@ -1312,6 +1389,20 @@ strings.
 
 sub setWM_COMMAND {
     return setWMPropertyTermStrings(@_[0..1],WM_COMMAND=>COMPOUND_TEXT=>$_[2]);
+}
+
+
+=item B<dmpWM_COMMAND>(I<$X>,I<$argv>)
+
+Prints to standard output the value of getWM_COMMAND().
+
+=cut
+
+sub dmpWM_COMMAND {
+    my($X,$argv) = @_;
+    return dmpWMPropertyDisplay($X,WM_COMMAND=>sub{
+	printf "\t%-20s: %s\n",command=>shell_command(@$argv);
+    });
 }
 
 =back
@@ -1582,14 +1673,6 @@ sub getWM_STATE {
     });
 }
 
-sub dmpWM_STATE {
-    my($X,$state) = @_;
-    return dmpWMPropertyDisplay($X,WM_STATE=>sub{
-	printf "\t%-20s: %s\n",state=>$state->{state};
-	printf "\t%-20s: %s\n",icon=>$state->{icon};
-    });
-}
-
 =item B<setWM_STATE>(I<$X>,I<$window>,I<$state>)
 
 Sets the C<WM_STATE> property state, I<$state>, on the window, I<$window>,
@@ -1615,6 +1698,20 @@ sub setWM_STATE {
 	    $icon = 0 unless $icon;
 	    $icon = 0 if $icon eq 'None';
 	    return CARDINAL=>32,pack('LL',$state,$icon);
+    });
+}
+
+=item B<dmpWM_STATE>(I<$X>,I<$state>)
+
+Prints to standard output the value of getWM_STATE().
+
+=cut
+
+sub dmpWM_STATE {
+    my($X,$state) = @_;
+    return dmpWMPropertyDisplay($X,WM_STATE=>sub{
+	printf "\t%-20s: %s\n",state=>$state->{state};
+	printf "\t%-20s: %s\n",icon=>$state->{icon};
     });
 }
 
@@ -1709,10 +1806,6 @@ sub getWM_ICON_SIZE {
     return getWMPropertyHashInts(@_[0..1],WM_ICON_SIZE=>[qw(min_width min_height max_width max_height width_inc height_inc)])
 }
 
-sub dmpWM_ICON_SIZE {
-    return dmpWMPropertyHashInts($_[0],WM_ICON_SIZE=>[qw(min_width min_height max_width max_height width_inc height_inc)],$_[1]);
-}
-
 =item B<setWM_ICON_SIZE>(I<$X>,I<$root>,I<$sizes>)
 
 Sets the C<WM_ICON_SIZE> property icon sizes, I<$sizes>, on the window,
@@ -1726,6 +1819,16 @@ When unspecified, null or zero, I<$root> defaults to C<$X-E<gt>root>.
 
 sub setWM_ICON_SIZE {
     return setWMPropertyHashInts(@_[0..1],WM_ICON_SIZE=>CARDINAL=>[qw(min_width min_height max_width max_height width_inc height_inc)],$_[2])
+}
+
+=item B<dmpWM_ICON_SIZE>(I<$X>,I<$sizes>)
+
+Prints to standard output the value of getWM_ICON_SIZE().
+
+=cut
+
+sub dmpWM_ICON_SIZE {
+    return dmpWMPropertyHashInts($_[0],WM_ICON_SIZE=>[qw(min_width min_height max_width max_height width_inc height_inc)],$_[1]);
 }
 
 =back
@@ -1900,16 +2003,22 @@ sub getSM_CLIENT_ID {
     return getWMPropertyString(@_[0..1],SM_CLIENT_ID=>);
 }
 
-sub dmpSM_CLIENT_ID {
-    return dmpWMPropertyString($_[0],SM_CLIENT_ID=>client_id=>$_[1]);
-}
-
 =item B<setSM_CLIENT_ID>(I<$X>,I<$window>,I<$clientid>)
 
 =cut
 
 sub setWM_CLIENT_ID {
     return setWMPropertyString(@_[0..1],SM_CLIENT_ID=>STRING=>$_[2]);
+}
+
+=item B<dmpSM_CLIENT_ID>(I<$X>,I<$clientid>)
+
+Prints to standard output the value of getWM_CLIENT_ID().
+
+=cut
+
+sub dmpSM_CLIENT_ID {
+    return dmpWMPropertyString($_[0],SM_CLIENT_ID=>client_id=>$_[1]);
 }
 
 =back
@@ -1955,16 +2064,22 @@ sub getWM_CLIENT_LEADER {
     return getWMPropertyRecursive(@_[0..1],WM_CLIENT_LEADER=>);
 }
 
-sub dmpWM_CLIENT_LEADER {
-    return dmpWMPropertyUint($_[0],WM_CLIENT_LEADER=>leader=>$_[1]);
-}
-
 =item B<setWM_CLIENT_LEADER>(I<$X>,I<$window>,I<$leader>)
 
 =cut
 
 sub setWM_CLIENT_LEADER {
     return setWMPropertyRecursive(@_[0..1],WM_CLIENT_LEADER=>WINDOW=>$_[2]);
+}
+
+=item B<dmpWM_CLIENT_LEADER>(I<$X>,I<$leader>)
+
+Prints to standard output the value of getWM_CLIENT_LEADER().
+
+=cut
+
+sub dmpWM_CLIENT_LEADER {
+    return dmpWMPropertyUint($_[0],WM_CLIENT_LEADER=>leader=>$_[1]);
 }
 
 =back
@@ -2017,16 +2132,22 @@ sub getWM_WINDOW_ROLE {
     return getWMPropertyString(@_[0..1],WM_WINDOW_ROLE=>);
 }
 
-sub dmpWM_WINDOW_ROLE {
-    return dmpWMPropertyString($_[0],WM_WINDOW_ROLE=>role=>$_[1]);
-}
-
 =item B<setWM_WINDOW_ROLE>(I<$X>,I<$window>,I<$role>)
 
 =cut
 
 sub setWM_WINDOW_ROLE {
     return setWMPropertyString(@_[0..1],WM_WINDOW_ROLE=>STRING=>$_[2]);
+}
+
+=item B<setWM_WINDOW_ROLE>(I<$X>,I<$role>)
+
+Prints to standard output the value of getWM_WINDOW_ROLE().
+
+=cut
+
+sub dmpWM_WINDOW_ROLE {
+    return dmpWMPropertyString($_[0],WM_WINDOW_ROLE=>role=>$_[1]);
 }
 
 =back
@@ -2106,16 +2227,22 @@ sub getWM_LOCALE_NAME {
     return getWMPropertyString(@_[0..1],WM_LOCALE_NAME=>);
 }
 
-sub dmpWM_LOCALE_NAME {
-    return dmpWMPropertyString($_[0],WM_LOCALE_NAME=>locale=>$_[1]);
-}
-
 =item B<setWM_LOCALE_NAME>(I<$X>,I<$window>,I<$locale>)
 
 =cut
 
 sub setWM_LOCALE_NAME {
     return setWMPropertyString(@_[0..1],WM_LOCALE_NAME=>STRING=>$_[2]);
+}
+
+=item B<dmpWM_LOCALE_NAME>(I<$X>,I<$locale>)
+
+Prints to standard output the value of getWM_LOCALE_NAME().
+
+=cut
+
+sub dmpWM_LOCALE_NAME {
+    return dmpWMPropertyString($_[0],WM_LOCALE_NAME=>locale=>$_[1]);
 }
 
 =back
@@ -2341,6 +2468,13 @@ requests.
 
 =cut
 
+foreach my $pfx (qw(get set dmp req)) {
+    push @{$EXPORT_TAGS{$pfx}},
+	 grep {/^$pfx/} @{$EXPORT_TAGS{all}};
+}
+
+Exporter::export_ok_tags('all');
+
 1;
 
 __END__
@@ -2354,4 +2488,4 @@ Brian Bidulock <bidulock@cpan.org>
 L<X11::Protocol(3pm)>,
 L<X11::Protocol::AnyEvent(3pm)>.
 
-# vim: set sw=4 tw=72 fo=tcqlorn:
+# vim: set sw=4 tw=72 fo=tcqlorn foldmarker==head,=head foldmethod=marker:

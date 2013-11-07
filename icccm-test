@@ -69,4 +69,4 @@ check_window($X,$X->root);
 
 exit(0);
 
-# vim: set sw=4 tw=72 fo=tcqlorn:
+# vim: set sw=4 tw=72 fo=tcqlorn foldmarker==head,=head foldmethod=marker:
