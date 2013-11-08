@@ -1,6 +1,9 @@
 package X11::SM::Client;
 use strict;
 use warnings;
+use vars '$VERSION', '@ISA', '@EXPORT_OK', '%EXPORT_TAGS';
+$VERSION = 0.01;
+@ISA = ('Exporter');
 
 =head1 NAME
 
@@ -9,6 +12,14 @@ X11::SM::Client - implements the client functions of the X Session Management Li
 =head1 SYNOPSIS
 
 =head1 DESCRIPTION
+
+This module provides perl-language equivalents of the client functions
+of the X Session Management library.  An X Session Client is an
+application program that connects to a session manager on an ICE socket
+connection for communications with the manager based on the
+B<SESSION_MANAGER> environment variable that was provided during
+invocation.  A subordinate manager also acts as a manager; however,
+manager functions are provided by the L<X11::SM::Manager(3pm)> module.
 
 =head1 METHODS
 
@@ -143,4 +154,4 @@ L<X11::Protocol(3pm)>.
 
 =cut
 
-# vim: set sw=4 tw=72 fo=tcqlorn:
+# vim: set sw=4 tw=72 fo=tcqlorn foldmarker==head,=head foldmethod=marker:

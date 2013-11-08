@@ -1,4 +1,4 @@
-package X11::SM;
+package X11::Protocol::Window;
 use strict;
 use warnings;
 use vars '$VERSION', '@ISA', '@EXPORT_OK', '%EXPORT_TAGS';
@@ -7,15 +7,16 @@ $VERSION = 0.01;
 
 =head1 NAME
 
-X11::SM - session management for X11::Protocol.
+X11::Protocol::Window - representation of X11 window
 
 =head1 SYNOPSIS
 
 =head1 DESCRIPTION
 
-This module provides base capabilities for the X11::SM::Manager,
-X11::SM::Client and X11::SM::Proxy modules in support of X Session
-Management in a accordance with X11R6 and later session management.
+This module provides an object-oriented perl representation of an X11
+window.  THis is used primarily to track the creation, reparenting,
+withdrawal, docking, startup notificaiton, session management proxy and
+other assistance for light-weight window managers.
 
 =head1 METHODS
 

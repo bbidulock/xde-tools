@@ -232,6 +232,9 @@ Current EWMH support is as follows:
 
 .Item				JWM	Fluxbox	PeKWM	IceWM	Bbox	Wmaker	Openbox	FVWM	AStep	Mcity	Notes
 ----				---	-------	-----	-----	----	------	-------	----	-----	-----		
+_KDE_NET_SYSTEM_TRAY_WINDOWS	-	-	-	-	-	-	-	Y	-	-
+_KDE_NET_WM_FRAME_STRUT		-	-	-	-	-	-	-	Y	-	-
+_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR	-	-	-	-	-	-	Y	-	-
 _NET_ACTIVE_WINDOW		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
 _NET_CLIENT_LIST		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
 _NET_CLIENT_LIST_STACKING	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
@@ -286,7 +289,7 @@ _NET_WM_OPAQUE_REGION		-	-	-	-	-	-	-	-	-	-
 _NET_WM_PID			Y	N	Y	Y	Y	N	Y	Y	Y	Y	(17)
 _NET_WM_PING			-	-	-	-	-	-	X	-	Y	Y	(18)
 _NET_WM_STATE			Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_WM_STATE_ABOVE		Y	Y	Y	Y	Y	Y	Y	N*	N	Y	(21)
+_NET_WM_STATE_ABOVE		Y	Y	Y	Y	Y	Y	Y	Y*	N	Y	(21)
 _NET_WM_STATE_BELOW		Y	Y	Y	Y	Y	Y	Y	Y	N	Y
 _NET_WM_STATE_DEMANDS_ATTENTION	Y	Y	Y	Y	Y	N	Y	N	N	Y	(19)
 _NET_WM_STATE_FOCUSED		N	N	N	-	Y	N	N	N	N	N
@@ -325,8 +328,8 @@ _NET_WM_WINDOW_TYPE_TOOLTIP	N	N	N	Y	Y	N	N	N	N	N
 _NET_WM_WINDOW_TYPE_UTILITY	Y	N	Y	Y	Y	Y	Y	N	N	Y
 _NET_WORKAREA			Y	Y	Y	Y	Y	N	Y	Y	N	Y
 ------------------------------	---	---	---	---	---	---	---	---	---	---
-Total N				14N	22N	22N	 6N	 6N	27N	11N	26N	48N	11N
-Total Y				62Y	52Y	55Y	73Y	71Y	48Y	65Y	52Y	29Y	66Y
+Total N				14N	22N	22N	 6N	 6N	27N	11N	25N	48N	11N
+Total Y				62Y	52Y	55Y	73Y	71Y	48Y	65Y	53Y	29Y	66Y
 ------------------------------	---	---	---	---	---	---	---	---	---	---
 Total				80	80	80	80	80	80	80	80	80	80
 
@@ -336,8 +339,8 @@ Metacity    66 Y    11 N
 Openbox	    65 Y    11 N
 JWM	    62 Y    13 N	(http://github.com/joewing/jwm)
 PeKWM	    55 Y    22 N
+FVWM	    53 Y    25 N
 Fluxbox	    52 Y    22 N
-FVWM	    52 Y    26 N
 Wmaker	    49 Y    27 N
 AfterStep   29 Y    48 N
 

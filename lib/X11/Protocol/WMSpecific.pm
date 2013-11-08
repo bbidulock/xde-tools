@@ -142,6 +142,11 @@ sub wm_check {
 		    $name = $command->[0];
 		}
 	    }
+	    unless ($name) {
+		if (my $command = getWM_COMMAND($X,$X->root))
+		    $name = $command->[0];
+	    }
+	    }
 	    $name = get_NET_WM_ICON_NAME($X,$check) unless $name;
 	    $name = getWM_ICON_NAME($X,$check) unless $name;
 	    last if $name;
@@ -151,6 +156,7 @@ sub wm_check {
 	    $name =~ s{^.*/}{};
 	    $name ="\L$name\E";
 	}
+	$name = "ctwm" if $name eq 'workspacemanager';
 	foreach $check (@totest) {
 #
 # Note that fluxbox is setting _BLACKBOX_PID on the root window instead.
