@@ -1,0 +1,626 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+    if $running_under_some_shell;
+
+BEGIN {
+    use strict;
+    use warnings;
+    my $here = $0; $here =~ s{/[^/]*$}{};
+    if ($here =~ s{^\.}{}) {
+	chomp(my $cwd = `pwd`);
+	$here = "/$here" if $here;
+	$here = "$cwd$here";
+    }
+    unshift @INC, "$here/lib" unless $here =~ m{^/usr/bin};
+}
+
+use Getopt::Long;
+use Encode;
+use I18N::Langinfo qw(langinfo CODESET);
+use POSIX qw(getpid locale_h);
+use X11::Protocol::AnyEvent;
+use XDE::Context;
+use EV;
+use strict;
+use warnings;
+
+my %OVERRIDES = ();
+my $here = $0; $here =~ s{/[^/]*$}{};
+if ($here =~ s{^\.}{}) {
+    chomp(my $cwd = `pwd`);
+    $here = "/$here" if $here;
+    $here = "$cwd$here";
+}
+unless ($here =~ m{^/usr/bin}) {
+    %OVERRIDES = (
+	HERE               => "$here",
+	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
+	XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
+	XDG_ICON_APPEND    => "$here/share/icons:$here/share/pixmaps",
+    );
+    my %path = (map{$_=>1}split(/:/,$ENV{PATH}));
+    $ENV{PATH} = "$here:$ENV{PATH}" unless exists $path{$here};
+}
+
+my $program = $0; $program =~ s{^.*/}{};
+
+my %ops = (
+    help	=> '',
+    verbose	=> '',
+    charset	=> langinfo(CODESET),
+    language	=> setlocale(LC_MESSAGES),
+    session	=> '',
+    desktop	=> '',
+    vendor	=> '',
+    display	=> $ENV{DISPLAY},
+
+    name	=> '', # NAME
+    screen	=> '', # SCREEN
+    binary	=> '', # BIN
+    icon	=> '', # ICON
+    workspace	=> '', # DESKTOP
+    timestamp	=> '', # TIMESTAMP
+    description	=> '', # DESCRIPTION
+    wmclass	=> '', # WMCLASS
+    silent	=> '', # SILENT
+    appid	=> '', # APPLICATION_ID
+
+    launcher	=> $program,
+    launchee	=> '',
+
+    sequence	=> 0,
+
+    exec	=> '',
+    file	=> '',
+    url		=> '',
+
+    argv	=> [],
+);
+
+my $xde = XDE::Context->new(%OVERRIDES,ops=>\%ops);
+$xde->getenv;
+
+my $syntax = GetOptions(
+    'help|h'		=> \$ops{help},
+    'verbose|v'		=> \$ops{verbose},
+    'charset|c=s'	=> \$ops{charset},
+    'language|L=s'	=> \$ops{language},
+    'display|d=s'	=> \$ops{display},
+
+    'launcher=s'	=> \$ops{launcher},
+    'launchee=s'	=> \$ops{launchee},
+    'sequence=i'	=> \$ops{sequence},
+
+    'name|N=s'		=> \$ops{name},
+    'screen|s=i'	=> \$ops{screen},
+    'binary|b=s'	=> \$ops{binary},
+    'icon|i=s'		=> \$ops{icon},
+    'workspace|w=i'	=> \$ops{workspace},
+    'timestamp|t=i'	=> \$ops{timestamp},
+    'description|D=s'	=> \$ops{description},
+    'wmclass|w=s'	=> \$ops{wmclass},
+    'silent|s!'		=> \$ops{silent},
+    'appid|a=s'		=> \$ops{appid},
+
+    'exec|x=s'		=> \$ops{exec},
+    'file|f=s'		=> \$ops{file},
+    'url|u=s'		=> \$ops{url},
+);
+
+sub show_usage {
+    return<<USAGE_EOF;
+
+USAGE:
+    xdg-launch [OPTIONS] APPID [FILE|URL]
+USAGE_EOF
+}
+
+$xde->default; # reset defaults
+
+if ($ops{help}) {
+    print STDOUT show_usage;
+    exit(0);
+}
+
+$ops{argv} = \@ARGV;
+
+unless ($syntax) {
+    print STDERR "ERROR: syntax error\n";
+    print STDERR show_usage;
+    exit(2);
+}
+
+if (@ARGV > 2) {
+    print STDERR "ERROR: too many non-option arguments\n";
+    print STDERR show_usage;
+    exit(2);
+}
+
+if (@ARGV < 1 or not $ARGV[0]) {
+    print STDERR "ERROR: too few non-option arguments\n";
+    print STDERR show_usage;
+    exit(2);
+}
+
+$ops{entry} = $ARGV[0];
+
+if ($ARGV[1]) {
+    if ($ARGV[1] =~ m{^file:}) {
+	$ops{url} = $ARGV[1] unless $ops{url};
+	unless ($ops{file}) {
+	    $ops{file} = $ARGV[1];
+	    $ops{file} = s{^file:}{};
+	}
+    } elsif ($ARGV[1] =~ m{^[a-z]+:}) {
+	$ops{url} = $ARGV[1] unless $ops{url};
+    } else {
+	$ops{file} = $ARGV[1] unless $ops{file};
+	$ops{url} = "file:$ARGV[1]" if $ops{file} and not $ops{url};
+    }
+}
+
+#$xde->init;
+
+$xde->{DESKTOP_STARTUP_ID} = $ENV{DESKTOP_STARTUP_ID}
+    unless $xde->{DESKTOP_STARTUP_ID};
+delete $ENV{DESKTOP_STARTUP_ID};
+
+my $entry = $ops{entry};
+my $file;
+
+if ($entry =~ m{/}) {
+    unless (-f "$ops{entry}") {
+	print STDERR "ERROR: file $entry does not exist\n";
+	print STDERR show_usage;
+	exit(1);
+    }
+    $file = $entry;
+} else {
+    $entry = "$entry.desktop" unless $entry =~ m{\.desktop$};
+    foreach (map{"$_/applications"}$xde->XDG_DATA_ARRAY) {
+	if (-f "$_/$entry") {
+	    $file = "$_/$entry";
+	    last;
+	}
+    }
+    unless ($file) {
+	print STDERR "ERROR: no desktop file for entry $entry\n";
+	print STDERR show_usage;
+	exit(1);
+    }
+}
+
+my @parts = split('/',$file);
+my $f = pop @parts;
+my $d = join('/',@parts);
+my $appid = $f; $appid =~ s{\.desktop$}{};
+
+my %entry = $xde->get_entry($d,$f,'Desktop Entry');
+unless (%entry) {
+    print STDERR "ERROR: could not parse file $d/$f\n";
+    print STDERR show_usage;
+    exit(1);
+}
+
+my $launcher = $program; $launcher  = $ops{launcher}  if $ops{launcher};
+my $launchee = $appid;   $launchee  = $ops{launchee}  if $ops{launchee};
+my $timestamp = 0;	 $timestamp = $ops{timestamp} if $ops{timestamp};
+my $sequence = 0;	 $sequence  = $ops{sequence}  if $ops{sequence};
+
+$launcher =~ s{/}{|}g;
+$launchee =~ s{/}{|}g;
+
+$ENV{DISPLAY} = $ops{display} if $ops{display};
+
+my $X = X11::Protocol::AnyEvent->new();
+
+$timestamp = $X->get_timestamp unless $timestamp;
+
+my $id = sprintf('%s/%s/%d-%d_TIME%lu',
+	$launcher,$launchee,getpid(),$sequence++,$timestamp);
+
+my %parms = ();
+$parms{ID}	    = $id;
+$parms{NAME}	    = $entry{Name}		if $entry{Name};
+$parms{NAME}	    = $ops{name}		if $ops{name};
+$parms{ICON}	    = $entry{Icon}		if $entry{Icon};
+$parms{ICON}	    = $ops{icon}		if $ops{icon};
+($parms{BIN})	    = split(/\s+/,$entry{Exec},2) if $entry{Exec};
+$parms{BIN}	    = $entry{TryExec}		if $entry{TryExec};
+$parms{BIN}	    = $ops{binary}		if $ops{binary};
+$parms{DESCRIPTION} = $entry{Comment}		if $entry{Comment};
+$parms{DESCRIPTION} = $ops{description}		if $ops{description};
+$parms{WMCLASS}	    = $entry{StartupWMClass}	if $entry{StartupWMCLass};
+$parms{WMCLASS}	    = $ops{wmclass}		if $ops{wmclass};
+
+$parms{SILENT}	    = ($ops{silent} and $ops{silent} !~ m{no|false}i) ? 1 : 0
+						if $ops{silent} ne '';
+$parms{APPLICATION_ID} = $appid;
+$parms{APPLICATION_ID} = $ops{appid}		if $ops{appid};
+$parms{FILE}	    = $ops{file}		if $ops{file};
+$parms{URL}	    = $ops{url}			if $ops{url};
+$parms{COMMAND}	    = $entry{Exec}		if $entry{Exec};
+$parms{COMMAND}	    = $ops{exec}		if $ops{exec};
+
+$parms{DESKTOP}	    = $ops{workspace}		if $ops{workspace} ne '';
+$parms{SCREEN}	    = $ops{screen}		if $ops{screen} ne '';
+$parms{TIMESTAMP}   = $timestamp		if $timestamp;
+
+sub quote_string {
+    my $string = shift;
+    my $need_quotes = 0;
+    $need_quotes = 1 if $string =~ m{\s|"};
+    $string =~ s{\\}{\\\\}g;
+    $string =~ s{"}{\\"}g;
+    $string = '"'.$string.'"' if $need_quotes;
+    return $string;
+}
+
+my $msg = 'new:';
+foreach (qw(ID NAME ICON BIN DESCRIPTION WMCLASS SILENT APPLICATION_ID
+	    FILE URL COMMAND DESKTOP SCREEN TIMESTAMP)) {
+    $msg .= sprintf(' %s=%s',$_,quote_string($parms{$_}))
+	if defined $parms{$_};
+}
+
+warn "Message is: $msg";
+
+$msg = Encode::decode('UTF-8',$msg);
+$msg .= "\0";
+
+my $win = $X->new_rsrc;
+$X->CreateWindow($win,$X->root,InputOutput=>
+	$X->root_depth,CopyFromParent=>
+	(0,0), (10,10), 0);
+
+my $pad = pack('C20',0 x 20);
+my $mask = $X->pack_event_mask(qw(PropertyChange));
+
+$X->SendEvent($X->root,0,$mask,
+	$X->pack_event(
+	    name=>'ClientMessage',
+	    window=>$win,
+	    type=>$X->atom('_NET_STARTUP_INFO_BEGIN'),
+	    format=>8,
+	    data=>substr($msg.$pad,0,20)));
+
+$msg = (length($msg) > 20) ? substr($msg,20) : '';
+
+while (length($msg)) {
+    $X->SendEvent($X->root,0,$mask,
+	$X->pack_event(
+	    name=>'ClientMessage',
+	    window=>$win,
+	    type=>$X->atom('_NET_STARTUP_INFO'),
+	    format=>8,
+	    data=>substr($msg.$pad,0,20)));
+    $msg = (length($msg) > 20) ? substr($msg,20) : '';
+}
+
+$X->GetScreenSaver;
+$X->flush;
+close($X->connection->fh);
+
+my $command = $parms{COMMAND};
+$command = 'false' unless $command;
+my $path = $parms{FILE}; $path = '' unless $path; $path = '"'.$path.'"' if $path;
+my $uri  = $parms{URL};  $uri  = '' unless $uri;  $uri  = '"'.$uri.'"'  if $uri;
+$command =~ s{%[fF]}{$path};
+$command =~ s{%[uU]}{$uri};
+$command =~ s{%[dDnNickvmfFuU]}{}g;
+
+warn "Command is: $command";
+
+exec "$command" or die;
+
+1;
+
+__END__
+
+=head1 NAME
+
+xdg-launch - an XDG compliant startup notification launcher
+
+=head1 SYNOPSIS
+
+xdg-launch [I<OPTIONS>] I<APPID>
+
+=head1 DESCRIPTION
+
+B<xdg-launch> is an X11::Protocol(3pm) application that can be used to
+launch XDG application programs with startup notificaiton.
+
+=head1 ARGUMENTS
+
+The script accepts the following arugments:
+
+=over
+
+=item I<APPID>
+
+Specifies the application identifier of an XDG application program to
+launch.  The application identifier, I<APPID>, can be one of the
+following:
+
+=over
+
+=item 1.
+
+the name of a desktop entry file without the F<.desktop> suffix (e.g.
+F<gvim>);
+
+=item 2.
+
+the name of a desktop entry file with the F<.desktop> suffix (e.g.
+F<gvim.desktop>); or,
+
+=item 3.
+
+the full path (absolute or relative) and filename of a desktop entry
+file (e.g. F</usr/share/applications/gvim.desktop>).
+
+=back
+
+Providing an application identifier argument is mandatory.
+
+=back
+
+=head1 OPTIONS
+
+The options that are detailed below are recognized by B<xdg-launch>.
+b<xdg-launch> uses Getopt::Long(3pm), so unambiguous abbreviations of
+long options and long options with a single dash, are also supported.
+
+=head2 COMMAND OPTIONS
+
+The default is to launch the application specified by C<APPID>.  When
+any of the following options are specified, the command mode changes.
+
+=over
+
+=item B<--help>, B<-h>
+
+Print usage information to standard output and exit.
+
+=back
+
+=head2 CONFIGURATION OPTIONS
+
+The following are primary configuration options:
+
+=over
+
+=item B<--verbose>, B<-v>
+
+Print diagnostic information to standard error during operation.
+
+=item B<--display>, B<-d> I<DISPLAY>
+
+Use the specified display, I<DISPLAY>, instead of the value of the
+B<DISPLAY> environment variable.
+
+=item B<--charset>, B<-c> I<CHARSET>
+
+Specifies the character set that is to be used to display messages
+concerning the startup notification.  The (usually adequate) default is
+to use the locale settings of the launching process.
+
+=item B<--language>, B<-L> I<LANGUAGE>
+
+Specifies the language that is to be used to display messages concerning
+the startup notification.  The (usually adequate) default is to use the
+settings of the launching process.
+
+=back
+
+=head2 LAUNCH OPTIONS
+
+The following options affect the parameters of startup notification
+C<new> message that is sent for launch:
+
+=over
+
+=item B<--launcher> I<LAUNCHER>
+
+Specifies the string that will be used as the launcher when generating
+a startup notification identifier.  The default is the name of this
+program (i.e. B<xdg-launch>).
+
+=item B<--launchee> I<LAUNCHEE>
+
+Specifies the string that will be used as the launcher when generating a
+startup notificaiton identifier.  The default is the application
+identifier.
+
+=item B<--sequence> I<SEQUENCE>
+
+Specifies a sequence number that will be used when generating a startup
+notification identifier.  The default, when unspecified, is zero (0).
+
+=item B<--screen>, B<-s> I<SCREEN>
+
+Specifies the screen, I<SCREEN>, on which the XDG application, I<APPID>,
+is to launch.  When unsepcified, the default screen is used.  I<SCREEN>
+must be the numerical zero-based index of the desired screen.
+This value is placed in the C<SCREEN> key-value entry in the startup
+notification C<new> message.
+
+=item B<--workspace>, B<-w> I<DESKTOP>
+
+Specifies the desktop, I<DESKTOP>, on which the XDG application is to
+launch.  The default, when unspecified, is the current desktop.
+This value is placed in the C<DESKTOP> key-value entry in the startup
+notification C<new> mesage.
+
+=item B<--timestamp>, B<-t> I<TIMESTAMP>
+
+Specifies an X Server timestamp that corresponds to the X window event
+that cuased the launch to occur.  This is only useful in conjunction
+with specification of an I<APPID> argument.
+When the timestamp is not specified, B<xdg-launch> will use the time of
+the last event (or generate an event) for the timestamp.
+The resulting timestamp (whether specified or not) is used in the
+C<_TIME> portion of the startup notification identifier, as well as the
+the C<TIMESTAMP> key-value entry in the startup notification C<new>
+mesage.
+
+=item B<--name>, B<-N> I<NAME>
+
+Specify the name of the XDG application.  This overrides the B<Name>
+field from the XDG desktop entry file.  When unspecified, the default is
+the B<Name> field from the XDG desktop entry file.
+This value, when available, is placed in the C<NAME> key-value entry in
+the startup notification C<new> mesage.
+
+=item B<--icon>, B<-i> I<ICON>
+
+Specifies the icon name of the XDG application.  This overrides the
+B<Icon> field from the XDG desktop entry file.  When unspecified, the
+default is the B<Icon> field from the XDG desktop entry file.
+This value, when available, is placed in the C<ICON> key-value entry in
+the startup notification C<new> mesage.
+
+=item B<--binary>, B<-b> I<BIN>
+
+Specifies the name of the binary for the XDG application.  This
+overrides the B<TryExec> and B<Exec> fields from the XDG desktop entry
+file.  When unspecified, default is the B<TryExec> field, or the
+C<argv[0]> option of the B<Exec> field, from the XDG desktop entry file.
+This value, when available, is placed in the C<BIN> key-value entry in
+the startup notification C<new> mesage.
+
+=item B<--description>, B<-D> I<DESCRIPTION>
+
+Specifies the description of the XDG application.  This overrides the
+B<Comment> field from the XDG desktop entry file.  When unspecified, the
+default is to use the B<Comment> field from the XDG desktop entry file,
+or a descriptive sequence such as "Staring B<Name>".
+This value, when available, is placed in the C<DESCRIPTION> key-value
+entry in the startup notification C<new> mesage.
+
+=item B<--wmclass>, B<-W> I<WMCLASS>
+
+Specify the window manager class (matched against the C<res_name> or
+C<res_class> of the B<WM_CLASS> property on a window), of the top-level
+window that the XDG application is expected to map.  This overrides the
+B<StartupWMClass> field of the XDG desktop entry file.  When
+unspecified, the default is the B<StartupWMClass> field of the XDG
+desktop entry file.
+This value, when available, is placed in the C<WMCLASS> key-value entry
+in the startup notification C<new> mesage.
+
+=item B<--silent>, B<-s> I<SILENT>
+
+Specify a boolean value (0/1) choosing whether visual feedback should be
+provided for the launching XDG application.  Normally, when unspecified,
+visual feedback would be determined from the presence of a value of a
+B<StartupNotify> or B<StartupWMClass> field in the XDG desktop entry
+file.  The I<SILENT> argument should be some boolean value like C<0> or
+C<1> or C<yes> or C<no> or C<true> or C<false>.  The default when
+unspecified is to determine the value from the other fields of the XDG
+desktop entry file.
+This value, when available, is placed in the C<SILENT> key-value entry
+in the startup notification C<new> mesage.
+
+=item B<--appid>, B<-a> I<APPLICATION_ID>
+
+Override the application identifier.  Ths overrides the name of the XDG
+application file.  When unspecified, the defualt is to use the
+non-option I<APPID> arugment to determine the application identifier.
+This value, when available, is placed in the C<APPLICATION_ID> key-value
+entry in the startup notification C<new> mesage.
+
+=item B<--exec>, B<-x> I<COMMAND>
+
+Specifies the command to execute.  This overrides the B<Exec> field of
+the XDG desktop entry file.  When unspecified, the default is the
+B<Exec> field of the XDG desktop entry file.
+
+=item B<--file>, B<-f> I<FILE>
+
+Specifies a filename to be substituted into the XDG desktop entry B<Exec>
+command in accordance with XDG desktop entry specifications.  The
+default is no filename.  When B<--url> is specified as a F<file://> URL,
+this option defaults to the URL with the C<file:> portion removed.
+
+=item B<--url>, B<-u> I<URL>
+
+Specifies a URL to be substituted into the the XDG desktop entry B<Exec>
+command in accordance with XDG desktop entry specifications.  The
+default is no URL.  When B<--file> is specified, this option defaults to
+the I<FILE> with a C<file://> portion prefixed.
+
+=back
+
+=head1 BEHAVIOUR
+
+B<xdg-launch> exhibits the following behaviour:
+
+=head2 TIME STAMPS
+
+B<xdg-launch> is intended on being invoked directly from a user
+interface, such as the root menu of a light-weight window manager, or an
+X windows application such as a systray menu.  To perform proper startup
+notificaiton, B<xdg-launch> determines the X service timestamp of the
+invocation as follows:
+
+=over
+
+=item 1.
+
+When B<xdg-lanuch> is invoked directly (executed) from an application
+that has access to the X server event that invoked the launch, it can
+supply the X server timestamp directly to B<xdg-launch> using the
+B<--timestamp> option (see L</OPTIONS>).  B<xdg-launch> will use this
+time stamp in the generation of the B<DESKTOP_STARTUP_ID> as well as the
+C<TIMESTAMP> key-value pair in the startup notification C<new> message.
+
+=item 2.
+
+When B<xdg-launch> is invoked by an application that does not have
+access to the X event that invoked the launch, B<xdg-launch> will change
+the B<_TIMESTAMP_PROP> property on the root window to obtain a
+time stamp.  In this way, B<xdg-launch> can simply be executed using the
+execute mechanism of a light-weight window manager root menu or key
+binding.
+
+=back
+
+=head2 WINDOW MANAGERS
+
+B<xdg-launch> interacts with window managers int he following ways:
+
+=over
+
+=item 1.
+
+B<xdg-launch> creates startup notification identifiers using the
+technique from the F<libsn> library.  This consists of the following:
+
+ $launcher =~ s{/}{|}g;
+ $launchee =~ s{/}{|}g;
+ $id = sprintf('%s/%s/%d-%d-%s_TIME%lu',
+	 $launcher, $launchee, getpid(), $sequence_number++,
+	 $timestamp);
+
+Compliant applications will place the startup notification identifier
+from the B<DESKTOP_STARTUP_ID> environment variable in the
+B<_NET_STARTUP_ID> property on its group leader top-level window before
+it is mapped.  THe window manager can use the C<_TIME%lu> portion of the
+startup identifier to determine the X server timestamp for the event
+that launched the application.  When the client does not set an initial
+B<_NET_WM_uSER_TIME>, this timestamp can be used in its stead.
+
+=item 2.
+
+B<xdg->launch> does neither changes nor completes the starutp
+notificaiton sequence and is only responsible for issuing in the C<new>
+message.
+
+=back
+
+=cut
+
+# vim: set sw=4 tw=72 fo=tcqlorn foldmarker==head,=head foldmethod=marker:

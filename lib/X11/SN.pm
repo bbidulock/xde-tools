@@ -1,5 +1,5 @@
 package X11::SN;
-use base qw(X11::Protocol::AnyEvent);
+use base qw(X11::Protocol::ICCCM X11::Protocol::AnyEvent X11::Protocol);
 use AnyEvent;
 use strict;
 use warnings;
@@ -110,8 +110,15 @@ When an ICCCM compliant window manager starts managing a top-level
 client window, it places the C<WM_STATE> property on the window.  The
 window manager only performs these functions when a request has been
 made to map the window.  When we receive a C<CreateNotify> for a
-top-level window, we start tracking it; however, once it has been
-mapped by the window manager, we 
+top-level window, we start tracking.
+
+Note that L<fluxbox(1)>, L<blackbox(1)>, L<openbox(1)> and L<pekwm(1)>
+do not set the C<WM_STATE> property on WindowMaker dock apps (even
+though, WindowMaker itself always sets C<WM_STATE> on dock apps).  This
+might especially be to support session management via X Session
+Management proxies, such as L<smproxy(1)>, which would otherwise perform
+proxy restart of dock apps. (WindowMaker performs its own session
+management for these applications.)
 
 =cut
 
@@ -286,4 +293,4 @@ L<X11::SN::Sequence(3pm)>.
 
 =cut
 
-# vim: set sw=4 tw=72 fo=tcqlorn:
+# vim: set sw=4 tw=72 fo=tcqlorn foldmarker==head,=head foldmethod=marker:

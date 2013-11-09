@@ -4,7 +4,7 @@ use warnings;
 
 =head1 NAME
 
- XDG::Menu::Blackbox - generate a Blackbox menu from an XDG::Menu tree.
+XDG::Menu::Blackbox - generate a Blackbox menu from an XDG::Menu tree.
 
 =head1 SYNOPSIS
 
@@ -132,10 +132,12 @@ sub Directory {
 
 1;
 
+__END__
+
 =head1 SEE ALSO
 
 L<XDG::Menu(3pm)>
 
 =cut
 
-
+# vim: set sw=4 tw=72 fo=tcqlorn foldmarker==head,=head foldmethod=marker:

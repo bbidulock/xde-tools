@@ -117,10 +117,17 @@ sub wm_check {
 		$seen{$check} = 1;
 	    }
 	    $X->{screens}[$screen]{wm}{owner} = $check;
-	    printf STDERR "Window Manager ICCCM %s owner 0x%08x\n", $sel, $check;
+	    printf STDERR "Window Manager ICCCM 2.0 %s owner 0x%08x\n", $sel, $check;
 	} else {
 	    delete $X->{screens}[$screen]{wm}{owner};
-	    warn "Window Manager does not support ICCCM $sel";
+	    warn "Window Manager does not support ICCCM 2.0 $sel";
+	}
+	my %attrs = $X->GetWindowAttributes($X->root);
+	my @events = $X->unpack_event_mask($attrs{all_event_masks});
+	if (grep /SubstructureRedirect/, @events) {
+	    printf STDERR "Window Manager present (SubstructureRedirect).\n";
+	} else {
+	    warn "Window Manager not present (!SubstructureRedirect)";
 	}
 	push @totest, $X->root;
 #
@@ -143,9 +150,9 @@ sub wm_check {
 		}
 	    }
 	    unless ($name) {
-		if (my $command = getWM_COMMAND($X,$X->root))
+		if (my $command = getWM_COMMAND($X,$X->root)) {
 		    $name = $command->[0];
-	    }
+		}
 	    }
 	    $name = get_NET_WM_ICON_NAME($X,$check) unless $name;
 	    $name = getWM_ICON_NAME($X,$check) unless $name;
@@ -298,7 +305,85 @@ sub dmp_XSETROOT_ID {
 
 =back
 
+=head3 _DBUS_SESSION_BUS_PID, pid CARDINAL/32
+
+=over
+
+=item B<get_DBUS_SESSION_BUS_PID>(I<$X>,I<$window>) => I<$pid>
+
+=cut
+
+sub get_DBUS_SESSION_BUS_PID {
+    return getWMPropertyUint(@_[0..1],_DBUS_SESSION_BUS_PID=>);
+}
+
+=item B<set_DBUS_SESSION_BUS_PID>(I<$X>,I<$window>,I<$pid>)
+
+=cut
+
+sub set_DBUS_SESSION_BUS_PID {
+    return setWMPropertyUint(@_[0..1],_DBUS_SESSION_BUS_PID=>CARDINAL=>$_[2]);
+}
+
+=item B<dmp_DBUS_SESSION_BUS_PID>(I<$X>,I<$pid>)
+
+=cut
+
+sub dmp_DBUS_SESSION_BUS_PID {
+    return dmpWMPropertyUint($_[0],_DBUS_SESSION_BUS_PID=>pid=>$_[1]);
+}
+
+=back
+
+=head3 _DBUS_SESSION_BUS_ADDRESS, address STRING/8
+
+=over
+
+=item B<get_DBUS_SESSION_BUS_ADDRESS>(I<$X>,I<$window>) => I<$address>
+
+=cut
+
+sub get_DBUS_SESSION_BUS_ADDRESS {
+    return getWMPropertyString(@_[0..1],_DBUS_SESSION_BUS_ADDRESS=>);
+}
+
+=item B<set_DBUS_SESSION_BUS_ADDRESS>(I<$X>,I<$window>,I<$address>)
+
+=cut
+
+sub set_DBUS_SESSION_BUS_ADDRESS {
+    return setWMPropertyString(@_[0..1],_DBUS_SESSION_BUS_ADDRESS=>STRING=>$_[2]);
+}
+
+=item B<dmp_DBUS_SESSION_BUS_ADDRESS>(I<$X>,I<$address>)
+
+=cut
+
+sub dmp_DBUS_SESSION_BUS_ADDRESS {
+    return dmpWMPropertyString($_[0],_DBUS_SESSION_BUS_ADDRESS=>address=>$_[1]);
+}
+
+=back
+
 =head2 Fluxbox
+
+Fluxbox is only ICCCM/EWMH compliant and is not WMH compliant.  It
+properly sets C<_NET_SUPPORTIN_WM_CHECK> on both the root and the check
+window.  On the check window, the only other thing that is sets is
+C<_NET_WM_NAME> which is a proper C<UTF8_STRING> with the single word
+C<Fluxbox>.
+
+Fluxbox also sets C<_BLACKBOX_PID(CARDINAL/32)> on the root window.
+(Gee, blackbox doesn't!)
+
+Fluxbox interns the C<_BLACKBOX_ATTRIBUTES> atom and then does nothing
+with it.  Fluxbox interns the C<_FLUXBOX_ACTION>,
+C<_FLUXBOX_ACTION_RESULT> and C<_FLUXBOX_GROUP_LEFT> atoms.  Actions
+are only possible when the C<session.session0.allowRemoteActions>
+resource is set to true.  They are effected by changing the
+C<_FLUXBOX_ACTION> property on the root window to reflect the new
+command.  The result is communicated by Fluxbox setting the
+C<_FLUXBOX_ACTION_RESULT> property on the root window with the result.
 
 =cut
 
@@ -424,12 +509,31 @@ sub dmp_FLUXBOX_GROUP_LEFT {
 
 =head2 Blackbox
 
+Blackbox is only ICCCM/EWMH compliant and is not WMH compliant.  It
+properly sets C<_NET_SUPPORTING_WM_CHECK> on both the root and the check
+window.  On the check window the only other thing that is sets is
+C<_NET_WM_NAME> whis is a property C<UTF8_STRING> with the single word
+C<Blackbox>.  [It now sets C<_NET_WM_PID> correctly, but still does not
+set C<WM_CLIENT_MACHINE> to the fully qualified domain name as required
+by NetWM/EWMH specifications.
+
 =cut
 
 $EXPORT_TAGS{blackbox} = [qw(
 )];
 
-=head2 OpenBox
+=head2 Openbox
+
+Openbox is only ICCCM/EWMH compliant and is not WMH compliant.  It
+properly ses C<_NET_SUPPORTING_WM_CHECK> on both the root and the check
+window.  On the check window, the only ohter thing that it sets is
+C<_NET_WM_NAME> which is a proper C<UTF8_STRING> with the single word
+C<Openbox>.
+
+Openbox also sets C<_OPENBOX_PID(CARDINAL/32)> on the root window.  It
+also sets C<_OB_VERSION(UTF8_STRING)> and C<_OB_THEME(UTF8_STRING)> on
+the root window: will changing the C<_OB_THEME> property actually change
+the theme?
 
 =cut
 
@@ -823,6 +927,16 @@ sub set_OB_APP_TYPE {
 
 =head2 IceWM
 
+Sets C<_NET_SUPPORTING_WM_CHECK> appropriately.  Note that it sets
+C<_WIN_SUPPORTING_WM_CHECK> as well.  Also, it sets both
+C<_NET_SUPPORTING_WM_CHECK> and C<_WIN_SUPPORTING_WM_CHECK> to the same
+window.  It sets C<_NET_WM_NAME(STRING/8)> to C<IceWM 1.3.7 (Linux
+3.4.0-1-ARCH/x86_64)> or some such.  Note that C<_NET_WM_NAME> should be
+C<UTF8_STRING> instead of C<STRING> [this has been fixed].  It sets
+C<_NET_WM_PID> to the pid of th window manager; however, it does not set
+C<WM_CLIENT_MACHINE> to the fully qualified domain name of the window
+manager machine as required by the NetWM/EWMH specification.
+
 =cut
 
 $EXPORT_TAGS{icewm} = [qw(
@@ -1031,6 +1145,17 @@ sub got_ICEWM_TRAY {
 
 =head2 PeKWM
 
+PekWM is only ICCCM and NetWM/EWMH compliant and is not Gnome/WMH
+compliant.  It properly sets _NET_SUPPORTING_WM_CHECK on both the root
+and check windows.  It sets _NET_WM_NAME(STRING) on the check window.
+Note that _NET_WM_NAME should be UTF8_STRING instead of STRING
+(corrected in the I<git> version).  It does not set WM_CLIENT_MACHINE on
+the check window as required by EWMH, but sets it on the root window.
+It does not, however, set it to the fully qualified domain name as
+required by EWMH.  Also, it sets _NET_WM_PID on the check window, but
+mistakenly sets it on the root window.  It sets WM_CLASS to a null
+string on the check window and does not set WM_NAME.
+
 =cut
 
 $EXPORT_TAGS{pekwm} = [qw(
@@ -1222,6 +1347,14 @@ sub set_PEKWM_FRAME_ORDER {
 
 =head2 JWM
 
+JWM is only ICCCM and NetWM/EWMH compliant and is not Gnome/WMH
+compliant.  It properly sets _NET_SUPPORTING_WM_CHECK on both the root
+and the check window.  It properly sets _NET_WM_NAME on the check window
+(to C<JWM>).  It does not property set _NET_WM_PID on the check window,
+or anywhere for that matter [it does now].  It does not set
+WM_CLIENT_MACHINE anywhere and there is no WM_CLASS  or WM_NAME on the
+check window.
+
 L<jwm(1)> provides for client message control.  It can also be
 controlled by signals and sets it process id (PID) in the
 C<_NET_WM_PID(CARDINAL/32)> property on the check window in current
@@ -1291,6 +1424,14 @@ sub req_JWM_EXIT {
 
 
 =head2 WindowMaker
+
+WindowMaker is only ICCCM and NetWM/EWMH compliant and is not Gnome/WMH
+compliant.  It property sets _NET_SUPPORTING_WM_CHECK on both the root
+and the check window.  It does not set the _NET_WM_NAME on the check
+window.  It does, however, define a recursive
+_WINDOWMAKER_NOTICEBOARD(WINDOW/32) property that shares the same window
+as the check window and sets the _WINDOWMAKER_ICON_TILE(_RGBA_IMAGE)
+property on this window to the icon/dock/clip tile.
 
 =cut
 
@@ -1915,6 +2056,15 @@ sub dmp_WINDOWMAKER_WM_PROTOCOLS {
 =back
 
 =head2 FVWM
+
+FVWM is both ICCCM/EWMH compliant as well as Gnome/WMH compliant.  It
+sets C<_NET_SUPPORTING_WM_CHECK> property on the root window and check
+window.  On the check window it sets C<_NET_WM_NAME> to C<FVWM>.  It
+sets C<WM_NAME> to C<fvwm> and C<WM_CLASS> to C<fvwm>, C<FVWM>.  FVWM
+implements C<_WIN_SUPPORTING_WM_CHECK> in a separate window from
+C<_NET_SUPPORTING_WM_CHECK>, but the same one as
+C<_WIN_DESKTOP_BUTTON_PROXY>.  There are no additional properties set on
+those windows.
 
 =cut
 
@@ -2545,6 +2695,24 @@ sub set_MOTIF_DRAG_ATOM_PAIRS {
 }
 
 =back
+
+=head2 Wind
+
+Wind is largely ICCCM compliant (but does not take an ICCCM 2.0 WM_S%d
+manager selection).  It provides partial NetWM/EWMH compliance and no
+GNOME/WMH compliance.  Wind correctly sets _NET_SUPPORTING_WM_CHECK on
+both the root and check windows.  It correctly sets _NET_WM_NAME to the
+single word C<Wind>.
+
+=head2 TWM
+
+=head2 CTWM
+
+=head2 VTWM
+
+=head2 Metacity
+
+=head2 WMX
 
 =cut
 

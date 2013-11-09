@@ -30,6 +30,54 @@ The module provides the following methods:
 
 =back
 
+=head2 EVENT HANDLERS
+
+Several event handlers are provided for monitoring as follows:
+
+=over
+
+=item $mon->B<event_handler_CreateNotify>(I<$e>)
+
+This event handler selects for C<StructureNotify> and C<PropertyNotify>
+events on newly created top-level windows so that we can track
+applications that map windows by C<WMCLASS>.
+
+=item $mon->B<event_handler_DestroyNotify>(I<$e>)
+
+This is to remove windows from memory when they are destroyed.
+
+=item $mon->B<event_handler_UnmapNotify>(I<$e>)
+
+=item $mon->B<event_handler_MapNotify>(I<$e>)
+
+When a window is mapped, this handler checks to see whether it forms the
+completion of a startup notification sequence by C<WMCLASS>, or whether
+the C<_NET_STARTUP_ID> property identifies a window mapped in completion
+of a startup notification.  Also checked are the C<WM_CLIENT_MACHINE>
+and C<_NET_WM_PID> properties to be able to add a C<HOST> and C<PID>
+field to existing startup notification sequences.
+
+=item $mon->B<event_handler_PropertyNotifyWM_STATE>(I<$e>)
+
+When an ICCCM 2.0 compliant window manager starts managing a top-level
+client window, it places the C<WM_STATE> proeprty on the window.  The
+window manager only performs these functions when a request has been
+made to map the window.  When we receive a C<CreateNotify> for a
+top-level window, we start tracking.
+
+Note that L<fluxbox(1)>, L<blackbox(1)>, L<openbox(1)> and L<pekwm(1)>
+do not set the C<WM_STATE> property on WindowMaker dock apps (even
+though, WindowMaker itself alway sets the C<WM_STATE> on dock apps).
+This is bad because it also defeats the X Session Management proxy
+L<smproxy(8)> from doing its job.  In particular, L<fluxbox(1)>,
+L<blackbox(1)>, and L<pekwm(1)> do not support X Session Management
+directly.
+
+This is actually strange as L<ctwm(1)>, L<vtwm(1)> and even L<twm(1)>
+supports X11R6 X Session Management.
+
+=back
+
 =cut
 
 1;

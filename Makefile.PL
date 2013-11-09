@@ -48,6 +48,7 @@ WriteMakefile(
 		xde-theme3
 		xde-traymenu
 		xde-xset
+		xdg-launch
 		xlib-test
 	)],
 	PREREQ_PM => {

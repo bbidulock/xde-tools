@@ -146,7 +146,7 @@ my $unique = Gtk2::UniqueApp->new(
 unless ($ops{monitor}) {
     # when we are not supposed to monitor, we launch the application
     # directly
-    $xde->launch(%;  # should not return
+    $xde->launch(};  # should not return
     die "Cannot direct launch!";
 }
 

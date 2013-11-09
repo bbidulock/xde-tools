@@ -45,6 +45,7 @@ use XDG::Menu::Jwm;
 use XDG::Menu::Pekwm;
 use XDG::Menu::Openbox;
 use XDG::Menu::Openbox3;
+use XDG::Menu::Twm;
 use Getopt::Long;
 use Encode;
 use I18N::Langinfo qw(langinfo CODESET);
@@ -144,6 +145,7 @@ my %outputs = (
     icewm       => [ "$HOME/.icewm/menu" ],
     jwm         => [ "$HOME/.jwm/menu" ],
     pekwm       => [ "$HOME/.pekwm/menu" ],
+    twm		=> [ "$HOME/.twm/menu" ],
 );
 
 my %formats = (
@@ -155,6 +157,7 @@ my %formats = (
     wmaker      => [qw(WMAKER   XDG::Menu::Wmaker   )],
     jwm         => [qw(JWM      XDG::Menu::Jwm      )],
     pekwm       => [qw(PEKWM    XDG::Menu::Pekwm    )],
+    twm		=> [qw(TWM	XDG::Menu::Twm	    )],
 );
 
 my %desktops = (
@@ -166,6 +169,7 @@ my %desktops = (
     ICEWM       => [qw(icewm    XDG::Menu::Icewm    )],
     JWM         => [qw(jwm      XDG::Menu::Jwm      )],
     PEKWM       => [qw(pekwm    XDG::Menu::Pekwm    )],
+    TWM		=> [qw(twm	XDG::Menu::Twm	    )],
 );
 
 

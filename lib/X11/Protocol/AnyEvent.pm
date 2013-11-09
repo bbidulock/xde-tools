@@ -46,8 +46,10 @@ directly to X11::Protocol::new().
 sub new {
     my $X = X11::Protocol::new(@_);
     if ($X) {
+	$X->ChangeWindowAttributes($X->root,
+		event_mask=>$X->pack_event_mask(qw(PropertyChange)));
 	$X->{event_handler} = sub{
-	    my($X,$e) = @_;
+	    my(%e) = @_;
 	    push @{$X->{ae}{events}}, \%e
 		unless $X->{ae}{discard_events};
 	};
@@ -63,6 +65,7 @@ sub new {
 	    $X->process_queue;
 	};
 	$X->{ae}{quit} = AE::cv;
+	$X->{ae}{time} = AE::cv;
     }
     return $X;
 }
@@ -77,6 +80,7 @@ so that the object can be garbage collected.
 sub destroy {
     my $X = shift;
     # remove circular references
+    delete $X->{ae}{time};
     delete $X->{ae}{quit};
     delete $X->{ae}{watcher};
     $X->{event_handler} = sub{ };
@@ -135,6 +139,25 @@ Convenience function for exiting the event loop invoked by main().
 
 sub main_quit {
     shift->{ae}{quit}->send;
+}
+
+=item $X->B<get_timestamp>() => I<$timestamp>
+
+Obtains a new timestamp for C<CurrentTime>.  This method blocks until an
+exchange with the X server has completed.
+
+=cut
+
+sub get_timestamp {
+    my $X = shift;
+    $X->ChangeProperty($X->root,
+	    $X->atom('_TIMESTAMP_PROP'),
+	    $X->atom('_TIMESTAMP_PROP'), 8,
+	    Replace=>pack('Cxxxxxxxxxxxxxxxxxxx',0x61));
+    $X->GetScreenSaver;
+    $X->process_queue;
+    $X->{ae}{time}->recv;
+    return $X->{current_time};
 }
 
 =item $X->B<discard_events>()
@@ -291,8 +314,10 @@ sub _time_less_than {
 
 sub _update_current_time {
     my($X,$e) = @_;
-    $X->{current_time} = $e->{time}
-	if _time_less_than($X->{current_time},$e->{time});
+    if (_time_less_than($X->{current_time},$e->{time})) {
+	$X->{current_time} = $e->{time};
+	$X->{ae}{time}->send;
+    }
 }
 
 
