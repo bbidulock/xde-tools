@@ -1,7 +1,6 @@
 package XDE::Monitor;
-use base qw(XDE::Dual  XDE::X11::StartupNotification);
-use Glib qw(TRUE FALSE);
-use Gtk2;
+use X11::SN::Monitor;
+use X11::SN::Sequence;
 use strict;
 use warnings;
 
@@ -17,19 +16,17 @@ XDE::Monitor -- monitor startup notification of XDG applications
 
  $xde->getenv;
  $xde->init;
- $SIG{TERM} = sub{$xde->main_quit};
- $SIG{INT}  = sub{$xde->main_quit};
- $SIG{QUIT} = sub{$xde->main_quit};
  $xde->main;
- $xde->term;
+ $xde->monitor;
  exit(0);
 
 =head1 DESCRIPTION
 
-Provides a module that runs out of the L<Glib::Mainloop(3pm)> that will
-monitor the launching of XDG applications (desktop entries) using
-startup notification and will assist light-weight window managers with
-proper handling of XDG startup notification.
+Provides the capabilities of an XDG application startup notification
+monitor.  It provides facilities for monitoring the launch of XDG
+applicaitons (desktop entries) using startup notificaiton and will
+assist light-weight window managers with proper handling of XDG startup
+notification.  This module is used by, for example, L<xdg-monitor(1p)>.
 
 =head1 METHODS
 
@@ -43,13 +40,29 @@ The following methods are provided:
 
 =item $xde->B<_term>() => $xde
 
+=back
+
+=head1 BEHAVIOR
+
+There are several problems with the XDG compliant startup notification:
+
+=over
+
+=item 1.
+
+An XDG desktop entry does not necessary have the correct settings of the
+B<StartupNotify> or B<StartupWMClass> fields (or both).  This can cause
+a laucher to populate incorrect values in the C<new> message.
+
+=item 2.
+
+=back
+
 =cut
 
 1;
 
 __END__
-
-=back
 
 =head1 AUTHOR
 
@@ -57,11 +70,10 @@ Brian Bidulock <bidulock@cpan.org>
 
 =head1 SEE ALSO
 
-L<XDE::Context(3pm)>,
-L<XDE::Dual(3pm)>,
-L<XDE::X11(3pm)>,
-L<XDE::X11::StartupNotification>.
+L<X11::SN(3pm)>,
+L<X11::SN::Monitor(3pm)>,
+L<X11::SN::Sequence(3pm)>.
 
 =cut
 
-# vim: set sw=4 tw=72 fo=tcqlorn:
+# vim: set sw=4 tw=72 fo=tcqlorn foldmarker==head,=head foldmethod=marker:

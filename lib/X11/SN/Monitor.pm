@@ -32,7 +32,8 @@ The module provides the following methods:
 
 =head2 EVENT HANDLERS
 
-Several event handlers are provided for monitoring as follows:
+Several L<X11::Protocol::AnyEvent(3pm)> event handlers are provided for
+monitoring as follows:
 
 =over
 
@@ -75,6 +76,73 @@ directly.
 
 This is actually strange as L<ctwm(1)>, L<vtwm(1)> and even L<twm(1)>
 supports X11R6 X Session Management.
+
+=item $mon->B<event_handler_ClientMessage_NET_STARTUP_INFO_BEGIN>(I<$e>)
+
+C<_NET_STARTUP_INFO_BEGIN> client messages start a sequence of
+individual 20-byte startup notification messages that form a single
+message.  Each begin message fragment contains enought bytes (20-bytes)
+to identify the type of message (C<new>, C<change> or C<remove>) but are
+unlikely to contain an entire startup notification ID parameter.
+
+This handler establishes a new list of message fragements for the
+sending window, C<$e-E<gt>{window}>.
+
+When a beginning message fragment appears and an incomplete message
+fragment sequence already exists, the incomplete fragments are
+discarded.
+
+=cut
+
+sub _complete_message {
+    my($X,$data) = @_;
+    my $msg = Encode::decode('UTF-8',$data);
+     # FIXME: more to do, parse and unpack message
+}
+
+
+sub event_handler_ClientMessage_NET_STARTUP_INFO_BGIN {
+    my($X,$e) = @_;
+    my $win = $e->{window};
+    return unless $win;
+    my $data = unpack('Z*',$e->{data}."\x00");
+    return unless $data =~ m{^(new|change|remove): };
+    $X->{sn}{messages}{$win} = $data;
+    _complete_message($X,delete $X->{sn}{messages}{$win})
+	if length($data) < 20;
+}
+
+=item $mon->B<event_handler_ClientMessage_NET_STARTUP_INFO>(I<$e>)
+
+C<_NET_STARTUP_INFO> client messages continue a sequence of message
+fragments that make up a complete message.  If there is a null byte
+(0x00) in the data portion of the message, this message also completes a
+message.
+
+This method adds fragments to a message until it is complete and then
+dispatches it to the appropriate L<X11::SN::Sequence(3pm)>.  For a
+freshly compeleted C<new> message, a corresponding
+L<X11::SN::Sequence(epm)> will be created and stored by startup
+notification ID.  Completed C<remove> messages will result in the
+destruction and dereferenceing of the corresponding
+L<X11::SN::Sequence(3pm)>.  (Note that here, I<sequence>, referes to the
+startup sequence and not the message fragement sequence.)
+
+When a message fragment appears from a window for which no start
+fragment was received, the fragment is discarded.
+
+=cut
+
+sub event_handler_ClientMessage_NET_STARTUP_INFO {
+    my($X,$e) = @_;
+    my $win = $e->{window};
+    return unless $win;
+    return unless exists $X->{sn}{messages}{$win};
+    my $data = unpack('Z*',$e->{data}."\x00");
+    $X->{sn}{messages}{$win} .= $data;
+    _complete_message($X,delete $X->{sn}{messages}{$win})
+	if length($data) < 20;
+}
 
 =back
 

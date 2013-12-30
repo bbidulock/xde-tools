@@ -75,8 +75,13 @@ sub destroy {
 
 =item $sn->B<event_handler_CreateNotify>(I<$e>)
 
-When a window is created, we want to select for propert changes on the
-window so that we can track a few properties.
+This event handler selects for C<StructureNotify> and C<PropertyNotify>
+events on newly created top-level windows so that we can track
+applications that map windows by C<WMCLASS>.
+
+We want to select for property changes on the window so that we can
+track a few properties, as well as structure notifications so that we
+can track when the 
 
 =cut
 
@@ -85,6 +90,8 @@ window so that we can track a few properties.
 When a window is destroyed, we want to remove it from memory.
 
 =cut
+
+=item $sn->B<event_handler_ReparentNotify>(I<$e>)
 
 =item $sn->B<event_handler_UnmapNotify(I<$e>)
 

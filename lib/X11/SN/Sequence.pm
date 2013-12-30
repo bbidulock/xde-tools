@@ -1,5 +1,6 @@
 package X11::SN::Sequence;
 require X11::SN;
+use Encode;
 use strict;
 use warnings;
 
@@ -28,15 +29,25 @@ The startup notification identifier.  Uniquely identifies a startup
 sequence; should be some globally unique string.  This should normally
 not be supplied and will be completed during the initiate() call. 
 
+This parameter is required in all startup notification messages, C<new>,
+C<change> or C<remove>.  This parameter is the only parameter that may
+appear in a C<remove> message.
+
 =item C<NAME>
 
 Some human readable name of the item being started; for example,
 C<Control Center> or C<Untitled Document>; this name should be
 localized.
 
+This parameter is required in C<new> message and optional in a
+C<changed> message.
+
 =item C<SCREEN>
 
 The X screen number for the startup sequence.
+
+This parameter is required in a C<new> message and optional in a
+C<changed> message.
 
 =item C<BIN>
 
@@ -110,6 +121,54 @@ the application file.
 
 =back
 
+The following parameters are included by this module over and above the
+set above from the freedesktop.org specification:
+
+=over
+
+=item C<LAUNCHER>
+
+Provides the binary name, C<argv[0]>, of the launcher.  This is the same
+string as is used to create the startup identifier.
+
+=item C<LAUNCHEE>
+
+Provides the binary name of the launchee.  This is the same string as is
+used to create the startup identifier.
+
+=item C<HOSTNAME>
+
+Provides the hostname of the machine on which the launcher is running.
+This is the fullly qualified domain name and should match with the
+B<WM_CLIENT_MACHINE> property on a resulting group leader window.
+
+=item C<PID>
+
+Provides the process identifier of the launchee process.  This should
+match with the B<_NET_WM_PID> property of a resulting group leader
+window.
+
+=item C<COMMAND>
+
+Provides the command that was executed by the launcher to launch the
+launhcee.  This should compare with the shell escaped single-space
+concatention of the arguments of the B<WM_COMMAND> property on a
+resulting group leader window.
+
+=item C<FILE>
+
+Provides the file name or names, if any,  that were substituted into the
+B<Exec> field of the XDG desktop entry to arrive at the command to
+execute the launchee.
+
+=item C<URL>
+
+Provides the URL or URLS, if any,  that were substituted into the
+B<Exec> field of the XDG desktop entry to arrive at the command to
+execute the launchee.
+
+=back
+
 Note that additional parameters may also be specified.  The contents of
 each parameter should be an unquoted string.  X11::SN::Sequence will
 perform quoting of the value before including it in a startup
@@ -130,9 +189,9 @@ Utility function to quote a key value string.
 sub sn_quote {
     my $string = shift;
     my $need_quotes = 0;
-    $need_quotes = 1 if $string =~ m{\s};
-    $need_quotes = 1 if $string =~ s{\\}{\\\\}g;
-    $need_quotes = 1 if $string =~ s{"}{\\"}g;
+    $need_quotes = 1 if $string =~ m{\s|"};
+    $string =~ s{\\}{\\\\}g;
+    $string =~ s{"}{\\"}g;
     $string = '"'.$string.'"' if $need_quotes;
     return $string;
 }
@@ -150,7 +209,14 @@ L</PARAMETERS>.
 
 =cut
 
-sub new { return bless {sn=>$sn,parms=>\%parms}, shift }
+sub new {
+    my($type,$X,%parms) = @_;
+    my $win = $X->new_rsrc;
+    $X->CreateWindow($win,$X->root,InputOutput=>
+	$X->root_depth,CopyFromParent=>
+	(0,0), (10,10), 0);
+    return bless {sn=>$X,win=>$win,parms=>\%parms}, $type;
+}
 
 =item $seq->B<destroy>()
 
@@ -163,6 +229,11 @@ release its references to the object following its call to this method.
 
 =cut
 
+sub destroy {
+    my $self = shift;
+    delete $self->{sn};
+}
+
 =item $seq->B<get_id>() => I<$startup_id>
 
 =item $seq->B<get_startup_id>() => I<$startup_id>
@@ -174,6 +245,35 @@ with this startup notification sequence.
 
 sub get_id { return shift->{parms}{ID} }
 sub get_startup_id { return shift->{parms}{ID} }
+
+=item $seq->B<broadcast_message>(I<$message>)
+
+=cut
+
+my $PAD = pack('C20',0 x 20);
+
+sub broadcast_message {
+    my($self,$msg) = @_;
+    my $bytes = Encode::decode('UTF-8',$msg)."\0";
+    my $win = $self->{win};
+    my $X = $self->{sn};
+    my $mask = $X->pack_event_mask(qw(PropertyChange));
+    my $type = $X->atom('_NET_STARTUP_INFO_BEGIN');
+    my $cont = $X->atom('_NET_STARTUP_INFO');
+    while (length($bytes)) {
+	$X->SendEvent($X->root,0,$mask,
+		$X->pack_event(
+		    name=>ClientMessage=>
+		    window=>$win,
+		    type=>$type,
+		    format=>8,
+		    data=>substr($bytes.$pad,0,20)));
+	$bytes = (length($bytes) > 20) ? substr($bytes,20) : '';
+	$type = $cont;
+    }
+    $X->GetScreenSaver;
+}
+
 
 =back
 
@@ -565,6 +665,14 @@ sub get_properties {
     return () unless $self->{parms};
     return keys %{$self->{parms}};
 }
+
+=back
+
+=head2 MESSAGE METHODS
+
+The following methods provide startup notificiation message functions:
+
+=over
 
 =back
 
