@@ -57,11 +57,16 @@ manager is running.
 
 =cut
 
+my %TEST_WINDOWS = (
+	[ 'pager',  'Mwm',  'Mwm Pager',    'mwm' ],
+	[ 'mwm',    'Mwm',  'mwm',	    'mwm' ],
+);
+
 sub wm_check {
     my($X,$screen) = @_;
     my $result = 0;
     if (defined $screen) {
-	my ($check,$name,$pid,$host) = (0,'',0,'');
+	my ($check,$name,$pid,$host,$maybe) = (0,'',0,'','');
 	my @totest = ();
 	return 0 unless $X->{screens}[$screen];
 	$X->choose_screen($screen);
@@ -100,12 +105,27 @@ sub wm_check {
 		push @totest,$check;
 		$seen{$check} = 1;
 	    }
-	    $name = 'wmaker';
+	    $maybe = 'wmaker';
 	    $X->{screens}[$screen]{wm}{noticeboard} = $check;
 	    printf STDERR "Window Manager wmaker notice window 0x%08x\n", $check;
 	} else {
 	    delete $X->{screens}[$screen]{wm}{noticeboard};
 	    warn "Window Manager does not support WindowMaker";
+	}
+	$check = get_MOTIF_WM_INFO($X);
+	$check = get_MOTIF_WM_INFO($X) unless $check;
+	$check = $check->{wm_window} if $check;
+	if ($check) {
+	    unless ($seen{$check}) {
+		push @totest,$check;
+		$seen{$check} = 1;
+	    }
+	    $maybe = 'mwm';
+	    $X->{screens}[$screen]{wm}{mwm}{check} = $check;
+	    printf STDERR "Window Manager Motif check window 0x%08x\n", $check;
+	} else {
+	    delete $X->{screens}[$screen]{wm}{mwm}{check};
+	    warn "Window Manager does not support Motif/MWMH";
 	}
 	my $sel = sprintf("WM_S%d",$screen);
 	my $selection = $X->atom($sel);
@@ -134,7 +154,7 @@ sub wm_check {
 # Note that pekwm and openbox are settting a null WM_CLASS porperty on
 # the check window.  fvwm is setting WM_NAME and WM_CLASS properly on
 # the check window.  Recent jwm, blackbox and icewm are properly setting
-# _NET_WM_NAME on the check window.
+# _NET_WM_NAME and WM_CLASS on the check window.
 #
 	foreach $check (@totest) {
 	    $name = get_NET_WM_NAME($X,$check) unless $name;
@@ -163,7 +183,18 @@ sub wm_check {
 	    $name =~ s{^.*/}{};
 	    $name ="\L$name\E";
 	}
-	$name = "ctwm" if $name eq 'workspacemanager';
+#
+# CTWM with the old GNOME support uses the work space manager window as
+# a check window.  Newer CTWM is fully Net/EWMH compliant.
+#
+	$name = $maybe unless $name;
+	$name = "ctwm" if $name and $name eq 'workspacemanager';
+#
+# When there is no name found with these approaches, we need to go look
+# for windows to check.
+#
+	unless ($name) {
+	}
 	foreach $check (@totest) {
 #
 # Note that fluxbox is setting _BLACKBOX_PID on the root window instead.
@@ -200,7 +231,7 @@ sub wm_check {
 	}
 	if ($host) {
 	    $X->{screens}[$screen]{wm}{name} = $host;
-	    print STDERR "Window Manager host is $pid\n";
+	    print STDERR "Window Manager host is $host\n";
 	} else {
 	    delete $X->{screens}[$screen]{wm}{name};
 	    warn "Window Manager host is unknown";
@@ -2508,8 +2539,13 @@ sub get_MOTIF_WM_HINTS {
 }
 
 sub dmp_MOTIF_WM_HINTS {
-    return dmpWMPropertyHashUints($_[0],_MOTIF_WM_HINTS=>[qw(functions
-		decorations input_mode status)],$_[1]);
+    my($X,$hints) = @_;
+    return dmpWMPropertyDisplay($X,_MOTIF_WM_HINTS=>sub{
+	    foreach (qw(functions decorations input_mode status)) {
+		next unless defined $hints->{$_};
+		printf "\t%-20s: %s\n",$_,join(', ',@{$hints->{$_}});
+	    }
+    });
 }
 
 =item B<set_MOTIF_WM_HINTS>(I<$X>,I<$window>,I<$hints>)
