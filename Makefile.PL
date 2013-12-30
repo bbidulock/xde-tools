@@ -1,8 +1,15 @@
 use ExtUtils::MakeMaker;
+my $VERSION = '0.01';
+if (-d ".git") {
+	$VERSION = `git describe --tags`;
+	$VERSION =~ s/[-_]/./g;
+	$VERSION =~ s/\.g[0-9a-f]{7,}$//;
+}
 WriteMakefile(
 	NAME => 'xde-tools',
-	VERSION => '0.01',
+	VERSION => $VERSION,
 	EXE_FILES => [qw(
+		icccm-test
 		sn-launch
 		sn-monitor
 		xde-autostart
@@ -11,6 +18,7 @@ WriteMakefile(
 		xde-desktop
 		xde-dock
 		xde-fluxbox
+		xde-genmenu
 		xde-icon
 		xde-init
 		xde-input
@@ -24,6 +32,7 @@ WriteMakefile(
 		xde-panel
 		xde-run
 		xde-session
+		xde-session.conf.pod
 		xde-session-ctrl
 		xde-session-edit
 		xde-session-logout
