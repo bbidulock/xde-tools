@@ -551,6 +551,8 @@ good theme support.  It provides a basic panel.  It can support dockapps
 by swallowing them into a I<wharf>.
 It is no longer developed.
 
+=item L<waimea(1)>
+
 =item L<wmx(1)>
 
 WMX is a light window manager.  It has basic ICCCM/EWMH support and has
@@ -565,6 +567,59 @@ recommended for use with I<XDE>: your mileage will vary on other
 versions of the wmx window manager.  This recommended version is
 available for Arch Linux using the I<wmx-git> AUR package.
 
+=item L<ctwm(1)>
+
+CTWM is a light weight window manager based on TWM code.  It supports
+ICCCM (not version 2.0) and Gnome/WMH, but has no NetWM/EWMH.  It has
+quite good theme support including title bar button theming and function
+settings.  It has good key/mouse binding support.  It supports icon
+mini-windows on the desktop.  It does not provide a panel of its own,
+but does provide a WM-specifc pager and icon manager (i.e. windowlist).
+(It is actively developed.  In fact, I am considering contributing full
+ICCCM 2.0, Gnome/WMH and NetWM/EWMH support.)
+
+=item L<flwm(1)>
+
+FLWM (Fast Light Window Manager) is a light weight window manager
+sharing the root menu directory appropach of L<wmx(1)>.  It provide
+rotated title bars along the left edge of the window like L<wmx(1)>.  It
+is ICCCM (prior to version 2.0) and Gnome/WMH support but no NetWM/EWMH
+support.  It supports multiple workspaces, but does not have theme
+support.  FLWM uses an approach compatible with WMX for the root menu
+(directory-based approach instead of a file-based approach).
+
+XDE launches a full desktop for FLWM, however, some capabilities
+(advanced key binding) are not supported due to the lack of NetWM/EWMH
+support in FLWM.
+L<xde-menugen(1)> supports menu generation for both FLWM and WMX.
+
+=item L<twm(1)>
+
+TWM is a light window manager and toolkit using the F<Xt> library.
+It supports only ICCCM (prior to version 2.0) and does not support
+Gnome/WMH or NetWM/EWMH.  It does not support multiple desktops.
+
+TWM is an excellent fail-safe window manager; therefore, XDE provides
+setup in L<xde-chooser(1p)> but does not launch a full XDE desktop when
+starting TWM.
+L<xde-menugen(1p)> provides full XDG compliant menu generation for
+L<twm(1)>.
+
+=item L<mwm(1)>
+
+MWM is a light window manager and toolkit using the F<Xm> library.  It
+supports ICCCM (prior to version 2.0) and does not support Gnome/WMH or
+NetWM/EWMH.  It supports MOTIF hints (MWMH) but not may applications or
+application toolkits support the complete MWMH specification any more.
+It supports mulltiple desktops via its own pager.  It has meager theme
+support (mostly just colors).
+
+MWM is a good fail-safe window manager; therefore, XDE provides setup in
+L<xde-chooser(1p)> but does not launch a full XDE desktop when starting
+MWM.
+L<xde-menugen(1p)> provides full XDG compliant menu generation for
+L<mwm(1)>.
+
 =back
 
 All of the window managers listed above are suitable for use with
@@ -573,7 +628,7 @@ I<XDE>.
 =head1 HISTORY
 
 I started writing I<XDE> as an enhancement to I<LXDE> to corrrect some
-of the deficiencies of the environment.  It use to heavily rely on some
+of the deficiencies of the environment.  It used to heavily rely on some
 of the I<LXDE> tools such as L<lxsession(1)>, L<lxpanel(1)>,
 L<pcmanfm(1)> and L<lxterminal(1)>.  Unfortunately most of the I<LXDE>
 tools are buggy and support for the Gtk2-based tools is likely to
@@ -583,8 +638,8 @@ desktop environments such as L<ede(1)> and L<rox(1)>, however, the lack
 of XDG compliance of these environments was a problem.
 
 As a result, the I<XDE> was tuned to not depend on any external tools
-other than L<perl(1)>, L<Gtk2(3pm)> and L<X11::Protocol(3pm)> wherever
-possible.
+other than L<perl(1)>, L<Gtk2(3pm)> and L<X11::Protocol(3pm)>, and,
+wherever possible, to not depend on L<Gtk2(3pm)>.
 
 =head1 AUTHOR
 
