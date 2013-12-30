@@ -46,11 +46,65 @@ sub check_window {
     my @unknown = sort
 	map{$X->can("get$_")?():$_}
 	@properties;
-    if (@properties) {
+    my $res;
+    ($res) = $X->robust_req(GetGeometry=>$window);
+    if (ref $res) {
+	my %geom = (@$res);
+	($res) = $X->robust_req(GetWindowAttributes=>$window);
+	if (ref $res) {
+	    my %attr = (@$res);
+	    printf "Client window: 0x%08x, %dx%d+%d+%d %d%s\n",$window,
+		$geom{width},$geom{height},$geom{x},$geom{y},
+		$geom{border_width},$attr{override_redirect}?' (override-redirect)':'';
+	} else {
+	    printf "Client window: 0x%08x, %dx%d+%d+%d %d\n",$window,
+		$geom{width},$geom{height},$geom{x},$geom{y},
+		$geom{border_width};
+	}
+    } else {
 	printf "Client window: 0x%08x\n", $window;
-	printf "\t%-20s: %s\n", properties=>join(', ',@properties);
-	printf "\t%-20s: %s\n", unknown=>join(', ',@unknown) if @unknown;
-	foreach (@known) {
+    }
+#   printf "\t%-20s: 0x%08x\n",root=>$root;
+    printf "\t%-20s: 0x%08x\n",parent=>$parent if $parent and $parent ne $root and $parent ne 'None';
+    printf "\t%-20s: %s\n",children=>join(', ',map{sprintf("0x%08x",$_)}@kids) if @kids;
+    ($res) = $X->robust_req(GetWindowAttributes=>$window);
+#    if (ref $res) {
+#	my %attrs = (@$res);
+#	printf "  %s:\n", 'ATTRIBUTES';
+#	foreach (qw(win_gravity override_redirect)) {
+##	foreach (qw(backing_store visual class bit_gravity win_gravity
+##		    backing_planes backing_pixel map_is_installed
+##		    map_state override_redirect colormap your_event_mask
+##		    do_not_propagate_mask)) {
+#	    next unless defined $attrs{$_};
+#	    printf "\t%-20s: %s\n", $_,$attrs{$_};
+#	}
+#    }
+#    if (ref $res) {
+#	my %geom = (@$res);
+#	printf "\%-20s: %dx%d+%d+%d %d\n",geometry=>
+#	    $geom{width},$geom{height},$geom{x},$geom{y},
+#	    $geom{border_width};
+#	printf "  %s:\n", 'GEOMETRY';
+#	foreach (qw(depth)) {
+#	    next unless defined $geom{$_};
+#	    printf "\t%-20s: %s\n", $_,$geom{$_};
+#	}
+#	foreach (qw(root)) {
+#	    next unless defined $geom{$_};
+#	    printf "\t%-20s: 0x%08x\n", $_,$geom{$_};
+#	}
+#	foreach (qw(x y width height border_width)) {
+#	    next unless defined $geom{$_};
+#	    printf "\t%-20s: %s\n", $_,$geom{$_};
+#	}
+#    }
+    if (@properties) {
+	printf "  %s:\n", 'PROPERTIES';
+	 #printf "\t%-20s: %s\n", properties=>join(', ',@properties);
+	my %seen = ();
+	foreach (qw(WM_NAME WM_CLASS WM_STATE WM_HINTS WM_NORMAL_HINTS), @known) {
+	    next if $seen{$_};
 	    if (defined(my $result = $X->can("get$_")->($X,$window))) {
 		if ($X->can("dmp$_")) {
 		    $X->can("dmp$_")->($X,$result);
@@ -58,7 +112,9 @@ sub check_window {
 		    warn "No dmp method for '$_'";
 		}
 	    }
+	    $seen{$_} = 1;
 	}
+	printf "\t%-20s: %s\n", unknown=>join(', ',@unknown) if @unknown;
     }
     foreach (@kids) {
 	check_window($X,$_);
