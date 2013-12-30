@@ -363,7 +363,7 @@ but see also L</_WIN_WORKSPACES>.
 =cut
 
 sub get_WIN_WORKSPACE {
-    return getWMPropertyUint($_[0],$_[1],_WIN_WORKSPACE=>);
+    return getWMPropertyInt($_[0],$_[1],_WIN_WORKSPACE=>);
 }
 
 =item B<set_WIN_WORKSPACE>(I<$X>,I<$window>,I<$workspace>)
@@ -382,7 +382,7 @@ to request that the window manager change the property.
 =cut
 
 sub set_WIN_WORKSPACE {
-    return setWMPropertyUint($_[0],$_[1],_WIN_WORKSPACE=>CARDINAL=>$_[2]);
+    return setWMPropertyInt($_[0],$_[1],_WIN_WORKSPACE=>CARDINAL=>$_[2]);
 }
 
 =item B<dmp_WIN_WORKSPACE>(I<$X>,I<$workspace>)
@@ -392,7 +392,7 @@ Prints to standard output the value of get_WIN_WORKSPACE().
 =cut
 
 sub dmp_WIN_WORKSPACE {
-    return dmpWMPropertyUint($_[0],_WIN_WORKSPACE=>workspace=>$_[1]);
+    return dmpWMPropertyInt($_[0],_WIN_WORKSPACE=>workspace=>$_[1]);
 }
 
 =item B<req_WIN_WORKSPACE>(I<$X>,I<$window>,I<$workspace>,I<$timestamp>)

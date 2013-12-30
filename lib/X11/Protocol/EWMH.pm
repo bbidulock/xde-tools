@@ -2149,11 +2149,11 @@ C<$window>, or C<undef> if no such property exists on C<$window>.
 =cut
 
 sub get_NET_WM_DESKTOP {
-    return getWMPropertyUint($_[0],$_[1],_NET_WM_DESKTOP=>);
+    return getWMPropertyInt($_[0],$_[1],_NET_WM_DESKTOP=>);
 }
 
 sub dmp_NET_WM_DESKTOP {
-    return dmpWMPropertyUint($_[0],_NET_WM_DESKTOP=>desktop=>$_[1]);
+    return dmpWMPropertyInt($_[0],_NET_WM_DESKTOP=>desktop=>$_[1]);
 }
 
 =item B<set_NET_WM_DESKTOP>(I<$X>,I<$window>,I<$desktop>)
@@ -2165,7 +2165,7 @@ withdrawn state.
 =cut
 
 sub set_NET_WM_DESKTOP {
-    return setWMPropertyUint($_[0],$_[1],_NET_WM_DESKTOP=>CARDINAL=>$_[2]);
+    return setWMPropertyInt($_[0],$_[1],_NET_WM_DESKTOP=>CARDINAL=>$_[2]);
 }
 
 =item B<req_NET_WM_DESKTOP>(I<$X>,I<$window>, I<$desktop>, I<$source>)
