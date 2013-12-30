@@ -1,6 +1,6 @@
 package XDG::Context;
 use File::Path;
-use Encode;
+use Encode qw(decode encode);
 use I18N::Langinfo qw(langinfo CODESET);
 use POSIX qw(locale_h);
 use strict;
@@ -110,8 +110,6 @@ to reapply overrides if necessary.
 =cut
 
 sub setup {
-    print STDERR "Args are: ", join(',',@_), "\n"
-	unless (scalar(@_)&0x1);
     my ($self,%OVERRIDES) = @_;
     foreach (keys %OVERRIDES) {
 	if ($_ eq 'ops' and exists $self->{ops}) {
@@ -420,10 +418,10 @@ sub get_entry {
 	    $section = '' unless $sections =~ m{;$section;};
 	}
 	elsif ($section and /^([^=\[]+)\[([^=\]]+)\]=([^[:cntrl:]]*)/) {
-	    $xl{$1}{$2} = $3;
+	    $xl{$1}{$2} = decode('UTF-8', $3);
 	}
 	elsif ($section and /^([^=]*)=([^[:cntrl:]]*)/) {
-	    $e{$1} = $2 unless exists $e{$1};
+	    $e{$1} = decode('UTF-8', $2) unless exists $e{$1};
 	}
     }
     close($fh);
