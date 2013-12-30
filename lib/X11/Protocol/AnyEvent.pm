@@ -46,8 +46,10 @@ directly to X11::Protocol::new().
 sub new {
     my $X = X11::Protocol::new(@_);
     if ($X) {
-	$X->ChangeWindowAttributes($X->root,
-		event_mask=>$X->pack_event_mask(qw(PropertyChange)));
+	foreach my $screen (@{$X->{screens}}) {
+	    $X->ChangeWindowAttributes($screen->{root},
+		    event_mask=>$X->pack_event_mask(qw(PropertyChange)));
+	}
 	$X->{event_handler} = sub{
 	    my(%e) = @_;
 	    push @{$X->{ae}{events}}, \%e
