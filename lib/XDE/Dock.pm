@@ -1170,17 +1170,145 @@ comes to dock apps as follows:
 
 =item L<fluxbox(1)>
 
+L<fluxbox(1)> provides its own dock (called a "slit").
+
+=over
+
+=item *
+
+WindowMaker and KDE dock apps are automatically swallowed to the dock
+(based on being mapped in the C<WithdrawnState>).
+
+=item *
+
+Facility is provided to position and autohide the dock.
+
+=item *
+
+Styles support the dock.
+
+=item *
+
+Some native facility is provided for positioning dock apps.
+
+=item *
+
+No provision is provided for restarting dock apps startup and session
+management of dock apps is unsupported and problematic.
+
+=item *
+
+L<fluxbox(1)> does not support X session management and improperly
+failes to set the C<WM_STATE> property on swallowed dock apps (and,
+therefore, session management proxies such as L<smproxy(1)> will not
+save and restore dock app settings.
+
+=back
+
 =item L<blackbox(1)>
+
+L<blackbox(1)> provides its own dock (called a "slit").
+
+=over
+
+=item *
+
+WindowMaker dock apps are automatically swallowed to the dock.
+Styles support the dock.
+
+=item *
+
+KDE applications are not automatically swallowed to the dock and
+a separate KDE dock is necessary to support KDE dock apps.
+
+=item *
+
+Facility is provided for positionining and autohiding the dock.
+
+=item *
+
+No facility is provided to position applications within the dock.
+
+=item *
+
+No provision is provided for restarting dock apps; startup and session
+management of dock apps is unsupported and problematic.
+
+=item *
+
+L<blackbox(1)> does not support X session management and improperly fails
+to set the C<WM_STATE> property on swallowed dock apps (and, therefore,
+session management proxies such as L<smproxy(1)> will not save and
+restore dock app settings.
+
+=back
 
 =item L<openbox(1)>
 
+L<openbox(1)> provides its own dock.
+
+=over
+
+=item *
+
+WindowMaker dock apps are automatically swallowed to the dock.
+
+=item *
+
+Styles support the dock.
+
+=item *
+
+KDE applications are not automatically swallowed to the dock and a
+separate KDE dock is necessary to support KDE dock apps.
+
+=item *
+
+Facility is provided for positioning and autohiding the dock.
+
+=item *
+
+No facility is provided for positioning applications within the dock.
+
+=item *
+
+No provision is provided for restarting dock apps; startup and session
+managemen of dock apps is problematic.
+
+=item *
+
+L<openbox(1)> supports X session management; however, it improperly
+fails to set the C<WM_STATE> property on swallowed dock apps (and,
+therefore session management proxies such as L<smproxy(1)> will not save
+and restore dock app settings.
+
+=item *
+
+It is questionable whether L<openbox(1)> saves the state of dock app
+windows at all.
+
+=back
+
 =item L<icewm(1)>
+
+IceWM does not provide a dock.  It is able to swallow applications into
+its internal panel.
+L<icewm(1)> treats windows with the C<WithdrawnState> as the initial
+state in window hints as C<DontCareState>.
 
 =item L<jwm(1)>
 
+JWM does not provide a dock.  It is able to swallow applications into
+its internal panel.
+
 =item L<pekwm(1)>
 
+PEK provides its own dock (called a "harbour").  WindowMaker dock apps
+are atuomatically swallowed to the dock.
+
 =item L<wmaker(1)>
+
+Window Maker provides its own dock.  Applications 
 
 =item L<fvwm(1)>
 
@@ -1189,6 +1317,27 @@ comes to dock apps as follows:
 =item L<metacity(1)>
 
 =item L<wmx(1)>
+
+=item L<ctwm(1)>
+
+L<ctwm(1)> does not provide its own dock.  It does, however, support
+window boxes that are capable of swallowing applications.  In general,
+it should not be too difficult to extend the winbox mechanism to provide
+a dock that automatically swallows dock apps.
+L<ctwm(1)> treats windows with the C<WithdrawnState> as the initial
+state in window hints as C<DontCareState>.
+
+=item L<vtwm(1)>
+
+L<vtwm(1)> does not provide its own dock.
+L<vtwm(1)> treats windows with the C<WithdrawnState> as the initial
+state in window hints as C<DontCareState>.
+
+=item L<twm(1)>
+
+L<twm(1)> treats windows with the C<WithdrawnState> as the initial
+state in window hints as C<DontCareState>.
+
 
 =item B<unknown>
 

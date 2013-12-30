@@ -536,7 +536,35 @@ session.
 Normally invoked as setup_session(), prepares the L<XDE(3pm)> files for
 the L<metacity(1)> window manager and a C<METACITY> L<XDE(3pm)> session.
 
-=cut
+=item $xde->B<setup_session_WAIMEA>() => $xde or undef
+
+Normally invoked as setup_session(), prepares the L<XDE(3pm)> file for
+the L<waimea(1)> window manager and a C<WAIMEA> L<XDE(3pm)> session.
+
+=item $xde->B<setup_session_WMX>() => $xde or undef
+
+Normally invoked as setup_session(), prepares the L<XDE(3pm)> file for
+the L<wmx(1)> window manager and a C<WMX> L<XDE(3pm)> session.
+
+=item $xde->B<setup_session_CTWM>() => $xde or undef
+
+Normally invoked as setup_session(), prepares the L<XDE(3pm)> file for
+the L<ctwm(1)> window manager and a C<CTWM> L<XDE(3pm)> session.
+
+=item $xde->B<setup_session_FLWM>() => $xde or undef
+
+Normally invoked as setup_session(), prepares the L<XDE(3pm)> file for
+the L<flwm(1)> window manager and a C<FLWM> L<XDE(3pm)> session.
+
+=item $xde->B<setup_session_TWM>() => $xde or undef
+
+Normally invoked as setup_session(), prepares the L<XDE(3pm)> file for
+the L<twm(1)> window manager and a C<TWM> L<XDE(3pm)> session.
+
+=item $xde->B<setup_session_MWM>() => $xde or undef
+
+Normally invoked as setup_session(), prepares the L<XDE(3pm)> file for
+the L<mwm(1)> window manager and a C<MWM> L<XDE(3pm)> session.
 
 =item $xde->B<setup_session_LXDE>() => $xde or undef
 
@@ -845,7 +873,7 @@ I would prefer to fix L<jwm(1)> and add an C<-rc> option.
 
 =item L<pekwm(1)>
 
-L<pekwm(1)> looks for its primary configuraiton in the file
+L<pekwm(1)> looks for its primary configuration in the file
 F<~/.pekwm/config>.  This file specifies the location of all other
 configuration files.  L<pekwm(1)> may be invoked with the C<--config>
 option speciyfing the location of a different F<config> file to use
@@ -896,11 +924,44 @@ environment variable.
 
 =item L<metacity(1)>
 
-L<metacity(1)> does not read a configuraiton file on startup.  It uses
+L<metacity(1)> does not read a configuration file on startup.  It uses
 L<dconf(1)> to query the desktop configration database for window
 manager settings.
 
+=item L<waimea(1)>
+
 =item L<wmx(1)>
+
+=item L<flwm(1)>
+
+=item L<ctwm(1)>
+
+L<ctwm(1)> looks for its primary configuration file in the following
+locations: F<~/.ctwmrc.%d>, F<~/.ctwmrc>, F<~/.twmrc.%d>, F<~/.twmrc> or
+F</usr/lib/X11/twm/system.ctwmrc>, where C<%d> is the screen number.
+This file can provide the locations of all other configuration files.
+L<ctwm(1)> accepts the path to an alternate primary configuration file
+in the C<-f> option argument.  With these facilities, it is possible to
+relocate configuration to F<$XDG_CONFIG_HOME/ctwm/rc>.
+
+=item L<twm(1)>
+
+L<twm(1)> looks for its primary configuration file in the following
+locations: F<~/.twmrc.%d>, F<~/.twmrc>, or
+F</usr/lib/X11/twm/system.twmrc>, where C<%d> is the screen number.
+This file provides all configuration and there is no mechanism for
+including additional configuration files.  L<twm(1)> accepts the path
+to an alternate primary configuration file in the C<-f> option argument.
+With this facility, it is possible to relocate configuration to
+F<$XDG_CONFIG_HOME/twm/rc>.
+
+=item L<mwm(1)>
+
+L<mwm(1)> looks for its primary configuration file in F<~/.mwmrc> by
+default.  This is the sole configuration file.  The location of the
+configuration file can be changed by changing the C<Mwm*configFile>
+resource with the resource manager.  With this facility it is possible
+to relocate configuration to F<$XDG_CONFIG_HOME/mwm/rc>.
 
 =back
 
