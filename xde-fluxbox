@@ -31,9 +31,9 @@ if ($here =~ s{^\.}{}) {
 unless ($here =~ m{^/usr/bin}) {
     %OVERRIDES = (
 	HERE               => "$here",
-	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
-	XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
-	XDG_ICON_APPEND    => "$here/share/icons:$here/share/pixmaps",
+	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg:/etc/xdg/xde",
+	XDG_DATA_PREPEND   => "$here/share/xde:$here/share:/usr/share/xde",
+	XDG_ICON_APPEND    => "$here/share/icons:$here/share/pixmaps:/usr/share/icons:/usr/share/pixmaps",
     );
     my %path = (map{$_=>1}split(/:/,$ENV{PATH}));
     $ENV{PATH} = "$here:$ENV{PATH}" unless exists $path{$here};
