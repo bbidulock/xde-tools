@@ -112,7 +112,12 @@ lib/XDG/Menu/Wmaker.pm
 Makefile.PL
 MANIFEST
 MANIFEST.SKIP
+COPYING
+INSTALL
+LICENSE
 NOTES
+README
+TODO
 share/lxpanel/profile/BLACKBOX/config
 share/lxpanel/profile/BLACKBOX/panels/panel
 share/lxpanel/profile/FLUXBOX/config
