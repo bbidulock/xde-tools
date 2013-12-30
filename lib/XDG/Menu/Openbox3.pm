@@ -1,4 +1,5 @@
 package XDG::Menu::Openbox3;
+use base qw(XDG::Menu::Base);
 use strict;
 use warnings;
 
@@ -19,110 +20,196 @@ B<XDG::Menu::Openbox> has the folllowing methods:
 
 =over
 
-=item XDG::Menu::Openbox3->B<new>($tree) => XDG::Menu::Openbox3
+=item $openbox->B<icon>(I<@names>) => I<$spec>
 
-Creates a new XDG::Menu::Openbox3 instance for creating Openbox XML menus.
+Accepts a list of icon names, I<@names>, as specified in a desktop entry
+file and returns an icon specification that can be added to a menu
+entry.
 
 =cut
 
-sub new {
-    return bless {}, shift;
-}
-
 sub icon {
-    my ($self,$name) = @_;
-    return '' unless $name;
-    return $name if $name =~ m{/} and -f $name;
-    $name =~ s{.*/}{};
-    $name =~ s{\.(png|xpm|svg|jpg)$}{};
-    my $icons = XDG::Menu::DesktopEntry->get_icons;
-    return '' unless $icons;
-    my $fn = $icons->FindIcon($name,16,[qw(png xpm jpg)]);
-    $fn = '' unless $fn;
-    return sprintf("icon=\"%s\" ", $fn);
+    my($self,@names) = @_;
+    foreach (@names) {
+	my $icon = $self->SUPER::icon($_,qw(png xpm jpg svg));
+	return sprintf("icon=\"%s\" ",$icon) if $icon;
+    }
+    return '';
 }
 
-=item $openbox->B<create>($tree) => scalar
+=item $openbox->B<create>(I<$tree>,I<$style>,I<$name>) => I<$menu>
 
-Creates the Openbox menu from menu tree, C<$tree>, and returns the menu
-in a scalar string.  C<$tree> must have been created as the result of
-parsing the XDG menu using XDG::Menu::Parser (see L<XDG::Menu(3pm)>).
+Creates an L<openbox(1)> menu from menu tree, C<$tree>, and returns the
+menu in a scalar string, I<$menu>.  C<$tree> must have been created as
+the result of parsing the XDG menu using XDG::Menu::Parser (see
+L<XDG::Menu(3pm)>).
+
+I<$style>, which defaults to C<fullmenu>, is the style of menu to create
+as follows:
+
+=over
+
+=item C<entries>
+
+Does not create a full menu at all, but just supplies the entries that
+would be placed in an applications menu (but not the shell of the menu).
+This can be useful for menu systems that include other menu files.  When
+the menu system does not nest, this does not return the preamble.  The
+preamble can be obtained using C<appmenu>.
+
+=item C<appmenu>
+
+Does not create a root window menu, but only creates a stand-alone
+applications menu named, I<$name>.  This menu contains only applications
+menu items.
+
+=item C<submenu>
+
+Creates a full root window menu, however, the XDG applications are
+contained in a submenu of the root menu, named I<$name>.  The
+applications submenu is also made available (where supported by the menu
+system) as a stand-alone applications menu named, I<$name>.
+
+=item C<fullmenu>
+
+Creates a full root window menu, however, the XDG applications are
+contained directly in the root window menu rather than in a submenu.
+An applications submenu is also made available (where supported by the
+menu system) as a stand-alone applications menu named, I<$name>.
+
+=back
+
+When the applications menu entries are created as a submenu of the root
+menu or a menu of its own, the submenu will be given the name, I<$name>.
+I<$name>, when unspecified, defaults to C<Applications>.
+
+=cut
+
+sub create {
+    my($self,$tree,$style,$name) = @_;
+    $style = 'fullmenu' unless $style;
+    $name = 'Applications' unless $name;
+    $name =~ s{&}{&amp;}g;
+    $self->{menus} = [];
+    my $entries = $self->build($tree,'');
+    push @{$self->{menus}},$self->appmenu($entries,$name);
+    return $entries if $style eq 'entries';
+    $entries = "  <menu id=\"$name Menu\" label=\"$name\" ".$self->icon('start-here')."/>\n"
+	if $style eq 'submenu';
+    push @{$self->{menus}},$self->rootmenu($entries,$name)
+	if $style ne 'appmenu';
+    my $menu = join("\n",@{$self->{menus}});
+    return $self->makefile($menu);
+}
 
 =back
 
 =cut
 
-sub create {
-    my ($self,$item) = @_;
+sub wmmenu {
+    my $self = shift;
+    my $text = '';
+    $text .= "<menu id=\"Window Managers Menu\" label=\"Window Managers\" ".$self->icon('gtk-quit').">\n";
+    $text .= "  <item label=\"Blackbox\" ".$self->icon('blackbox').">\n";
+    $text .= "    <action name=\"Restart\">\n";
+    $text .= "      <command>blackbox</command>\n";
+    $text .= "    </action>\n";
+    $text .= "  </item>\n";
+    $text .= "  <item label=\"Fluxbox\" ".$self->icon('fluxbox').">\n";
+    $text .= "    <action name=\"Restart\">\n";
+    $text .= "      <command>fluxbox</command>\n";
+    $text .= "    </action>\n";
+    $text .= "  </item>\n";
+    $text .= "  <item label=\"FVWM\" ".$self->icon('fvwm').">\n";
+    $text .= "    <action name=\"Restart\">\n";
+    $text .= "      <command>fvwm2</command>\n";
+    $text .= "    </action>\n";
+    $text .= "  </item>\n";
+    $text .= "  <item label=\"IceWM\" ".$self->icon('icewm').">\n";
+    $text .= "    <action name=\"Restart\">\n";
+    $text .= "      <command>icewm</command>\n";
+    $text .= "    </action>\n";
+    $text .= "  </item>\n";
+    $text .= "  <item label=\"JWM\" ".$self->icon('archlinux-wm-jwm').">\n";
+    $text .= "    <action name=\"Restart\">\n";
+    $text .= "      <command>jwm</command>\n";
+    $text .= "    </action>\n";
+    $text .= "  </item>\n";
+    $text .= "  <item label=\"Openbox\" ".$self->icon('openbox').">\n";
+    $text .= "    <action name=\"Restart\">\n";
+    $text .= "      <command>openbox</command>\n";
+    $text .= "    </action>\n";
+    $text .= "  </item>\n";
+    $text .= "  <item label=\"TWM\" ".$self->icon('twm').">\n";
+    $text .= "    <action name=\"Restart\">\n";
+    $text .= "      <command>twm</command>\n";
+    $text .= "    </action>\n";
+    $text .= "  </item>\n";
+    $text .= "  <item label=\"WindowMaker\" ".$self->icon('wmaker').">\n";
+    $text .= "    <action name=\"Restart\">\n";
+    $text .= "      <command>wmaker</command>\n";
+    $text .= "    </action>\n";
+    $text .= "  </item>\n";
+    $text .= "  <item label=\"Terminal\" ".$self->icon('terminal').">\n";
+    $text .= "    <action name=\"Restart\">\n";
+    $text .= "      <command>roxterm-</command>\n";
+    $text .= "    </action>\n";
+    $text .= "  </item>\n";
+    $text .= "  <separator />\n";
+    $text .= "  <item label=\"Reload\" ".$self->icon('gtk-redo-ltr').">\n";
+    $text .= "    <action name=\"Reconfigure\" />\n";
+    $text .= "  </item>\n";
+    $text .= "  <item label=\"Restart\" ".$self->icon('gtk-refresh').">\n";
+    $text .= "    <action name=\"Restart\" />\n";
+    $text .= "  </item>\n";
+    $text .= "  <item label=\"Exit\" ".$self->icon('gtk-quit').">\n";
+    $text .= "    <action name=\"Exit\" />\n";
+    $text .= "  </item>\n";
+    $text .= "</menu>\n";
+    return $text;
+}
+
+sub obmenu {
+    my $self = shift;
+    push @{$self->{menus}}, $self->wmmenu();
+    my $text = '';
+    $text .= "<menu id=\"Openbox\" label=\"Openbox\" ".$self->icon('openbox').">\n";
+    $text .= "  <menu id=\"client-list-menu\" label=\"Desktops\" ".$self->icon('preferences-desktop-display')."/>\n";
+    $text .= "  <menu id=\"client-list-combined-menu\" label=\"Windows\" ".$self->icon('preferences-system-windows')."/>\n";
+    $text .= "  <menu id=\"Window Managers Menu\" label=\"Window Managers\" ".$self->icon('gtk-quit')."/>\n";
+    $text .= "</menu>\n";
+    return $text;
+}
+
+sub makefile {
+    my($self,$menu) = @_;
     my $text = '';
     $text .= "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
     $text .= "\n";
     $text .= "<openbox_menu xmlns=\"http://openbox.org/3.4/menu\">\n";
     $text .= "\n";
+    $text .= $menu;
+    $text .= "\n";
+    $text .= "</openbox_menu>\n";
+    return $text;
+}
+sub appmenu {
+    my($self,$entries,$name) = @_;
+    my $text = '';
+    $text .= "<menu id=\"$name Menu\" label=\"$name\" ".$self->icon('start-here').">\n";
+    $text .= $entries;
+    $text .= "</menu>\n";
+    return $text;
+}
+
+sub rootmenu {
+    my($self,$entries,$name) = @_;
+    push @{$self->{menus}}, $self->obmenu();
+    my $text = '';
     $text .= "<menu id=\"root-menu\" label=\"Openbox 3\">\n";
-    $text .= $self->build($item,'  ');
+    $text .= $entries;
     $text .= "  <separator />\n";
-    $text .= "  <menu id=\"Openbox\" label=\"Openbox\" ".$self->icon('openbox').">\n";
-    $text .= "    <menu id=\"client-list-menu\" label=\"Desktops\" ".$self->icon('preferences-desktop-display')."/>\n";
-    $text .= "    <menu id=\"client-list-combined-menu\" label=\"Windows\" ".$self->icon('preferences-system-windows')."/>\n";
-    $text .= "    <menu id=\"Window Managers\" label=\"Window Managers\" ".$self->icon('gtk-quit').">\n";
-    $text .= "      <item label=\"Blackbox\" ".$self->icon('blackbox').">\n";
-    $text .= "        <action name=\"Restart\">\n";
-    $text .= "          <command>blackbox</command>\n";
-    $text .= "        </action>\n";
-    $text .= "      </item>\n";
-    $text .= "      <item label=\"Fluxbox\" ".$self->icon('fluxbox').">\n";
-    $text .= "        <action name=\"Restart\">\n";
-    $text .= "          <command>fluxbox</command>\n";
-    $text .= "        </action>\n";
-    $text .= "      </item>\n";
-    $text .= "      <item label=\"FVWM\" ".$self->icon('fvwm').">\n";
-    $text .= "        <action name=\"Restart\">\n";
-    $text .= "          <command>fvwm2</command>\n";
-    $text .= "        </action>\n";
-    $text .= "      </item>\n";
-    $text .= "      <item label=\"IceWM\" ".$self->icon('icewm').">\n";
-    $text .= "        <action name=\"Restart\">\n";
-    $text .= "          <command>icewm</command>\n";
-    $text .= "        </action>\n";
-    $text .= "      </item>\n";
-    $text .= "      <item label=\"JWM\" ".$self->icon('archlinux-wm-jwm').">\n";
-    $text .= "        <action name=\"Restart\">\n";
-    $text .= "          <command>jwm</command>\n";
-    $text .= "        </action>\n";
-    $text .= "      </item>\n";
-    $text .= "      <item label=\"Openbox\" ".$self->icon('openbox').">\n";
-    $text .= "        <action name=\"Restart\">\n";
-    $text .= "          <command>openbox</command>\n";
-    $text .= "        </action>\n";
-    $text .= "      </item>\n";
-    $text .= "      <item label=\"TWM\" ".$self->icon('twm').">\n";
-    $text .= "        <action name=\"Restart\">\n";
-    $text .= "          <command>twm</command>\n";
-    $text .= "        </action>\n";
-    $text .= "      </item>\n";
-    $text .= "      <item label=\"WindowMaker\" ".$self->icon('wmaker').">\n";
-    $text .= "        <action name=\"Restart\">\n";
-    $text .= "          <command>wmaker</command>\n";
-    $text .= "        </action>\n";
-    $text .= "      </item>\n";
-    $text .= "      <item label=\"Terminal\" ".$self->icon('terminal').">\n";
-    $text .= "        <action name=\"Restart\">\n";
-    $text .= "          <command>roxterm-</command>\n";
-    $text .= "        </action>\n";
-    $text .= "      </item>\n";
-    $text .= "      <separator />\n";
-    $text .= "      <item label=\"Reload\" ".$self->icon('gtk-redo-ltr').">\n";
-    $text .= "        <action name=\"Reconfigure\" />\n";
-    $text .= "      </item>\n";
-    $text .= "      <item label=\"Restart\" ".$self->icon('gtk-refresh').">\n";
-    $text .= "        <action name=\"Restart\" />\n";
-    $text .= "      </item>\n";
-    $text .= "      <item label=\"Exit\" ".$self->icon('gtk-quit').">\n";
-    $text .= "        <action name=\"Exit\" />\n";
-    $text .= "      </item>\n";
-    $text .= "    </menu>\n";
-    $text .= "  </menu>\n";
+    $text .= "  <menu id=\"Openbox\" label=\"Openbox\" ".$self->icon('openbox')."/>\n";
     $text .= "  <item label=\"Reload\" ".$self->icon('gtk-redo-ltr').">\n";
     $text .= "    <action name=\"Reconfigure\" />\n";
     $text .= "  </item>\n";
@@ -134,8 +221,6 @@ sub create {
     $text .= "    <action name=\"Exit\" />\n";
     $text .= "  </item>\n";
     $text .= "</menu>\n";
-    $text .= "\n";
-    $text .= "</openbox_menu>\n";
     return $text;
 }
 sub build {
@@ -213,13 +298,15 @@ sub Directory {
     my $text = '';
     # no empty menus...
     return $text unless @{$menu->{Elements}};
-    $text .= sprintf "%s<menu id=\"%s\" label=\"%s\" icon=\"%s\">\n",
-	$indent, $item->Name." Menu", $item->Name,
-	$item->Icon([qw(png xpm)]);
-    $text .= $self->build($item->{Menu},$indent.'  ');
-    $text .= sprintf "%s</menu> <!-- %s -->\n",
-	$indent, $item->Name;
-    return $text;
+    my $label = $item->Name;
+    $label =~ s{&}{&amp;}g;
+    my $id = $label." Menu";
+    my $icon = $item->Icon([qw(png svg xpm)]);
+    $text .= sprintf "<menu id=\"%s\" label=\"%s\" icon=\"%s\">\n",$id,$label,$icon;
+    $text .= $self->build($item->{Menu},'');
+    $text .= sprintf "</menu> <!-- %s -->\n",$id;
+    push @{$self->{menus}}, $text;
+    return sprintf "%s<menu id=\"%s\" label=\"%s\" icon=\"%s\"/>\n",$indent,$id,$label,$icon;
 }
 
 1;
@@ -230,4 +317,4 @@ L<XDG::Menu(3pm)>
 
 =cut
 
-
+# vim: set sw=4 tw=72 fo=tcqlorn foldmarker==head,=head foldmethod=marker:

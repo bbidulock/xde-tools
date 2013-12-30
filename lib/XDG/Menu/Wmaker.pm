@@ -1,4 +1,5 @@
 package XDG::Menu::Wmaker;
+use base qw(XDG::Menu::Base);
 use strict;
 use warnings;
 
@@ -18,16 +19,6 @@ use warnings;
 B<XDG::Menu::Wmaker> has the folllowing methods:
 
 =over
-
-=item XDG::Menu::Wmaker->B<new>($tree) => XDG::Menu::Wmaker
-
-Creates a new XDG::Menu::Wmaker instance for creating WindowMaker menus.
-
-=cut
-
-sub new {
-    return bless {}, shift;
-}
 
 =item $wmaker->B<create>($tree) => scalar
 

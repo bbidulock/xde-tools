@@ -1,4 +1,5 @@
 package XDG::Menu::Pekwm;
+use base qw(XDG::Menu::Base);
 use strict;
 use warnings;
 
@@ -19,26 +20,20 @@ B<XDG::Menu::Pekwm> has the following methods:
 
 =over
 
-=item XDG::Menu::Pekwm>B<new>($tree) => XDG::Menu::Pekwm
+=item $pekwm->B<icon>(I<@names>) => I<$spec>
 
-Creates a new XDG::Menu::Pekwm instance for creating PekWM menus.
+Accepts a list of icon names, I<@names>, as specified in a desktop entry
+file and returns an icon specification that can be added to a menu
+entry.
 
 =cut
 
-sub new {
-    return bless {}, shift;
-}
-
 sub icon {
-    my ($self,$name) = @_;
-    return '' unless $name;
-    return $name if $name =~ m{/} and -f $name;
-    $name =~ s{.*/}{};
-    $name =~ s{\.(png|xpm|svg|jpg)$}{};
-    my $icons = XDG::Menu::DesktopEntry->get_icons;
-    return '' unless $icons;
-    my $fn = $icons->FindIcon($name,16,[qw(png xpm)]);
-    return sprintf("Icon = \"%s\"; ", $fn) if $fn;
+    my($self,@names) = @_;
+    foreach (@names) {
+	my $icon = $self->SUPER::icon($_,qw(png xpm));
+	return sprintf("Icon = \"%s\"; ",$icon) if $icon;
+    }
     return '';
 }
 
@@ -72,7 +67,21 @@ sub create {
     $text .= q(        Submenu = "Themes" { ).$self->icon('style')."\n";
     $text .= q(            Entry { Actions = "Dynamic $_PEKWM_SCRIPT_PATH/pekwm_themeset.sh $_PEKWM_THEME_PATH" })."\n";
     $text .= q(            Entry { Actions = "Dynamic $_PEKWM_SCRIPT_PATH/pekwm_themeset.sh ~/.pekwm/themes" })."\n";
-    $text .= q(            Entry { Actions = "Dynamic $_PEKWM_SCRIPT_PATH/pekwm_themeset.sh ~/.config/pekwm/themes" })."\n";
+#   $text .= q(            Entry { Actions = "Dynamic $_PEKWM_SCRIPT_PATH/pekwm_themeset.sh ~/.config/pekwm/themes" })."\n";
+    $text .= q(        })."\n";
+    $text .= q(        Submenu = "Layout" {)."\n";
+    $text .= q(            Entry = "Smart" { Actions = "SetLayouter Smart" })."\n";
+    $text .= q(            Entry = "Mouse Not Under" { Actions = "SetLayouter MouseNotUnder" })."\n";
+    $text .= q(            Entry = "Mouse Centered" { Actions = "SetLayouter MouseCentered" })."\n";
+    $text .= q(            Entry = "Mouse Top Left" { Actions = "SetLayouter MouseTopLeft" })."\n";
+    $text .= q(            Separator {})."\n";
+    $text .= q(            Entry = "Layout Horizontal" { Actions = "SetLayouter TILE_Horizontal" })."\n";
+    $text .= q(            Entry = "Layout Vertical" { Actions = "SetLayouter TILE_Vertical" })."\n";
+    $text .= q(            Entry = "Layout Dwindle" { Actions = "SetLayouter TILE_Dwindle" })."\n";
+    $text .= q(            Entry = "Layout Stacked" { Actions = "SetLayouter TILE_Stacked" })."\n";
+    $text .= q(            Entry = "Layout Center One" { Actions = "SetLayouter TILE_CenterOne" })."\n";
+    $text .= q(            Entry = "Layout Boxed" { Actions = "SetLayouter TILE_Boxed" })."\n";
+    $text .= q(            Entry = "Layout Fib" { Actions = "SetLayouter TILE_Fib" })."\n";
     $text .= q(        })."\n";
     $text .= q(        Submenu = "Window Managers" { ).$self->icon('gtk-quit')."\n";
     $text .= q(            Entry = "Blackbox" { ).$self->icon('blackbox').q(Actions = "RestartOther blackbox" })."\n";
@@ -163,3 +172,5 @@ __END__
 L<XDG::Menu(3pm)>
 
 =cut
+
+# vim: set sw=4 tw=72 fo=tcqlorn foldmarker==head,=head foldmethod=marker:

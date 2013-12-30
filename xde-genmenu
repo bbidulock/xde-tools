@@ -1,0 +1,68 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+    if $running_under_some_shell;
+
+BEGIN {
+    use strict;
+    use warnings;
+    my $here = $0; $here =~ s{/[^/]*$}{};
+    if ($here =~ s{^\.}{}) {
+	chomp(my $cwd = `pwd`);
+	$here = "/$here" if $here;
+	$here = "$cwd$here";
+    }
+    unshift @INC, "$here/lib" unless $here =~ m{^/usr/bin};
+}
+
+my $FBWM_CONFIG_HOME = $ENV{FBWM_CONFIG_HOME} or $FBWM_CONFIG_HOME = "$ENV{HOME}/.fluxbox";
+my $BBWM_CONFIG_HOME = $ENV{BBWM_CONFIG_HOME} or $BBWM_CONFIG_HOME = "$ENV{HOME}/.blackbox";
+my $OBWM_CONFIG_HOME = $ENV{OBWM_CONFIG_HOME} or $OBWM_CONFIG_HOME = "$ENV{HOME}/.openbox";
+my  $ICE_CONFIG_HOME =  $ENV{ICE_CONFIG_HOME} or  $ICE_CONFIG_HOME = "$ENV{HOME}/.icewm";
+my  $PEK_CONFIG_HOME =  $ENV{PEK_CONFIG_HOME} or  $PEK_CONFIG_HOME = "$ENV{HOME}/.pekwm";
+my  $JWM_CONFIG_HOME =  $ENV{JWM_CONFIG_HOME} or  $JWM_CONFIG_HOME = "$ENV{HOME}/.jwm";
+my $FVWM_CONFIG_HOME = $ENV{FVWM_CONFIG_HOME} or $FVWM_CONFIG_HOME = "$ENV{HOME}/.fvwm";
+my $WMKR_CONFIG_HOME = $ENV{WMKR_CONFIG_HOME} or $WMKR_CONFIG_HOME = "$ENV{HOME}/GNUstep";
+my $CTWM_CONFIG_HOME = $ENV{CTWM_CONFIG_HOME} or $CTWM_CONFIG_HOME = "$ENV{HOME}/.ctwm";
+my $VTWM_CONFIG_HOME = $ENV{VTWM_CONFIG_HOME} or $VTWM_CONFIG_HOME = "$ENV{HOME}/.vtwm";
+my  $TWM_CONFIG_HOME =  $ENV{TWM_CONFIG_HOME} or  $TWM_CONFIG_HOME = "$ENV{HOME}/.twm";
+
+my $FBWM_CONFIG_SDIR = $ENV{FBWM_CONFIG_SDIR} or $FBWM_CONFIG_SDIR = "/usr/share/fluxbox";
+my  $JWM_CONFIG_SDIR =  $ENV{JWM_CONFIG_SDIR} or  $JWM_CONFIG_SDIR = "/usr/share/jwm";
+my  $TWM_CONFIG_SDIR =  $ENV{TWM_CONFIG_SDIR} or  $TWM_CONFIG_SDIR = "/usr/share/twm";
+my $CTWM_CONFIG_SDIR = $ENV{CTWM_CONFIG_SDIR} or $CTWM_CONFIG_SDIR = "/usr/share/ctwm";
+my $VTWM_CONFIG_SDIR = $ENV{VTWM_CONFIG_SDIR} or $VTWM_CONFIG_SDIR = "/usr/share/vtwm";
+
+my %home = (
+    fluxbox	=> [ "$ENV{FVWM_CONFIG_HOME}", "$ENV{HOME}/.fluxbox" ],
+    blackbox	=> [ "$ENV{BBWM_CONFIG_HOME}", "$ENV{HOME}/.blackbox" ],
+    openbox	=> [ "$ENV{OBWM_CONFIG_HOME}", "$ENV{HOME}/.config/openbox" ],
+    icewm	=> [ "$ENV{ICE_CONFIG_HOME}", "$ENV{ICEWM_PRIVCFG}", "$ENV{HOME}/.icewm" ],
+    pekwm	=> [ "$ENV{PEK_CONFIG_HOME}", "$ENV{HOME}/.pekwm" ],
+    jwm		=> [ "$ENV{JWM_CONFIG_HOME}", "$ENV{HOME}/.jwm" ],
+    fvwm	=> [ "$ENV{FVWM_CONFIG_HOME}", "$ENV{FVWM_USERDIR}", "$ENV{HOME}/.fvwm" ],
+);
+
+
+__END__
+
+=head1 NAME
+
+xde-genmenu -- generate XDG compliant menus
+
+=head1 SYNOPSIS
+
+xde-genmenu [ OPTIONS ]
+
+=head1 DESCRIPTION
+
+B<xde-genmenu> is a command-line program that can be used to generate an
+XDG compliant menu in a number of formats to support configuration of
+the root menu for light-weight window managers.
+
+B<xde-genmenu> is capable of generating either a complete menu for a
+number of well-known window managers, or for generating a submenu that
+can be included in the root menu of those window managers.
+
+# vim: set sw=4 tw=72:

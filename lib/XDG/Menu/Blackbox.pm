@@ -1,4 +1,5 @@
 package XDG::Menu::Blackbox;
+use base qw(XDG::Menu::Base);
 use strict;
 use warnings;
 
@@ -24,32 +25,103 @@ B<XDG::Menu::Blackbox> has the following methods:
 
 =over
 
-=item XDG::Menu::Blackbox->B<new>() => XDG::Menu::Blackbox
+=item $blackbox->B<create>(I<$tree>,I<$style>,I<$name>) => I<$menu>
 
-Creates a new XDG::Menu::Blackbox instance for creating blackbox menus.
+Creates a L<blackbox(1)> menu from menu tree, C<$tree>, and returns the
+menu in a scalar string, I<$menu>.  C<$tree> must have been created as
+the result of parsing the XDG menu using XDG::Menu::Parser (see
+L<XDG::Menu(3pm)>).
+
+I<$style>, which defaults to C<fullmenu>, is the style of menu to create
+as follows:
+
+=over
+
+=item C<entries>
+
+Does not create a full menu at all, but just supplies the entries that
+would be placed in an applications menu (but not the shell of the menu).
+This can be useful for menu systems that include other menu files.  When
+the menu system does not nest, this does not return the preamble.  The
+preamble can be obtained using C<appmenu>.
+
+=item C<appmenu>
+
+Does not create a root window menu, but only creates a stand-alone
+applications menu named, I<$name>.  This menu contains only applications
+menu items.
+
+=item C<submenu>
+
+Creates a full root window menu, however, the XDG applications are
+contained in a submenu of the root menu, named I<$name>.  The
+applications submenu is also made available (where supported by the menu
+system) as a stand-alone applications menu named, I<$name>.
+
+=item C<fullmenu>
+
+Creates a full root window menu, however, the XDG applications are
+contained directly in the root window menu rather than in a submenu.
+An applications submenu is also made available (where supported by the
+menu system) as a stand-alone applications menu named, I<$name>.
+
+=back
+
+When the applications menu entries are created as a submenu of the root
+menu or a menu of its own, the submenu will be given the name, I<$name>.
+I<$name>, when unspecified, defaults to C<Applications>.
 
 =cut
 
-sub new {
-	return bless {}, shift;
+sub create {
+    my($self,$tree,$style,$name) = @_;
+    $style = 'fullmenu' unless $style;
+    $name = 'Applications' unless $name;
+    my $menu = $self->build($tree,'  ');
+    return $menu if $style eq 'entries';
+    $menu = $self->appmenu($menu,$name) unless $style eq 'fullmenu';
+    $menu = $self->rootmenu($menu,$name) unless $style eq 'appmenu';
+    return $menu;
 }
-
-=item $blackbox->B<create>($tree) => scalar
-
-Creates the blackbox menu from menu tree, C<$tree>, and returns the menu
-in a scalar string.  C<$tree> must have been created as the result of
-parsing the XDG menu using XDG::Menu::Parser (see L<XDG::Menu(3pm)>).
 
 =back
 
 =cut
 
-sub create {
-	my ($self,$item) = @_;
+sub wmmenu {
+    my $self = shift;
+    my $text = '';
+    $text .= sprintf "%s\n", '  [submenu] (Window Managers)';
+    $text .= sprintf "%s\n", '    [restart] (Restart)';
+    $self->getenv();
+    $self->default();
+    my $wms = $self->get_xsessions();
+    foreach (sort keys %$wms) {
+	my $wm = $wms->{$_};
+	my $name = $wm->{Name};
+	$name = $_ unless $name;
+	next if "\L$name\E" eq "blackbox";
+	my $exec = $wm->{Exec};
+	$text .= sprintf("    [restart] (Start %s) {%s}\n",$name,$exec);
+    }
+    $text .= sprintf "%s\n", '  [end]';
+    return $text;
+}
+
+sub appmenu {
+    my($self,$entries,$name) = @_;
+    my $text = '';
+    $text .= sprintf "[submenu] (%s)\n", $name;
+    $text .= $entries;
+    $text .= sprintf "[end]\n";
+    return $text;
+}
+sub rootmenu {
+	my ($self,$entries) = @_;
 	my $text = '';
 	$text .= sprintf "%s\n", '[begin] (Blackbox)';
 	$text .= "\n";
-	$text .= $self->build($item,'  ');
+	$text .= $entries;
 	$text .= "\n";
 	$text .= sprintf "%s\n", '  [nop] (————————————) {}',
 	$text .= "\n";
@@ -60,17 +132,7 @@ sub create {
 	$text .= sprintf "%s\n", '    [stylesdir] (~/.blackbox/styles)';
 	$text .= sprintf "%s\n", '    [stylesdir] (~/.config/blackbox/styles)';
 	$text .= sprintf "%s\n", '  [end]';
-	$text .= sprintf "%s\n", '  [submenu] (Window Managers)';
-	$text .= sprintf "%s\n", '    [restart] (Restart)';
-	$text .= sprintf "%s\n", '    [restart] (Start Afterstep) {afterstep}';
-	$text .= sprintf "%s\n", '    [restart] (Start Enlightenment) {enlightenment}';
-	$text .= sprintf "%s\n", '    [restart] (Start Fluxbox) {fluxbox}';
-	$text .= sprintf "%s\n", '    [restart] (Start FVWM) {fvwm}';
-	$text .= sprintf "%s\n", '    [restart] (Start KWM) {kwm}';
-	$text .= sprintf "%s\n", '    [restart] (Start Openbox) {openbox}';
-	$text .= sprintf "%s\n", '    [restart] (Start TWM) {twm}';
-	$text .= sprintf "%s\n", '    [restart] (Start WindowMaker) {wmaker}';
-	$text .= sprintf "%s\n", '  [end]';
+	$text .= $self->wmmenu();
 	$text .= sprintf "%s\n", '  [reconfig] (Reconfigure)';
 	$text .= "\n";
 	$text .= sprintf "%s\n", '  [nop] (————————————) {}',
@@ -86,7 +148,6 @@ sub build {
 	return $self->$name($item,$indent) if $self->can($name);
 	return '';
 }
-
 sub Menu {
 	my ($self,$item,$indent) = @_;
 	my $text = '';
@@ -112,8 +173,13 @@ sub Separator {
 sub Application {
 	my ($self,$item,$indent) = @_;
 	my $name = $item->Name; $name =~ s/[)]/\\)/g;
-	return sprintf "\n%s[exec] (%s) {%s}\n\n",
-	       $indent, $name, $item->Exec;
+	if ($self->{ops}{launch}) {
+	    return sprintf "\n%s[exec] (%s) {xdg-launch %s}\n\n",
+		   $indent, $name, $item->Id;
+	} else {
+	    return sprintf "\n%s[exec] (%s) {%s}\n\n",
+		   $indent, $name, $item->Exec;
+	}
 }
 sub Directory {
 	my ($self,$item,$indent) = @_;

@@ -63,6 +63,13 @@ sub new {
 	Name =>	    $app->{Name},
     }, $type;
 }
+sub Id {
+    my $self = shift;
+    my $file = $self->{Entry}->{file};
+    $file =~ s{^.*/}{};
+    $file =~ s{\.desktop$}{};
+    return $file;
+}
 sub Exec {
     my $self = shift;
     return $self->{Entry}->Exec;
@@ -142,17 +149,21 @@ sub new {
 sub Icon {
     my ($self,$exts) = @_;
     my $icon = $self->{Icon};
-    return '' unless $icon;
-    unless ($icon =~ m{/}) {
-	# need to go look for it
-	my $icons = $self->get_icons;
-	my $name = $icon; $name =~ s{\.(png|xpm|svg)$}{};
-	my $fn = $icons->FindIcon($name,16,$exts);
-	$fn = $icons->FindIcon('exec',16,$exts) unless $fn;
-	return $fn if $fn;
-	return '';
+    $icon = '' unless $icon;
+    $exts = ['xpm'] unless $exts and @$exts;
+    if ($icon =~ m{/} and -f $icon) {
+	foreach (@$exts) {
+	    return $icon if $icon =~ m{\.$_$};
+	}
     }
-    return $icon if -f $icon;
+    my $name = $icon;
+    $name =~ s{^.*/}{};
+    $name =~ s/\.[a-z]{3,4}$//;
+    if (my $icons = $self->get_icons) {
+	$icon = $icons->FindIcon($name,16,$exts) if $name;
+	$icon = $icons->FindIcon('exec',16,$exts) unless $icon;
+	return $icon if $icon;
+    }
     return '';
 }
 

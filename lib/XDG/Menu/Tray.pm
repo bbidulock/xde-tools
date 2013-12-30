@@ -1,4 +1,5 @@
 package XDG::Menu::Tray;
+use base qw(XDG::Menu::Base);
 use Gtk2;
 use strict;
 use warnings;
@@ -24,16 +25,6 @@ generates a Gtk2 menu.
 B<XDG::Menu::Tray> has the following methods:
 
 =over
-
-=item XDG::Menu::Tray->B<new>() => XDG::Menu::Tray
-
-Creates a new XDG::Menu::Tray instance for creating Gtk2 menus.
-
-=cut
-
-sub new {
-    return bless {}, shift;
-}
 
 =item $tray->B<create>($tree) => Gtk2::Menu
 

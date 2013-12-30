@@ -1,23 +1,23 @@
-package XDG::Menu::Twm;
+package XDG::Menu::Ctwm;
 use base qw(XDG::Menu::Base);
 use strict;
 use warnings;
 
 =head1 NAME
 
-XDG::Menu::Twm - generate a TWM menu from an XDG::Menu tree.
+XDG::Menu::Ctwm - generate a CTWM menu from an XDG::Menu tree.
 
 =head1 SYNOPSIS
 
  my $parser = new XDG::Menu::Parser;
  my $tree = $parser->parse_menu('/etc/xdg/menus/applications.menu');
- my $twm = new XDG::Menu::Twm;
- print $twm->create($tree);
+ my $ctwm = new XDG::Menu::Ctwm;
+ print $ctwm->create($tree);
 
 =head1 DESCRIPTION
 
-B<XDG::Menu::Twm> is a module that reads an XDG::Menu::Layout tree and
-generates a L<twm(1)> style menu.
+B<XDG::Menu::Ctwm> is a module that reads an XDG::Menu::Layout tree and
+generates a L<ctwm(1)> style menu.
 
 In general, creation of the applications submenu for L<ctwm(1)>,
 L<mwm(1)> and L<twm(1)> are almost identical; however, generation of a
@@ -25,13 +25,13 @@ full root menu is different.
 
 =head1 METHODS
 
-B<XDG::Menu::Twm> has the following methods:
+B<XDG::Menu::Ctwm> has the following methods:
 
 =over
 
-=item $twm->B<create>(I<$tree>,I<$style>,I<$name>) => I<$menu>
+=item $ctwm->B<create>(I<$tree>,I<$style>,I<$name>) => I<$menu>
 
-Creates a L<twm(1)> menu from menu tree, I<$tree>, and returns the
+Creates a L<ctwm(1)> menu from menu tree, I<$tree>, and returns the
 menu in a scalar string, I<$menu>.  I<$tree> must have been created as a
 result of parsing the XDG menu using XDG::Menu::Parser (see
 L<XDG::Menu(3pm)>).
@@ -125,7 +125,7 @@ sub wmmenu {
 	$icon = $self->icon('preferences-desktop-display') unless $icon;
 	$name =~ s/["]/\\"/g;
 	$exec =~ s/["]/\\"/g;
-	$text .= sprintf "    %-32s  %s\n",'"'.$name.'"','f.startwm "'.$exec.'"';
+	$text .= sprintf "    %-32s  %s\n",'"'.$name.'"','f.exec "exec '.$exec.' &"';
 	$gotone = 1;
     }
     $text .= $self->Separator() if $gotone;
@@ -140,7 +140,7 @@ sub twmmenu {
     $text .= "Menu \"twmmenu\" twm_MenuColor\n";
     $text .= "{\n";
     $text .= sprintf("    %-32s  %s\n",'"TWM Menu"',		    'f.title');
-    if (0) {
+    if (1) {
     $text .= sprintf("    %-32s  %s\n",'"Icons List"',		    'f.menu "TwmIcons"');
     }
     $text .= sprintf("    %-32s  %s\n",'"Window List"',		    'f.menu "TwmWindows"');
@@ -149,7 +149,7 @@ sub twmmenu {
     $text .= sprintf("    %-32s  %s\n",'"Window Managers"',	    'f.menu "managers"');
     $text .= sprintf("    %-32s  %s\n",'"Hide Icon Manager"',	    'f.hideiconmgr');
     $text .= sprintf("    %-32s  %s\n",'"Show Icon Manager"',	    'f.showiconmgr');
-    if (0) {
+    if (1) {
     $text .= sprintf("    %-32s  %s\n",'"Hide Workspace Manager"',  'f.hideworkspacemgr');
     $text .= sprintf("    %-32s  %s\n",'"Show Workspace Manager"',  'f.showworkspacemgr');
     }
@@ -217,7 +217,7 @@ sub Header {
 sub Separator {
     my($self,$item) = @_;
     my $text = '';
-    if (0) {
+    if (1) {
     $text .= sprintf "    %-32s  %s\n", '""', 'f.separator';
     } else {
     $text .= sprintf "    %-32s  f.nop\n", $SEPARATOR;
@@ -227,7 +227,7 @@ sub Separator {
 sub Pin {
     my($self,$item) = @_;
     my $text = '';
-    if (0) {
+    if (1) {
     $text .= sprintf "    %-32s  %s\n", '"--------> pin <--------"', 'f.pin';
     }
     return $text;
@@ -235,9 +235,15 @@ sub Pin {
 sub Application {
     my($self,$item) = @_;
     my $name = $item->Name; $name =~ s/["]/\\"/g;
-    my $exec = $item->Exec; $exec =~ s/["]/\\"/g;
-    return sprintf "    %-32s  f.exec \"exec %s &\"\n",
-	   '"'.$name.'"', $exec;
+    if ($self->{ops}{launch}) {
+	my $id = $item->Id; $id =~ s/["]/\\"/g;
+	return sprintf "    %-32s  f.exec \"exec xdg-launch %s &\"\n",
+	       '"'.$name.'"', $id;
+    } else {
+	my $exec = $item->Exec; $exec =~ s/["]/\\"/g;
+	return sprintf "    %-32s  f.exec \"exec %s &\"\n",
+	       '"'.$name.'"', $exec;
+    }
 }
 sub Directory {
     my($self,$item) = @_;

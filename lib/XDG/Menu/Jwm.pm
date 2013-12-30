@@ -1,4 +1,5 @@
 package XDG::Menu::Jwm;
+use base qw(XDG::Menu::Base);
 use strict;
 use warnings;
 
@@ -13,21 +14,18 @@ XDG::Menu::Jwm - generate a JWM menu from an XDG::Menu tree
  my $jwm = new XDG::Menu::Jwm;
  print $jwm->create($tree);
 
+=head1 DESCRIPTION
+
+B<XDG::Menu::Jwm> is a module that reads an XDG::Menu::Layout tree
+and generates a JWM style menu.
+
 =head1 METHODS
 
 B<XDG::Menu::Jwm> has the folllowing methods:
 
 =over
 
-=item XDG::Menu::Jwm->B<new>($tree) => XDG::Menu::Jwm
-
-Creates a new XDG::Menu::Jwm instance for creating JWM menus.
-
 =cut
-
-sub new {
-    return bless {}, shift;
-}
 
 sub escape {
     my $string = shift;
@@ -35,35 +33,131 @@ sub escape {
     return $string;
 }
 
+=item $jwm->B<icon>(I<@names>) => I<$spec>
+
+Accepts a list of icon names, I<@names>, as specified in a desktop entry
+file and returns an icon specification that can be added to a menu
+entry.
+
+=cut
+
 sub icon {
-    my ($self,$name) = @_;
-    return '' unless $name;
-    return $name if $name =~ m{/} and -f $name;
-    $name =~ s{.*/}{};
-    $name =~ s{\.(png|xpm|svg|jpg)$}{};
-    my $icons = XDG::Menu::DesktopEntry->get_icons;
-    return '' unless $icons;
-    my $fn = $icons->FindIcon($name,16,[qw(png xpm jpg)]);
-    $fn = '' unless $fn;
-    return sprintf("icon=\"%s\" ", $fn);
+    my($self,@names) = @_;
+    foreach (@names) {
+	my $icon = $self->SUPER::icon($_,qw(png svg xpm jpg));
+	return sprintf("icon=\"%s\" ",$icon) if $icon;
+    }
+    return '';
 }
 
-=item $jwm->B<create>($tree) => scalar
+=item $jwm->B<create>(I<$tree>,I<$style>,I<$name>) => I<$menu>
 
-Creates the JWM menu from menu tree, C<$tree>, and returns the menu
-in a scalar string.  C<$tree> must have been created as the result of
-parsing the XDG menu using XDG::Menu::Parser (see L<XDG::Menu(3pm)>).
+Creates the L<jwm(1)> menu from menu tree, C<$tree>, and returns the
+menu in a scalar string, I<$menu>.  C<$tree> must have been created as
+the result of parsing the XDG menu using XDG::Menu::Parser (see
+L<XDG::Menu(3pm)>).
+
+I<$style>, which defaults to C<fullmenu>, is the style of menu to create
+as follows:
+
+=over
+
+=item C<entries>
+
+Does not create a full menu at all, but just supplies the entries that
+would be placed in an applications menu (but not the shell of the menu).
+This can be useful for menu systems that include other menu files.  When
+the menu system does not nest, this does not return the preamble.  The
+preamble can be obtained using C<appmenu>.
+
+=item C<appmenu>
+
+Does not create a root window menu, but only creates a stand-alone
+applications menu named, I<$name>.  This menu contains only applications
+menu items.
+
+=item C<submenu>
+
+Creates a full root window menu, however, the XDG applications are
+contained in a submenu of the root menu, named I<$name>.  The
+applications submenu is also made available (where supported by the menu
+system) as a stand-alone applications menu named, I<$name>.
+
+=item C<fullmenu>
+
+Creates a full root window menu, however, the XDG applications are
+contained directly in the root window menu rather than in a submenu.
+An applications submenu is also made available (where supported by the
+menu system) as a stand-alone applications menu named, I<$name>.
+
+=back
+
+When the applications menu entries are created as a submenu of the root
+menu or a menu of its own, the submenu will be given the name, I<$name>.
+I<$name>, when unspecified, defaults to C<Applications>.
+
+=cut
+
+sub create {
+    my($self,$tree,$style,$name) = @_;
+    $style = 'fullmenu' unless $style;
+    $name = 'Applications' unless $name;
+    my $menu = $self->build($tree,'  ');
+    return $menu if $style eq 'entries';
+    $menu = $self->appmenu($menu,$name) unless $style eq 'fullmenu';
+    $menu = $self->rootmenu($menu,$name) unless $style eq 'appmenu';
+    return $self->makefile($menu);
+}
 
 =back
 
 =cut
 
-sub create {
-    my ($self,$item) = @_;
+sub makefile {
+    my($self,$menu) = @_;
     my $text = '';
     $text .= q(<?xml version="1.0"?>)."\n";
     $text .= q(<JWM>)."\n";
-    $text .= $self->build($item,'  ');
+    $text .= $menu;
+    $text .= q(</JWM>)."\n";
+    return $text;
+}
+
+sub wmmenu {
+    my($self,$indent) = @_;
+    my $text = '';
+    $text .= sprintf "%s%s\n", $indent, q(<Menu ).$self->icon('gtk-quit').q(label="Window Managers">);
+    $text .= sprintf "%s%s\n", $indent, q(  <Restart ).$self->icon('gtk-refresh').q(label="Restart"/>);
+    $self->getenv();
+    $self->default();
+    my $wms = $self->get_xsessions();
+    foreach (sort keys %$wms) {
+	my $wm = $wms->{$_};
+	my $name = $wm->{Name};
+	$name = $_ unless $name;
+	next if $name =~ m{jwm}i;
+	$name =~ s/["]/\\"/g;
+	my $exec = $wm->{Exec};
+	my $icon = $self->icon($wm->{Icon});
+	$icon = $self->icon('preferences-desktop-display') unless $icon;
+	$text .= sprintf "%s%s\n", $indent, q(  <Exit ).$icon.q(label=").escape($name).q(" confirm="false">).$exec.q(</Exit>);
+    }
+    $text .= sprintf "%s%s\n", $indent, q(</Menu>);
+    return $text;
+}
+
+sub appmenu {
+    my($self,$entries,$name) = @_;
+    my $text = '';
+    $text .= q(  <Menu ).$self->icon('start-here').q(label=").$name.q(">)."\n";
+    $text .= $entries;
+    $text .= q(  </Menu>)."\n";
+    return $text;
+}
+sub rootmenu {
+    my($self,$entries) = @_;
+    my $text = '';
+    $text .= $entries;
     $text .= q(  <Separator/>)."\n";
     $text .= q(  <Menu ).$self->icon('jwm').q(label="JWM">)."\n";
     $text .= q(    <Menu ).$self->icon('preferences-system-windows').q(label="Window Menu">)."\n";
@@ -82,13 +176,13 @@ sub create {
     $text .= q(    <Desktops ).$self->icon('preferences-desktop-display').q(label="Desktops"/>)."\n";
     $text .= $self->themes('    ');
     $text .= $self->styles('    ');
+    $text .= $self->wmmenu('    ');
     $text .= q(    <Program ).$self->icon('gtk-refresh').q(label="Regenerate Menu">xde-menugen -o /home/brian/.jwm/menu.new</Program>)."\n";
     $text .= q(  </Menu>)."\n";
     $text .= q(  <Separator/>)."\n";
     $text .= q(  <Restart ).$self->icon('gtk-refresh').q(label="Restart"/>)."\n";
     $text .= q(  <Program ).$self->icon('gnome-lockscreen').q(label="Lock">slock</Program>)."\n";
     $text .= q(  <Exit ).$self->icon('gtk-quit').q(label="Exit" confirm="true"/>)."\n";
-    $text .= q(</JWM>)."\n";
     return $text;
 }
 sub build {
@@ -113,7 +207,7 @@ sub Header {
     my ($self,$item,$indent) = @_;
     my $name = $item->Name; $name =~ s/["]/\\"/g;
     return sprintf "%s<Menu icon=\"%s\" label=\"%s\" labeled=\"false\"/>\n",
-	$indent, $item->Icon([qw(png xpm)]), escape($name);
+	$indent, $item->Icon([qw(png svg xpm jpg)]), escape($name);
 }
 sub Separator {
     my ($self,$item,$indent) = @_;
@@ -122,20 +216,26 @@ sub Separator {
 sub Application {
     my ($self,$item,$indent) = @_;
     my $name = $item->Name; $name =~ s/["]/\\"/g;
-    return sprintf "%s<Program icon=\"%s\" label=\"%s\">%s</Program>\n",
-	   $indent, $item->Icon([qw(png xpm)]), escape($name), $item->Exec;
+    if ($self->{ops}{launch}) {
+	return sprintf "%s<Program icon=\"%s\" label=\"%s\">xdg-launch %s</Program>\n",
+	       $indent, $item->Icon([qw(png svg xpm jpg)]), escape($name), $item->Id;
+    } else {
+	return sprintf "%s<Program icon=\"%s\" label=\"%s\">%s</Program>\n",
+	       $indent, $item->Icon([qw(png svg xpm jpg)]), escape($name), $item->Exec;
+    }
 }
 sub Directory {
     my ($self,$item,$indent) = @_;
+    my $menu = $item->{Menu};
     my $text = '';
-    if ($item->{Menu}{Elements} and @{$item->{Menu}{Elements}}) {
-	my $name = $item->Name; $name =~ s/["]/\\"/g;
-	$text .= sprintf "%s<Menu icon=\"%s\" label=\"%s\" labeled=\"false\">\n",
-	    $indent, $item->Icon([qw(png xpm)]), escape($name);
-	$text .= $self->build($item->{Menu},$indent.'   ');
-	$text .= sprintf "%s</Menu> <!-- %s -->\n",
-	    $indent, $item->Name;
-    }
+    # no empty menus...
+    return $text unless @{$menu->{Elements}};
+    my $name = $item->Name; $name =~ s/["]/\\"/g;
+    $text .= sprintf "%s<Menu icon=\"%s\" label=\"%s\" labeled=\"false\">\n",
+	$indent, $item->Icon([qw(png svg xpm jpg)]), escape($name);
+    $text .= $self->build($item->{Menu},$indent.'   ');
+    $text .= sprintf "%s</Menu> <!-- %s -->\n",
+	$indent, $item->Name;
     return $text;
 }
 
@@ -291,4 +391,4 @@ L<XDG::Menu(3pm)>
 
 =cut
 
-# vim: set sw=4 tw=72:
+# vim: set sw=4 tw=72 fo=tcqlorn foldmarker==head,=head foldmethod=marker:

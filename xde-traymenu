@@ -51,9 +51,9 @@ if ($here =~ s{^\.}{}) {
 unless ($here =~ m{^/usr/bin}) {
     %OVERRIDES = (
 	HERE               => "$here",
-	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
-	XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
-	XDG_ICON_APPEND    => "$here/share/icons:$here/share/pixmaps",
+	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg:/etc/xdg/xde",
+	XDG_DATA_PREPEND   => "$here/share/xde:$here/share:/usr/share/xde",
+	XDG_ICON_APPEND    => "$here/share/icons:$here/share/pixmaps:/usr/share/icons:/usr/share/pixmaps",
     );
     my %path = (map{$_=>1}split(/:/,$ENV{PATH}));
     $ENV{PATH} = "$here:$ENV{PATH}" unless exists $path{$here};
@@ -142,34 +142,47 @@ my $XDG_ICON_DIRS = join(':',"$HOME/.icons",map{"$_/icons"}@XDG_DATA_DIRS,'/usr/
 my @XDG_ICON_DIRS = split(/:/,$XDG_ICON_DIRS);
 
 my %outputs = (
-    fluxbox     => [ "$HOME/.fluxbox/menu" ],
-    blackbox    => [ "$HOME/.blackbox/menu", "$HOME/.bbmenu" ],
-    openbox     => [ "$HOME/.openbox/menu", "$HOME/.config/openbox/menu" ],
-    icewm       => [ "$HOME/.icewm/menu" ],
+    fluxbox	=> [ "$HOME/.fluxbox/menu" ],
+    blackbox	=> [ "$HOME/.blackbox/menu", "$HOME/.bbmenu" ],
+    openbox	=> [ "$HOME/.openbox/menu", "$HOME/.config/openbox/menu" ],
+    icewm	=> [ "$HOME/.icewm/menu" ],
+    pekwm	=> [ "$HOME/.pekwm/menu" ],
     jwm		=> [ "$HOME/.jwm/menu" ],
-    pekwm       => [ "$HOME/.pekwm/menu" ],
+    fvwm	=> [ "$HOME/.fvwm/menu" ],
+    wmaker	=> [ "$HOME/GNUstep/Defaults/WMRootMenu" ],
+    ctwm	=> [ "$HOME/.ctwm/menu" ],
+    vtwm	=> [ "$HOME/.vtwm/menu" ],
+    twm		=> [ "$HOME/.twm/menu" ],
 );
 
 my %formats = (
-    fluxbox     => [qw(FLUXBOX  XDG::Menu::Tray	)],
-    blackbox    => [qw(BLACKBOX XDG::Menu::Tray )],
-    openbox     => [qw(OPENBOX  XDG::Menu::Tray	)],
-    icewm       => [qw(ICEWM    XDG::Menu::Tray	)],
-    openbox3    => [qw(LXDE     XDG::Menu::Tray )],
-    wmaker      => [qw(WMAKER   XDG::Menu::Tray	)],
-    jwm         => [qw(JWM      XDG::Menu::Tray )],
-    pekwm       => [qw(PEKWM    XDG::Menu::Tray )],
+    fluxbox	=> [qw(FLUXBOX	XDG::Menu::Tray	)],
+    blackbox	=> [qw(BLACKBOX	XDG::Menu::Tray	)],
+    openbox	=> [qw(OPENBOX	XDG::Menu::Tray	)],
+    openbox3	=> [qw(LXDE	XDG::Menu::Tray	)],
+    icewm	=> [qw(ICEWM	XDG::Menu::Tray	)],
+    pekwm	=> [qw(PEKWM	XDG::Menu::Tray	)],
+    jwm		=> [qw(JWM	XDG::Menu::Tray	)],
+    fvwm	=> [qw(FVWM	XDG::Menu::Tray	)],
+    wmaker	=> [qw(WMAKER	XDG::Menu::Tray	)],
+    ctwm	=> [qw(CTWM	XDG::Menu::Tray	)],
+    vtwm	=> [qw(VTWM	XDG::Menu::Tray	)],
+    twm		=> [qw(TWM	XDG::Menu::Tray	)],
 );
 
 my %desktops = (
-    FLUXBOX     => [qw(fluxbox  XDG::Menu::Tray	)],
-    BLACKBOX    => [qw(blackbox XDG::Menu::Tray	)],
-    WMAKER      => [qw(wmaker   XDG::Menu::Tray	)],
-    OPENBOX     => [qw(openbox  XDG::Menu::Tray	)],
-    LXDE        => [qw(openbox3 XDG::Menu::Tray )],
-    ICEWM       => [qw(icewm    XDG::Menu::Tray	)],
-    JWM         => [qw(jwm      XDG::Menu::Tray )],
-    PEKWM       => [qw(pekwm    XDG::Menu::Tray )],
+    FLUXBOX	=> [qw(fluxbox  XDG::Menu::Tray	)],
+    BLACKBOX	=> [qw(blackbox XDG::Menu::Tray	)],
+    OPENBOX	=> [qw(openbox  XDG::Menu::Tray	)],
+    ICEWM	=> [qw(icewm    XDG::Menu::Tray	)],
+    PEKWM	=> [qw(pekwm    XDG::Menu::Tray	)],
+    JWM		=> [qw(jwm      XDG::Menu::Tray	)],
+    FVWM	=> [qw(fvwm	XDG::Menu::Tray	)],
+    WMAKER	=> [qw(wmaker   XDG::Menu::Tray	)],
+    CTWM	=> [qw(ctwm	XDG::Menu::Tray	)],
+    VTWM	=> [qw(vtwm	XDG::Menu::Tray	)],
+    TWM		=> [qw(twm	XDG::Menu::Tray	)],
+    LXDE	=> [qw(openbox3 XDG::Menu::Tray	)],
 );
 
 

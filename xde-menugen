@@ -39,13 +39,17 @@ can be included in the root menu of those window managers.
 use XDG::Menu::Parser;
 use XDG::Menu::Fluxbox;
 use XDG::Menu::Blackbox;
-use XDG::Menu::Icewm;
-use XDG::Menu::Wmaker;
-use XDG::Menu::Jwm;
-use XDG::Menu::Pekwm;
 use XDG::Menu::Openbox;
 use XDG::Menu::Openbox3;
+use XDG::Menu::Icewm;
+use XDG::Menu::Pekwm;
+use XDG::Menu::Jwm;
+use XDG::Menu::Fvwm;
+use XDG::Menu::Wmaker;
+use XDG::Menu::Ctwm;
+use XDG::Menu::Vtwm;
 use XDG::Menu::Twm;
+use XDG::Menu::Uwm;
 use Getopt::Long;
 use Encode;
 use I18N::Langinfo qw(langinfo CODESET);
@@ -63,9 +67,9 @@ if ($here =~ s{^\.}{}) {
 unless ($here =~ m{^/usr/bin}) {
     %OVERRIDES = (
 	HERE               => "$here",
-	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg",
-	XDG_DATA_PREPEND   => "$here/share/xde:$here/share",
-	XDG_ICON_APPEND    => "$here/share/icons:$here/share/pixmaps",
+	XDG_CONFIG_PREPEND => "$here/xdg/xde:$here/xdg:/etc/xdg/xde",
+	XDG_DATA_PREPEND   => "$here/share/xde:$here/share:/usr/share/xde",
+	XDG_ICON_APPEND    => "$here/share/icons:$here/share/pixmaps:/usr/share/icons:/usr/share/pixmaps",
     );
     my %path = (map{$_=>1}split(/:/,$ENV{PATH}));
     $ENV{PATH} = "$here:$ENV{PATH}" unless exists $path{$here};
@@ -143,33 +147,46 @@ my %outputs = (
     blackbox    => [ "$HOME/.blackbox/menu", "$HOME/.bbmenu" ],
     openbox     => [ "$HOME/.openbox/menu", "$HOME/.config/openbox/menu" ],
     icewm       => [ "$HOME/.icewm/menu" ],
-    jwm         => [ "$HOME/.jwm/menu" ],
     pekwm       => [ "$HOME/.pekwm/menu" ],
+    jwm         => [ "$HOME/.jwm/menu" ],
+    fvwm	=> [ "$HOME/.fvwm/menu" ],
+    wmaker	=> [ "$HOME/GNUstep/Defaults/WMRootMenu" ],
+    ctwm	=> [ "$HOME/.ctwm/menu" ],
+    vtwm	=> [ "$HOME/.vtwm/menu" ],
     twm		=> [ "$HOME/.twm/menu" ],
+    uwm		=> [ "$HOME/.uwm/menu" ],
 );
 
 my %formats = (
     fluxbox     => [qw(FLUXBOX  XDG::Menu::Fluxbox  )],
     blackbox    => [qw(BLACKBOX XDG::Menu::Blackbox )],
     openbox     => [qw(OPENBOX  XDG::Menu::Openbox  )],
-    icewm       => [qw(ICEWM    XDG::Menu::Icewm    )],
     openbox3    => [qw(OPENBOX  XDG::Menu::Openbox3 )],
-    wmaker      => [qw(WMAKER   XDG::Menu::Wmaker   )],
-    jwm         => [qw(JWM      XDG::Menu::Jwm      )],
+    icewm       => [qw(ICEWM    XDG::Menu::Icewm    )],
     pekwm       => [qw(PEKWM    XDG::Menu::Pekwm    )],
+    jwm         => [qw(JWM      XDG::Menu::Jwm      )],
+    fvwm	=> [qw(FVWM	XDG::Menu::Fvwm	    )],
+    wmaker      => [qw(WMAKER   XDG::Menu::Wmaker   )],
+    ctwm	=> [qw(CTWM	XDG::Menu::Ctwm	    )],
+    vtwm	=> [qw(VTWM	XDG::Menu::Vtwm	    )],
     twm		=> [qw(TWM	XDG::Menu::Twm	    )],
+    uwm		=> [qw(UWM	XDG::Menu::Uwm	    )],
 );
 
 my %desktops = (
     FLUXBOX     => [qw(fluxbox  XDG::Menu::Fluxbox  )],
     BLACKBOX    => [qw(blackbox XDG::Menu::Blackbox )],
-    WMAKER      => [qw(wmaker   XDG::Menu::Wmaker   )],
     OPENBOX     => [qw(openbox3 XDG::Menu::Openbox3 )],
-    LXDE        => [qw(openbox3 XDG::Menu::Openbox3 )],
     ICEWM       => [qw(icewm    XDG::Menu::Icewm    )],
-    JWM         => [qw(jwm      XDG::Menu::Jwm      )],
     PEKWM       => [qw(pekwm    XDG::Menu::Pekwm    )],
+    JWM         => [qw(jwm      XDG::Menu::Jwm      )],
+    FVWM	=> [qw(fvwm	XDG::Menu::Fvwm	    )],
+    WMAKER      => [qw(wmaker   XDG::Menu::Wmaker   )],
+    CTWM	=> [qw(ctwm	XDG::Menu::Ctwm	    )],
+    VTWM	=> [qw(vtwm	XDG::Menu::Vtwm	    )],
     TWM		=> [qw(twm	XDG::Menu::Twm	    )],
+    UWM		=> [qw(uwm	XDG::Menu::Uwm	    )],
+    LXDE        => [qw(openbox3 XDG::Menu::Openbox3 )],
 );
 
 
@@ -193,7 +210,7 @@ Print debugging information on standard error during operation.
 Specify the output format.  Recognized output formats are as follows:
 C<twm>, C<wmaker>, C<windowmaker>, C<fvwm>, C<fvwm2>, C<fvwm-crystal>,
 C<ion3>, C<blackbox>, C<fluxbox>, C<openbox>, C<xfce4>, C<openbox3>,
-C<openbox3-pipe>, C<awesome>, C<icewm>, C<jwm>, C<pekwm>.
+C<openbox3-pipe>, C<awesome>, C<icewm>, C<jwm>, C<pekwm>, C<μwm>.
 
 When unspecified, the setting of the B<XDG_CURRENT_DESKTOP> environment
 variable is used to determine the format.  This is accomplished by
@@ -279,6 +296,8 @@ my %ops = (
     noicons     => '',
     theme       => $XDG_ICON_THEME,
     monitor     => '',
+    style	=> 'fullmenu',
+    launch	=> '',
 );
 
 my $syntax = GetOptions(
@@ -297,6 +316,8 @@ my $syntax = GetOptions(
     "n"             =>sub{$ops{icons}=0},
     "theme|t=s"     =>\$ops{theme},
     "monitor|m"     =>\$ops{monitor},
+    "style|s=s"	    =>\$ops{style},
+    "launch|L!"	    =>\$ops{launch},
 );
 
 if ($ops{output} eq '') {
@@ -307,6 +328,20 @@ if ($ops{output} eq '') {
                 last;
             }
         }
+    }
+}
+
+if ($ops{launch}) {
+    $ops{launch} = 0;
+    foreach (split(/:/,$ENV{PATH})) {
+	if (-x "$_/xdg-launch") {
+	    $ops{launch} = 1;
+	    last;
+	}
+    }
+    unless ($ops{launch}) {
+	print STDERR "missing xdg-launch program";
+	usage(2);
     }
 }
 
@@ -346,10 +381,12 @@ unless ($ops{desktop} and exists $desktops{$ops{desktop}}) {
     usage(2);
 }
 
+if (0) {
 if (($ops{desktop} ne $formats{$ops{format}}[0]) or
     ($ops{format} ne $desktops{$ops{desktop}}[0])) {
     print STDERR "mismatch between format $ops{format} and desktop $ops{desktop}\n";
     usage(2);
+}
 }
 
 if ($ops{theme}) {
@@ -450,8 +487,8 @@ EOF
 my $parser = new XDG::Menu::Parser;
 my $tree = $parser->parse_menu($ops{root_menu});
 my $builder = $formats{$ops{format}}[1];
-my $wm = $builder->new();
-print $wm->create($tree);
+my $wm = $builder->new(%OVERRIDES,ops=>\%ops);
+print $wm->create($tree,$ops{style});
 exit (0);
 
 
