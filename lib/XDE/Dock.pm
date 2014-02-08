@@ -1049,6 +1049,7 @@ sub event_handler_ReparentNotify {
 	    $X->ChangeSaveSet('Insert',$win->{window});
 	    $self->{saveset}{$win->{window}} = 1;
 	    $X->ReparentWindow($win->{window},$self->{dock}{parent},0,0);
+	    $X->MapWindow($win->{window});
 	    $X->GetScreenSaver;
 	    $self->swallow($win);
 	    if ($self->{wmname} eq 'pekwm') {

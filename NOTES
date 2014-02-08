@@ -64,7 +64,7 @@ WM_PROTOCOLS: window [32] _NET_WM_PING, timestamp, client_window
 
 _NET_WM_FULLSCREEN_MONITORS: window [32] top, bot, left, right, source_ind
 
-	Set the monitors that define Xinerama fullscreen mode.
+	Set the monitors that define RANDR/Xinerama fullscreen mode.
 
 
 Testing for window managers:
@@ -274,124 +274,127 @@ Notes:
 
 Current EWMH support is as follows:
 
-.Item				uwm	Awesome	Waimea	Wind	JWM	Fluxbox	PeKWM	IceWM	Bbox	Wmaker	Openbox	FVWM	AStep	Mcity	Notes
-----				---	-------	------	----	---	-------	-----	-----	----	------	-------	----	-----	-----		
-_KDE_NET_SYSTEM_TRAY_WINDOWS	-	-	Y*	-	-	-	-	-	-	-	-	Y	-	-	(* not reported)
-_KDE_NET_WM_FRAME_STRUT		-	-	?	-	-	-	-	-	-	-	Y	Y	-	-
-_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR -	Y	Y*	-	-	-	-	-	-	-	-	Y	-	-	(* not reported)
-_KDE_NET_WM_WINDOW_TYPE_OVERRIDE -	-	-	-	-	-	-	-	-	-	Y	-	-	-
-_KDE_SPLASH_PROGRESS		-	-	-	-	-	-	-	-	-	-	Y	-	-	-
-_KDE_WM_CHANGE_STATE		-	-	-	-	-	-	-	-	-	-	Y	-	-	-
-_NET_ACTIVE_WINDOW		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_CLIENT_LIST_STACKING	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_CLIENT_LIST		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_CLOSE_WINDOW		Y	Y	*	Y	Y	Y	Y	Y	Y	N	Y	Y	N	Y	(1)
-_NET_CURRENT_DESKTOP		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_DESKTOP_GEOMETRY		Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_DESKTOP_LAYOUT		-	-	-	-	-	-	Y	-	Y	-	Y	-	N	Y	(4)
-_NET_DESKTOP_NAMES		Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	(2)
-_NET_DESKTOP_VIEWPORT		Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	(3)
-_NET_FRAME_EXTENTS		Y	N	N	Y	Y	Y	N	Y	Y	Y	Y	Y	N	Y
-_NET_MAXIMIZED_RESTORE		-	-	x	-	-	-	-	-	-	-	-	-	-
-_NET_MOVERESIZE_WINDOW		Y	N	N	N	Y	Y	N	Y	Y	N	Y	Y	N	Y	(5)
-_NET_NUMBER_OF_DESKTOPS		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	(23)
-_NET_PROPERTIES			-	-	-	-	-	-	-	-	-	-	-	-	-	-
-_NET_REQUEST_FRAME_EXTENTS	N	N	N	Y	Y	Y	N	N	N	N	Y	N	N	Y
-_NET_RESTACK_WINDOW		N	N	N	N	N	Y	N	Y	N	N	Y	Y	N	Y
-_NET_RESTART			-	-	x	-	-	-	-	-	-	-	-	-	-	-
-_NET_SHOWING_DESKTOP		Y	N	N	N	Y	N	N	Y	Y	Y	Y	N	N	Y	(6)
-_NET_SHUTDOWN			-	-	x	-	-	-	-	-	-	-	-	-	-	-
-_NET_STARTUP_ID			N	Y	N	N	N	N	N	N	Y	N	Y	N	N	Y	(7)
-_NET_STARTUP_INFO_BEGIN		-	Y*	-	-	-	-	-	-	-	-	Y*	-	-	Y*	* libstartup-notification
-_NET_STARTUP_INFO		-	Y*	-	-	-	-	-	-	-	-	Y*	-	-	Y*	* libstartup-notification
-_NET_SUPPORTED			Y	Y	Y	Y	Y*	Y	Y*	Y*	Y	Y	Y	Y*	Y	Y	(8)
-_NET_SUPPORTING_WM_CHECK	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	(9)
-_NET_SYSTEM_TRAY_MESSAGE_DATA	-	-	-	-	-	-	-	Y	-	-	-	-	-	-
-_NET_SYSTEM_TRAY_OPCODE		Y	Y	-	-	X	-	-	Y	-	-	-	-	-	-	(10)
-_NET_SYSTEM_TRAY_ORIENTATION	Y	-	-	-	-	-	-	N	-	-	-	-	-	-
-_NET_SYSTEM_TRAY_S%d		-	Y	-	-	Y	Y	-	Y	-	-	-	-	-	-
-_NET_SYSTEM_TRAY_VISUAL		-	-	-	-	-	-	-	N	-	-	-	-	-	-
-_NET_VIRTUAL_POS		-	-	x	-	-	-	-	-	-	-	-	-	-	-
-_NET_VIRTUAL_ROOTS		-	-	-	-	-	-	-	-	-	-	-	X	X	-	(11)
-_NET_WM_ACTION_ABOVE		Y	N	N	N	Y	N	N	Y	Y	N	Y	N	N	Y
-_NET_WM_ACTION_BELOW		Y	N	N	N	Y	N	N	Y	Y	N	Y	N	N	Y
-_NET_WM_ACTION_CHANGE_DESKTOP	Y	N	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
-_NET_WM_ACTION_CLOSE		Y	N	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
-_NET_WM_ACTION_FULLSCREEN	Y	N	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
-_NET_WM_ACTION_MAXIMIZE_HORZ	Y	N	N	N	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
-_NET_WM_ACTION_MAXIMIZE_VERT	Y	N	N	N	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
-_NET_WM_ACTION_MINIMIZE		Y	N	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
-_NET_WM_ACTION_MOVE		Y	N	N	N	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
-_NET_WM_ACTION_RESIZE		Y	N	N	N	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
-_NET_WM_ACTION_SHADE		Y	N	N	N	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
-_NET_WM_ACTION_STICK		Y	-	-	-	Y	Y	Y	Y	Y	Y	-	Y	N	Y
-_NET_WM_ALLOWED_ACTIONS		Y	N	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
-_NET_WM_BYPASS_COMPOSITOR	-	-	-	-	-	-	-	-	-	-	-	-	-	-
-_NET_WM_DESKTOP_MASK		-	-	x	-	-	-	-	-	-	-	-	-	-	-
-_NET_WM_DESKTOP			Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_WM_FULL_PLACEMENT		-	-	-	-	-	-	-	-	-	-	X	-	-	?	(12)
-_NET_WM_FULLSCREEN_MONITORS	N	N	N	N	N	N	N	Y	Y	N	N	N	N	Y
-_NET_WM_HANDLED_ICONS		-	-	-	-	Y	-	-	Y-	Y	Y	-	N*	-		(13)
-_NET_WM_ICON_GEOMETRY		-	-	-	-	-	-	-	-	-	Y	Y	Y	-	Y	(14)
-_NET_WM_ICON_NAME		-	Y	-	Y	-	Y	Y	Y	Y	Y	Y	Y	N	Y	(15)
-_NET_WM_ICON			Y	Y	N	N	Y	Y	Y	Y	-	Y	Y	Y	Y	Y
-_NET_WM_MOVERESIZE		N	N	N	N	N	Y	N	Y	N	N	Y	Y	N	Y
-_NET_WM_NAME			Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	(16)
-_NET_WM_OPAQUE_REGION		-	-	-	-	-	-	-	-	-	-	-	-	-	-
-_NET_WM_PID			N	Y	Y	N	Y	N	Y	Y	Y	N	Y	Y	Y	Y	(17)
-_NET_WM_PING			-	-	-	-	-	-	-	-	-	-	Y	-	Y	Y	(18)
-_NET_WM_STATE_ABOVE		Y	Y	Y*	Y	Y	Y	Y	Y	Y	Y	Y	Y*	N	Y	(21)
-_NET_WM_STATE_BELOW		Y	Y	Y*	Y	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
-_NET_WM_STATE_DECOR_BORDER	-	-	x	-	-	-	-	-	-	-	-	-	-	-
-_NET_WM_STATE_DECOR_HANDLE	-	-	x	-	-	-	-	-	-	-	-	-	-	-
-_NET_WM_STATE_DECOR_TITLE	-	-	x	-	-	-	-	-	-	-	-	-	-	-
-_NET_WM_STATE_DECOR		-	-	x	-	-	-	-	-	-	-	-	-	-	-
-_NET_WM_STATE_DEMANDS_ATTENTION	Y	Y	N	N	Y	Y	Y	Y	Y	N	Y	N	N	Y	(19)
-_NET_WM_STATE_FOCUSED		N	N	N	N	N	N	N	-	Y	N	N	N	N	N
-_NET_WM_STATE_FULLSCREEN	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
-_NET_WM_STATE_HIDDEN		Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
-_NET_WM_STATE_MAXIMIZED_HORZ	Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y*	Y	Y	(20)
-_NET_WM_STATE_MAXIMIZED_VERT	Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_WM_STATE_MODAL		Y	Y	N	N	N	Y	Y	Y-	Y	N	Y	Y	Y	Y
-_NET_WM_STATE_PARENTRELATIVE_BACKGROUND - -	x	-	-	-	-	-	-	-	-	-	-	-
-_NET_WM_STATE_SHADED		Y	N	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_WM_STATE_SKIP_PAGER	Y	N	N	N	Y	N	Y	Y	Y	Y	Y	Y	N	Y
-_NET_WM_STATE_SKIP_TASKBAR	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_WM_STATE_STAYS_AT_BOTTOM			Y   (old name for _BELOW)
-_NET_WM_STATE_STAYS_ON_TOP			Y   (old name for _ABOVE)
-_NET_WM_STATE_STICKY		Y	Y	Y	-	Y	Y	Y	Y	Y	Y	-	Y	Y	Y
-_NET_WM_STATE			Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_WM_STRUT			Y	N	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
-_NET_WM_STRUT_PARTIAL		Y	Y	N	N	Y	N	N	Y	Y	N	Y	N	N	Y
-_NET_WM_SYNC_REQUEST_COUNTER	N	N	N	N	N	N	N	N	N	N	Y	N	N	N
-_NET_WM_SYNC_REQUEST		N	N	N	N	N	N	N	N	N	N	Y	N	N	N
-_NET_WM_USER_TIME		N	N	N	N	Y	N	N	Y	Y	N	Y	N	N	Y
-_NET_WM_USER_TIME_WINDOW	N	N	N	N	Y	N	N	Y	Y	N	N	N	N	Y
-_NET_WM_VISIBLE_ICON_NAME	N	Y	N	Y	Y	N	Y	Y	Y	N	Y	N*	N	N	* misspelt
-_NET_WM_VISIBLE_NAME		N	N	Y	Y	Y	N	Y	Y	Y	N	Y	Y	N	N
-_NET_WM_WINDOW_OPACITY		Y	Y*	-	-	-	-	Y	-	-	-	-	-	-	-	(24) non-standard
-_NET_WM_WINDOW_TYPE_COMBO	N	Y	N	N	N	N	N	Y	Y	N	N	N	N	N
-_NET_WM_WINDOW_TYPE_DESKTOP	Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_WM_WINDOW_TYPE_DIALOG	Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_WM_WINDOW_TYPE_DND		N	Y	N	N	N	N	N	Y	Y	N	N	N	N	N
-_NET_WM_WINDOW_TYPE_DOCK	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_WM_WINDOW_TYPE_DROPDOWN_MENU N	Y	N	N	N	N	N	Y	Y	N	N	N	N	N
-_NET_WM_WINDOW_TYPE_MENU	Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_WM_WINDOW_TYPE_NORMAL	Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_WM_WINDOW_TYPE_NOTIFICATION Y	N	N	Y	N	N	Y	Y	N	N	Y	N	N
-_NET_WM_WINDOW_TYPE_POPUP_MENU	Y	N	N	N	N	N	Y	Y	N	N*	N	N	N
-_NET_WM_WINDOW_TYPE_SPLASH	Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	N	N	Y
-_NET_WM_WINDOW_TYPE_TOOLBAR	Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_WM_WINDOW_TYPE_TOOLTIP	N	Y	N	N	N	N	N	Y	Y	N	N	N	N	N
-_NET_WM_WINDOW_TYPE_UTILITY	Y	Y	Y	N	Y	N	Y	Y	Y	Y	Y	N	N	Y
-_NET_WM_WINDOW_TYPE		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
-_NET_WORKAREA			Y	N	Y	Y	Y	Y	Y	Y	Y	N	Y	Y	N	Y
-------------------------------	---	---	---	---	---	---	---	---	---	---	---	---	---	---
-Total N				17N	31N	39N	42N	14N	22N	22N	 6N	 6N	27N	 9N	25N	48N	11N
-Total Y				60Y	48Y	32Y	31Y	63Y	54Y	55Y	74Y	71Y	50Y	73Y	53Y	29Y	69Y
-------------------------------	---	---	---	---	---	---	---	---	---	---	---	---	---	---
-Total				80	80	80	80	80	80	80	80	80	80	80	80	80	80
+.Item					ADWM	matwm2	uwm	Awesome	Waimea	Wind	JWM	Fluxbox	PeKWM	IceWM	Bbox	Wmaker	Openbox	FVWM	AStep	Mcity	Notes
+----					-------	------	---	-------	------	----	---	-------	-----	-----	----	------	-------	----	-----	-----		
+_KDE_NET_SYSTEM_TRAY_WINDOWS		Y	-	-	-	Y*	-	-	-	-	-	-	-	-	Y	-	-	(* not reported)
+_KDE_NET_WM_FRAME_STRUT			Y	-	-	-	?	-	-	-	-	-	-	-	Y	Y	-	-
+_KDE_NET_WM_SYSTEM_TRAY_WINDOW_FOR	Y	-	-	Y	Y*	-	-	-	-	-	-	-	-	Y	-	-	(* not reported)
+_KDE_NET_WM_WINDOW_TYPE_OVERRIDE	Y	Y	-	-	-	-	-	-	-	-	-	-	Y	-	-	-
+_KDE_SPLASH_PROGRESS			Y	-	-	-	-	-	-	-	-	-	-	-	Y	-	-	-
+_KDE_WM_CHANGE_STATE			Y	-	-	-	-	-	-	-	-	-	-	-	Y	-	-	-
+_NET_ACTIVE_WINDOW			Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_CLIENT_LIST_STACKING		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_CLIENT_LIST			Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_CLOSE_WINDOW			Y	Y	Y	Y	*	Y	Y	Y	Y	Y	Y	N	Y	Y	N	Y	(1)
+_NET_CURRENT_DESKTOP			Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_DESKTOP_GEOMETRY			Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_DESKTOP_LAYOUT			-	-	-	-	-	-	-	-	Y	-	Y	-	Y	-	N	Y	(4)
+_NET_DESKTOP_NAMES			Y	Y	Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	(2)
+_NET_DESKTOP_VIEWPORT			Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	(3)
+_NET_FRAME_EXTENTS			Y	Y	Y	N	N	Y	Y	Y	N	Y	Y	Y	Y	Y	N	Y
+_NET_MAXIMIZED_RESTORE			-	-	-	-	x	-	-	-	-	-	-	-	-	-	-	-
+_NET_MONITOR_GEOMETRY			Y	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	(26)
+_NET_MOVERESIZE_WINDOW			Y	N	Y	N	Y	N	Y	Y	N	Y	Y	N	Y	Y	N	Y	(5)
+_NET_NUMBER_OF_DESKTOPS			Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	(23)
+_NET_PROPERTIES				-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-
+_NET_REQUEST_FRAME_EXTENTS		Y	Y	N	N	N	Y	Y	Y	N	N	N	N	Y	N	N	Y
+_NET_RESTACK_WINDOW			Y	Y	N	N	N	N	N	Y	N	Y	N	N	Y	Y	N	Y
+_NET_RESTART				Y	-	-	-	x	-	-	-	-	-	-	-	-	-	-	-
+_NET_SHOWING_DESKTOP			Y	Y	Y	N	N	N	Y	N	N	Y	Y	Y	Y	N	N	Y	(6)
+_NET_SHUTDOWN				Y	-	-	-	x	-	-	-	-	-	-	-	-	-	-	-
+_NET_STARTUP_ID				Y	N	N	Y	N	N	N	N	N	N	Y	N	Y	N	N	Y	(7)
+_NET_STARTUP_INFO_BEGIN			Y*	-	-	Y*	-	-	-	-	-	-	-	-	Y*	-	-	Y*	* libstartup-notification
+_NET_STARTUP_INFO			Y*	-	-	Y*	-	-	-	-	-	-	-	-	Y*	-	-	Y*	* libstartup-notification
+_NET_SUPPORTED				Y	Y	Y	Y	Y	Y	Y*	Y	Y*	Y*	Y	Y	Y	Y*	Y	Y	(8)
+_NET_SUPPORTING_WM_CHECK		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	(9)
+_NET_SYSTEM_TRAY_MESSAGE_DATA		-	-	-	-	-	-	-	-	-	Y	-	-	-	-	-	-
+_NET_SYSTEM_TRAY_OPCODE			-	-	Y	Y	-	-	X	-	-	Y	-	-	-	-	-	-	(10)
+_NET_SYSTEM_TRAY_ORIENTATION		-	-	Y	-	-	-	-	-	-	N	-	-	-	-	-	-
+_NET_SYSTEM_TRAY_S%d			-	-	-	Y	-	-	Y	Y	-	Y	-	-	-	-	-	-
+_NET_SYSTEM_TRAY_VISUAL			-	-	-	-	-	-	-	-	-	N	-	-	-	-	-	-
+_NET_VIRTUAL_POS			-	-	-	-	x	-	-	-	-	-	-	-	-	-	-	-
+_NET_VIRTUAL_ROOTS			Y	-	-	-	-	-	-	-	-	-	-	-	-	X	X	-	(11)
+_NET_VISIBLE_DESKTOPS			Y	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	(25)
+_NET_WM_ACTION_ABOVE			Y	Y	Y	N	N	N	Y	N	N	Y	Y	N	Y	N	N	Y
+_NET_WM_ACTION_BELOW			Y	Y	Y	N	N	N	Y	N	N	Y	Y	N	Y	N	N	Y
+_NET_WM_ACTION_CHANGE_DESKTOP		Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_ACTION_CLOSE			Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_ACTION_FULLSCREEN		Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_ACTION_MAXIMIZE_HORZ		Y	Y	Y	N	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_ACTION_MAXIMIZE_VERT		Y	Y	Y	N	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_ACTION_MINIMIZE			Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_ACTION_MOVE			Y	Y	Y	N	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_ACTION_RESIZE			Y	Y	Y	N	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_ACTION_SHADE			Y	N	Y	N	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_ACTION_STICK			Y	N	Y	-	Y	-	Y	Y	Y	Y	Y	Y	-	Y	N	Y
+_NET_WM_ALLOWED_ACTIONS			Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_BYPASS_COMPOSITOR		-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-
+_NET_WM_DESKTOP_MASK			Y	-	-	-	x	-	-	-	-	-	-	-	-	-	-	-
+_NET_WM_DESKTOP				Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_WM_FULL_PLACEMENT			-	-	-	-	-	-	-	-	-	-	-	-	X	-	-	?	(12)
+_NET_WM_FULLSCREEN_MONITORS		Y	N	N	N	N	N	N	N	N	Y	Y	N	N	N	N	Y
+_NET_WM_HANDLED_ICONS			Y	-	-	-	-	-	Y	-	-	Y-	Y	Y	-	N*	-		(13)
+_NET_WM_ICON_GEOMETRY			-	-	-	-	-	-	-	-	-	-	-	Y	Y	Y	-	Y	(14)
+_NET_WM_ICON_NAME			Y	-	-	Y	-	Y	-	Y	Y	Y	Y	Y	Y	Y	N	Y	(15)
+_NET_WM_ICON				-	-	Y	Y	N	N	Y	Y	Y	Y	-	Y	Y	Y	Y	Y
+_NET_WM_MOVERESIZE			Y	Y	N	N	Y	N	N	Y	N	Y	N	N	Y	Y	N	Y
+_NET_WM_NAME				Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	(16)
+_NET_WM_OPAQUE_REGION			-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-
+_NET_WM_PID				Y	N	N	Y	Y	N	Y	N	Y	Y	Y	N	Y	Y	Y	Y	(17)
+_NET_WM_PING				Y	-	-	-	-	-	-	-	-	-	-	-	Y	-	Y	Y	(18)
+_NET_WM_STATE_ABOVE			Y	Y	Y	Y	Y*	Y	Y	Y	Y	Y	Y	Y	Y	Y*	N	Y	(21)
+_NET_WM_STATE_BELOW			Y	Y	Y	Y	Y*	Y	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_STATE_DECOR_BORDER		-	-	-	-	x	-	-	-	-	-	-	-	-	-	-	-
+_NET_WM_STATE_DECOR_HANDLE		-	-	-	-	x	-	-	-	-	-	-	-	-	-	-	-
+_NET_WM_STATE_DECOR_TITLE		-	-	-	-	x	-	-	-	-	-	-	-	-	-	-	-
+_NET_WM_STATE_DECOR			-	-	-	-	x	-	-	-	-	-	-	-	-	-	-	-
+_NET_WM_STATE_DEMANDS_ATTENTION		Y	N	Y	Y	N	N	Y	Y	Y	Y	Y	N	Y	N	N	Y	(19)
+_NET_WM_STATE_FOCUSED			Y	N	N	N	N	N	N	N	N	-	Y	N	N	N	N	N
+_NET_WM_STATE_FULLSCREEN		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_STATE_HIDDEN			Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_STATE_MAXIMIZED_HORZ		Y	Y	Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y*	Y	Y	(20)
+_NET_WM_STATE_MAXIMIZED_VERT		Y	Y	Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_WM_STATE_MODAL			Y	N	Y	Y	N	N	N	Y	Y	Y-	Y	N	Y	Y	Y	Y
+_NET_WM_STATE_PARENTRELATIVE_BACKGROUND	-	-	-	-	x	-	-	-	-	-	-	-	-	-	-	-
+_NET_WM_STATE_SHADED			Y	N	Y	N	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_WM_STATE_SKIP_PAGER		Y	N	Y	N	N	N	Y	N	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_STATE_SKIP_TASKBAR		Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_WM_STATE_STAYS_AT_BOTTOM		-	-	-	-	Y	-	-	-	-	-	-	-	-	-	-	-	(old name for _BELOW)
+_NET_WM_STATE_STAYS_ON_TOP		-	-	-	-	Y	-	-	-	-	-	-	-	-	-	-	-	(old name for _ABOVE)
+_NET_WM_STATE_STICKY			Y	N	Y	Y	Y	-	Y	Y	Y	Y	Y	Y	-	Y	Y	Y
+_NET_WM_STATE				Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_WM_STRUT				Y	Y	Y	N	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
+_NET_WM_STRUT_PARTIAL			Y	Y	Y	Y	N	N	Y	N	N	Y	Y	N	Y	N	N	Y
+_NET_WM_SYNC_REQUEST_COUNTER		Y	N	N	N	N	N	N	N	N	N	N	N	Y	N	N	N
+_NET_WM_SYNC_REQUEST			Y	N	N	N	N	N	N	N	N	N	N	N	Y	N	N	N
+_NET_WM_USER_TIME			Y	N	N	N	N	N	Y	N	N	Y	Y	N	Y	N	N	Y
+_NET_WM_USER_TIME_WINDOW		Y	N	N	N	N	N	Y	N	N	Y	Y	N	N	N	N	Y
+_NET_WM_VISIBLE_ICON_NAME		Y	N	N	Y	N	Y	Y	N	Y	Y	Y	N	Y	N*	N	N	* misspelt
+_NET_WM_VISIBLE_NAME			Y	N	N	N	Y	Y	Y	N	Y	Y	Y	N	Y	Y	N	N
+_NET_WM_WINDOW_OPACITY			Y	-	Y	Y*	-	-	-	-	Y	-	-	-	-	-	-	-	(24) non-standard
+_NET_WM_WINDOW_TYPE_COMBO		Y	N	N	Y	N	N	N	N	N	Y	Y	N	N	N	N	N
+_NET_WM_WINDOW_TYPE_DESKTOP		Y	Y	Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_WM_WINDOW_TYPE_DIALOG		Y	N	Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_WM_WINDOW_TYPE_DND			Y	N	N	Y	N	N	N	N	N	Y	Y	N	N	N	N	N
+_NET_WM_WINDOW_TYPE_DOCK		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_WM_WINDOW_TYPE_DROPDOWN_MENU	Y	N	N	Y	N	N	N	N	N	Y	Y	N	N	N	N	N
+_NET_WM_WINDOW_TYPE_MENU		Y	N	Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_WM_WINDOW_TYPE_NORMAL		Y	N	Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_WM_WINDOW_TYPE_NOTIFICATION	Y	N	Y	N	N	Y	N	N	Y	Y	N	N	Y	N	N
+_NET_WM_WINDOW_TYPE_POPUP_MENU		Y	N	Y	N	N	N	N	N	Y	Y	N	N*	N	N	N
+_NET_WM_WINDOW_TYPE_SPLASH		Y	N	Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	N	N	Y
+_NET_WM_WINDOW_TYPE_TOOLBAR		Y	N	Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_WM_WINDOW_TYPE_TOOLTIP		Y	N	N	Y	N	N	N	N	N	Y	Y	N	N	N	N	N
+_NET_WM_WINDOW_TYPE_UTILITY		Y	N	Y	Y	Y	N	Y	N	Y	Y	Y	Y	Y	N	N	Y
+_NET_WM_WINDOW_TYPE			Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
+_NET_WORKAREA				Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	N	Y	Y	N	Y
+---------------------------------------	---	---	---	---	---	---	---	---	---	---	---	---	---	---	---	---
+Total N					 0N	32N	17N	31N	25N	42N	14N	22N	22N	 6N	 6N	27N	 9N	25N	48N	11N
+Total Y					91Y	42Y	60Y	48Y	52Y	31Y	63Y	54Y	55Y	74Y	71Y	50Y	73Y	53Y	29Y	69Y
+---------------------------------------	---	---	---	---	---	---	---	---	---	---	---	---	---	---	---	---
+Total					80	80	80	80	80	80	80	80	80	80	80	80	80	80	80	80
 
+ADWM	    91 Y     0 N	(http://github.com/bbidulock/adwm)
 IceWM	    74 Y     6 N	(http://github.com/bbidulock/icewm)
 Blackbox    71 Y     6 N	(http://github.com/bbidulock/blackboxwm)
 Openbox	    73 Y     9 N
@@ -399,11 +402,12 @@ Metacity    69 Y    11 N
 JWM	    63 Y    13 N	(http://github.com/joewing/jwm)
 UWM	    60 Y    17 N
 PeKWM	    55 Y    22 N
-FVWM	    53 Y    25 N
 Fluxbox	    54 Y    22 N
+FVWM	    53 Y    25 N
+Waimea	    52 Y    25 N
 Wmaker	    50 Y    27 N
 Awesome	    48 Y    31 N
-Waimea	    32 Y    39 N
+matwm	    42 Y    32 N	(http://segin-utils.googlecode.com/svn/trunk/matwm2)
 Wind	    31 Y    42 N	(http://windwm.sourceforge.net)
 AfterStep   29 Y    48 N
 
@@ -497,6 +501,16 @@ Notes:
 (24) Awesome supports _NET_WM_WINDOW_OPACITY but does not report it in
      _NET_SUPPORTED.
 
+(25) _NET_VISIBLE_DESKTOPS is a non-standard property that provides an array
+     of desktop indices that are being displayed on a given monitor.  The first
+     element in the array corresponds to RANDR/Xinerama screen 0.  Note that
+     _NET_CURRENT_DESKTOP can also be extended for this purpose.
+
+(26) _NET_MONITOR_GEOMETRY is a non-standard property that provides the
+     dimensions and position (x,y,w,h) of each monitor within a RANDR/Xinerama
+     multi-head screen.  The first 4-tuple corresponds to RANDR/Xinerama screen
+     0 and so on.
+
 
 Current WMH support is as follows:
 
@@ -504,33 +518,35 @@ Note that support for WMH has been removed from maintained window managers and
 its use is largely deprecated.  The only active window manager still supporting
 WMH is FVWM.
 
-Item				ETWM	JWM	Fluxbox	PeKWM	IceWM	Bbox	Wmaker	Openbox	FVWM
-----				----	---	-------	-----	-----	----	------	-------	----
-_WIN_APP_STATE			Y	-	-	-	N	-	-	-	N
-_WIN_AREA_COUNT			Y	-	-	-	Y*	-	-	-	Y
-_WIN_AREA			Y	-	-	-	Y*	-	-	-	Y
-_WIN_CLIENT_LIST		Y	-	-	-	Y	-	-	-	Y
-_WIN_CLIENT_MOVING		Y	-	-	-	N	-	-	-	N
-_WIN_DESKTOP_BUTTON_PROXY	Y	-	-	-	Y*	-	-	-	Y
-_WIN_EXPANDED_SIZE		Y	-	-	-	N	-	-	-	N
-_WIN_HINTS			Y	-	-	-	Y	-	-	-	Y
-_WIN_ICONS			Y	-	-	-	Y	-	-	-	N
-_WIN_LAYER			Y	-	-	-	Y	-	-	-	Y
-_WIN_MAXIMIZED_GEOMETRY		Y	-	-	-	N	-	-	-	N
-_WIN_PROTOCOLS			Y	-	-	-	Y	-	-	-	Y
-_WIN_STATE			Y	-	-	-	Y	-	-	-	Y
-_WIN_SUPPORTING_WM_CHECK	Y	-	-	-	Y	-	-	-	Y
-_WIN_WORKAREA			Y	-	-	-	Y	-	-	-	N
-_WIN_WORKSPACE_COUNT		Y	-	-	-	Y	-	-	-	Y
-_WIN_WORKSPACE_NAMES		Y	-	-	-	Y	-	-	-	Y
-_WIN_WORKSPACE			Y	-	-	-	Y	-	-	-	Y
-_WIN_WORKSPACES			Y	-	-	-	?	-	-	-	N
-_SWM_VROOT			Y	-	-	-	N	-	-	-	N
--------------------------	---	---	---	---	---	---	---	---	---
-Total N				 0 N	-	-	-	 5 N	-	-	-	 8 N
-Total Y				19 Y	-	-	-	14 Y	-	-	-	12 Y
--------------------------	---	---	---	---	---	---	---	---	---
-Total				20	-	-	-	20	-	-	-	20
+Item				ADWM	ETWM	JWM	Fluxbox	PeKWM	IceWM	Bbox	Wmaker	Openbox	FVWM
+----				-------	----	---	-------	-----	-----	----	------	-------	----
+_WIN_APP_STATE			-	Y	-	-	-	N	-	-	-	N
+_WIN_AREA_COUNT			Y	Y	-	-	-	Y*	-	-	-	Y
+_WIN_AREA			Y	Y	-	-	-	Y*	-	-	-	Y
+_WIN_CLIENT_LIST		Y	Y	-	-	-	Y	-	-	-	Y
+_WIN_CLIENT_MOVING		Y	Y	-	-	-	N	-	-	-	N
+_WIN_DESKTOP_BUTTON_PROXY	Y	Y	-	-	-	Y*	-	-	-	Y
+_WIN_EXPANDED_SIZE		Y	Y	-	-	-	N	-	-	-	N
+_WIN_FOCUS			-	-	-	-	-	-	-	-	-	-
+_WIN_HINTS			Y	Y	-	-	-	Y	-	-	-	Y
+_WIN_ICONS			-	Y	-	-	-	Y	-	-	-	N
+_WIN_LAYER			Y	Y	-	-	-	Y	-	-	-	Y
+_WIN_MAXIMIZED_GEOMETRY		Y	Y	-	-	-	N	-	-	-	N
+_WIN_PROTOCOLS			Y	Y	-	-	-	Y	-	-	-	Y
+_WIN_RESIZE			-	-	-	-	-	-	-	-	-	-
+_WIN_STATE			Y	Y	-	-	-	Y	-	-	-	Y
+_WIN_SUPPORTING_WM_CHECK	Y	Y	-	-	-	Y	-	-	-	Y
+_WIN_WORKAREA			Y	Y	-	-	-	Y	-	-	-	N
+_WIN_WORKSPACE_COUNT		Y	Y	-	-	-	Y	-	-	-	Y
+_WIN_WORKSPACE_NAMES		Y	Y	-	-	-	Y	-	-	-	Y
+_WIN_WORKSPACE			Y	Y	-	-	-	Y	-	-	-	Y
+_WIN_WORKSPACES			Y	Y	-	-	-	?	-	-	-	N
+_SWM_VROOT			-	Y	-	-	-	N	-	-	-	N
+-------------------------	---	---	---	---	---	---	---	---	---	---
+Total N				 0 N	 0 N	-	-	-	 5 N	-	-	-	 8 N
+Total Y				19 Y	19 Y	-	-	-	14 Y	-	-	-	12 Y
+-------------------------	---	---	---	---	---	---	---	---	---	---
+Total				20	20	-	-	-	20	-	-	-	20
 
 * => supported but not included in _WIN_PROTOCOLS().
 

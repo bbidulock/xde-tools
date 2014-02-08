@@ -155,7 +155,7 @@ L<icewm(1)> with this environment variable set.  L<icewm(1)> respects
 the environment variable, so no special options are required when
 launching L<icewm(1)>.
 
-The default configuraiton file when C<ICEWM_PRIVCFG> is not specified is
+The default configuration file when C<ICEWM_PRIVCFG> is not specified is
 F<~/.icewm/theme>.  The locations of all L<icewm(1)> configuration files
 are the same directory.  L<xde-session(1p)> typically sets
 C<ICEWM_PRIVCFG> to F<$XDG_CONFIG_HOME/icewm>.

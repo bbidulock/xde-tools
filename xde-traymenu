@@ -38,6 +38,7 @@ use I18N::Langinfo qw(langinfo CODESET);
 use POSIX qw(locale_h);
 use Glib qw(TRUE FALSE);
 use Gtk2;
+use Gtk2::Unique;
 use strict;
 use warnings;
 
@@ -58,6 +59,8 @@ unless ($here =~ m{^/usr/bin}) {
     my %path = (map{$_=>1}split(/:/,$ENV{PATH}));
     $ENV{PATH} = "$here:$ENV{PATH}" unless exists $path{$here};
 }
+
+my $program = $0; $program =~ s{^.*/}{};
 
 Gtk2::Rc->set_default_files("$ENV{HOME}/.gtkrc-2.0.xde");
 
@@ -153,6 +156,8 @@ my %outputs = (
     ctwm	=> [ "$HOME/.ctwm/menu" ],
     vtwm	=> [ "$HOME/.vtwm/menu" ],
     twm		=> [ "$HOME/.twm/menu" ],
+    echinus	=> [ "$HOME/.echinus/menu" ],
+    awesome	=> [ "$HOME/.awesome/menu" ],
 );
 
 my %formats = (
@@ -168,6 +173,8 @@ my %formats = (
     ctwm	=> [qw(CTWM	XDG::Menu::Tray	)],
     vtwm	=> [qw(VTWM	XDG::Menu::Tray	)],
     twm		=> [qw(TWM	XDG::Menu::Tray	)],
+    echinus	=> [qw(ECHINUS	XDG::Menu::Tray )],
+    awesome	=> [qw(AWESOME	XDG::Menu::Tray )],
 );
 
 my %desktops = (
@@ -182,6 +189,8 @@ my %desktops = (
     CTWM	=> [qw(ctwm	XDG::Menu::Tray	)],
     VTWM	=> [qw(vtwm	XDG::Menu::Tray	)],
     TWM		=> [qw(twm	XDG::Menu::Tray	)],
+    ECHINUS	=> [qw(echinus	XDG::Menu::Tray )],
+    AWESOME	=> [qw(awesome	XDG::Menu::Tray )],
     LXDE	=> [qw(openbox3 XDG::Menu::Tray	)],
 );
 
@@ -281,6 +290,8 @@ the B<--output> option.  This option requires L<Linux::Inotify2(3pm)>.
 
 =cut
 
+my (@SAVEARGS) = (@ARGV);
+
 my %ops = (
     help	=> '',
     format	=> "\L$XDG_CURRENT_DESKTOP\E",
@@ -296,6 +307,9 @@ my %ops = (
     noicons	=> '',
     theme	=> $XDG_ICON_THEME,
     monitor	=> '',
+    button	=> 3,
+    timestamp	=> 0,
+    popup	=> '',
 );
 
 my $syntax = GetOptions(
@@ -314,6 +328,9 @@ my $syntax = GetOptions(
     "n"		    =>sub{$ops{icons}=0},
     "theme|t=s"	    =>\$ops{theme},
     "monitor|m"	    =>\$ops{monitor},
+    "timestamp|T=i" =>\$ops{timestamp},
+    "button|b=i"    =>\$ops{button},
+    "popup|p"	    =>\$ops{popup},
 );
 
 if ($ops{output} eq '') {
@@ -464,6 +481,56 @@ EOF
     exit($retval);
 }
 
+$program = 'xde-traymenu-popup' if $ops{popup};
+
+my $DESKTOP_STARTUP_ID = delete $ENV{DESKTOP_STARTUP_ID};
+my $unique = Gtk2::UniqueApp->new(
+	'com.unexicon.xde-traymenu', $DESKTOP_STARTUP_ID,
+	'xde-traymenu' => 1,
+	'xde-traymenu-popup' => 2);
+if ($unique->is_running) {
+    if ($program eq 'xde-traymenu') {
+	$unique->send_message_by_name($program=>text=>join('|',@SAVEARGS));
+	print STDERR "Another instance of $program is already running.\n";
+    } elsif ($program eq 'xde-traymenu-popup') {
+	$unique->send_message_by_name($program=>text=>join(',',$ops{button},$ops{timestamp}));
+    }
+    exit(0);
+}
+
+my $menu;
+
+my $window = Gtk2::Window->new('toplevel');
+$unique->watch_window($window);
+$unique->signal_connect(message_received=>sub{
+	my ($unique,$command,$message,$time) = @_;
+	if ($command eq 'xde-traymenu') {
+	    if ($ops{verbose}) {
+		print STDERR "$command command received\n";
+		print STDERR "\tscreen is ", $message->get_screen, "\n";
+		print STDERR "\tworkspace is ", $message->get_workspace, "\n";
+		print STDERR "\tstartup id is ", $message->get_startup_id, "\n";
+	    }
+	}
+	elsif ($command eq 'xde-traymenu-popup') {
+	    if ($ops{verbose}) {
+		print STDERR "$command command received\n";
+		print STDERR "\tscreen is ", $message->get_screen, "\n";
+		print STDERR "\tworkspace is ", $message->get_workspace, "\n";
+		print STDERR "\tstartup id is ", $message->get_startup_id, "\n";
+	    }
+	    my $text = $message->get_text;
+	    my ($button,$timestamp) = split(/,/,$text);
+	    $button = 3 unless $button == 1 || $button == 2 || $button == 3;
+	    $timestamp = $time unless $timestamp;
+	    $menu->show_all;
+	    $menu->show_now;
+	    $menu->map;
+#$menu->popup(undef,undef,undef,undef,$button,$timestamp);
+	}
+	return 'ok';
+});
+
 #my $style = Gtk2::RcStyle->new;
 my @colors = (
     Gtk2::Gdk::Color->new(0x16*257,0x16*257,0x16*257), # 0
@@ -522,9 +589,12 @@ my $tree = $parser->parse_menu($ops{root_menu});
 my $tray = new XDG::Menu::Tray;
 #$tray->{style} = $style;
 #$tray->{colors} = \@colors;
-my $menu = $tray->create($tree);
+$menu = $tray->create($tree);
 
-my $icon = new Gtk2::StatusIcon->new_from_icon_name('arch-logo');
+my $pixbuf = Gtk2::IconTheme->get_default->load_icon('arch-logo',16,['generic-fallback','use-builtin']);
+my $icon =  Gtk2::StatusIcon->new_from_pixbuf($pixbuf);
+
+#my $icon = new Gtk2::StatusIcon->new_from_icon_name('arch-logo');
 $icon->set_tooltip_text('Click for menu...');
 $icon->set_visible(1);
 $icon->signal_connect(button_press_event=>sub{
@@ -536,7 +606,7 @@ $icon->signal_connect(button_press_event=>sub{
 #    Gtk2::Rc->reparse_all;
 #    Gtk2::Rc->parse("$ENV{HOME}/.gtkrc-2.0");
 #    Gtk2::Rc->reset_styles('gtk-theme-name');
-    $menu->popup(undef,undef,undef,undef,$button,$time);
+    $menu->popup(undef,undef,'Gtk2::StatusIcon::position_menu',$icon,$button,$time);
     return Gtk2::EVENT_STOP;
 });
 $icon->signal_connect(popup_menu=>sub{
@@ -549,7 +619,7 @@ $icon->signal_connect(popup_menu=>sub{
 #    Gtk2::Rc->reparse_all;
 #    Gtk2::Rc->parse("$ENV{HOME}/.gtkrc-2.0");
 #    Gtk2::Rc->reset_styles('gtk-theme-name');
-    $menu->popup(undef,undef,undef,undef,$button,$time);
+    $menu->popup(undef,undef,'Gtk2::StatusIcon::position_menu',$icon,$button,$time);
     return Gtk2::EVENT_PROPAGATE;
 });
 $icon->signal_connect(activate=>sub{
@@ -563,6 +633,10 @@ $icon->signal_connect(query_tooltip=>sub{
 });
 $icon->signal_connect(size_changed=>sub{
     my ($icon,$size) = @_;
+    if ($size != $pixbuf->get_height) {
+	$pixbuf = Gtk2::IconTheme->get_default->load_icon('arch-logo',$size,['generic-fallback','use-builtin']);
+	$icon->set_from_pixbuf($pixbuf);
+    }
     return Gtk2::EVENT_PROPAGATE;
 });
 

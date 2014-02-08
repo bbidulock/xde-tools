@@ -50,6 +50,7 @@ use XDG::Menu::Ctwm;
 use XDG::Menu::Vtwm;
 use XDG::Menu::Twm;
 use XDG::Menu::Uwm;
+use XDG::Menu::Waimea;
 use Getopt::Long;
 use Encode;
 use I18N::Langinfo qw(langinfo CODESET);
@@ -155,6 +156,7 @@ my %outputs = (
     vtwm	=> [ "$HOME/.vtwm/menu" ],
     twm		=> [ "$HOME/.twm/menu" ],
     uwm		=> [ "$HOME/.uwm/menu" ],
+    waimea	=> [ "$HOME/.waimea/menu" ],
 );
 
 my %formats = (
@@ -171,6 +173,7 @@ my %formats = (
     vtwm	=> [qw(VTWM	XDG::Menu::Vtwm	    )],
     twm		=> [qw(TWM	XDG::Menu::Twm	    )],
     uwm		=> [qw(UWM	XDG::Menu::Uwm	    )],
+    waimea	=> [qw(WAIMEA	XDG::Menu::Waimea   )],
 );
 
 my %desktops = (
@@ -186,6 +189,7 @@ my %desktops = (
     VTWM	=> [qw(vtwm	XDG::Menu::Vtwm	    )],
     TWM		=> [qw(twm	XDG::Menu::Twm	    )],
     UWM		=> [qw(uwm	XDG::Menu::Uwm	    )],
+    WAIMEA	=> [qw(waimea	XDG::Menu::Waimea   )],
     LXDE        => [qw(openbox3 XDG::Menu::Openbox3 )],
 );
 
@@ -210,7 +214,7 @@ Print debugging information on standard error during operation.
 Specify the output format.  Recognized output formats are as follows:
 C<twm>, C<wmaker>, C<windowmaker>, C<fvwm>, C<fvwm2>, C<fvwm-crystal>,
 C<ion3>, C<blackbox>, C<fluxbox>, C<openbox>, C<xfce4>, C<openbox3>,
-C<openbox3-pipe>, C<awesome>, C<icewm>, C<jwm>, C<pekwm>, C<μwm>.
+C<openbox3-pipe>, C<awesome>, C<icewm>, C<jwm>, C<pekwm>, C<μwm>, C<waimea>.
 
 When unspecified, the setting of the B<XDG_CURRENT_DESKTOP> environment
 variable is used to determine the format.  This is accomplished by
@@ -260,7 +264,7 @@ menu location for the current B<--format> will be used.
 
 Do not include icons in the generated menu files.  This option has no
 effect when it is not possible to generate icons for the menu format.
-That is, when the B<--format> is one such as C<blackbox>, it is not
+That is, when the B<--format> is one such as C<blackbox>, or C<waimea> it is not
 possible to place icons in the menu and this option is therefore
 ignored.  The default is to place icons in capable generated menus.
 

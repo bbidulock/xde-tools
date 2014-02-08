@@ -360,6 +360,7 @@ $splscr->set_type_hint('splashscreen');
 $splscr->set_border_width(20);
 $splscr->set_skip_pager_hint(TRUE);
 $splscr->set_skip_taskbar_hint(TRUE);
+$splscr->set_keep_below(TRUE);
 $splscr->set_position('center-always');
 my $table;
 my $cols = 7;

@@ -37,6 +37,23 @@ The following methods are provided by this module:
 
 =over
 
+=item $wm = X11::Protocol::WMSpecific->B<new>(I<$X>)
+
+Creates a new instance of an X11::Protocol::WMSpecific object.  When the
+passed argument, I<$X>, is C<undef>, a new X11::Protocol object will be
+created.  Otherwise, if an X11::Protocol object is passed, it will be
+initialized and blessed as an X11::Protocol::WMSpecific object.
+
+=cut
+
+sub new {
+    my($type,$X) = @_;
+    $X = X11::Protocol->new() unless $X and ref($X) and
+	$X->isa('X11::Protocol');
+    bless $X, $type;
+    return $X;
+}
+
 =back
 
 =head2 General
@@ -795,7 +812,7 @@ sub dmp_OB_APP_CLASS {
 =cut
 
 sub set_OB_APP_CLASS {
-    return setWMPropertString(@_[0..1],_OB_APP_CLASS=>UTF8_STRING=>$_[2]);
+    return setWMPropertyString(@_[0..1],_OB_APP_CLASS=>UTF8_STRING=>$_[2]);
 }
 
 =back

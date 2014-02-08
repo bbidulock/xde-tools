@@ -88,7 +88,7 @@ $VERSION = 0.01;
 
 =head1 NAME
 
-XDE::WMH -- provides methods for controlling window manager hints.
+X11::Protocol::WMH -- provides methods for controlling window manager hints.
 
 =head1 SYNOPSIS
 
@@ -106,8 +106,10 @@ WMH compliant anymore.  Many that are EWMH compliant have removed
 support for WMH (like L<fluxbox(1)>).  Several that support
 C<_WIN_DESKTOP_BUTTON_PROXY>, such as L<icewm(1)>, L<fvwm(1)>,
 L<metacity(1)> still support WMH; however, L<icewm(1)> has not
-received any development in some years.  L<fvwm(1)> may be the only
-XDE-supported window manager that continues to be WMH compliant.
+received any development in some years (I updated it recently, see
+L<http://github.com/bbidulock/icewm>.  L<fvwm(1)> would be the only
+XDE-supported window manager that continues to be WMH compliant if
+I had not added it to L<etwm(1)> and L<echinus(1)>.
 
 =head1 METHODS
 
