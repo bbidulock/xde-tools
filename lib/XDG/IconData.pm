@@ -1,4 +1,4 @@
-package XDE::IconData;
+package XDG::IconData;
 use strict;
 use warnings;
 

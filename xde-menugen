@@ -514,7 +514,7 @@ defaults to the value of this environment variable.
 =item B<XDG_MENU_PREFIX>
 
 Specifies the prefix to apply to the default menu name to derive the
-root menu unless specified with the B<--root-menu>.  When unspecified,
+root menu unless specified with B<--root-menu>.  When unspecified,
 this variable defaults to a null string.
 
 B<xde-menugen> finds the root menu using the following logic:

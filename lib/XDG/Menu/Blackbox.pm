@@ -123,7 +123,7 @@ sub rootmenu {
 	$text .= "\n";
 	$text .= $entries;
 	$text .= "\n";
-	$text .= sprintf "%s\n", '  [nop] (————————————) {}',
+	$text .= sprintf "%s\n", '  [nop] ('. "\N{EM DASH}" x 12 .') {}';
 	$text .= "\n";
 	$text .= sprintf "%s\n", '  [workspaces] (Workspace List)';
 	$text .= sprintf "%s\n", '  [config] (Configuration)';
@@ -135,7 +135,7 @@ sub rootmenu {
 	$text .= $self->wmmenu();
 	$text .= sprintf "%s\n", '  [reconfig] (Reconfigure)';
 	$text .= "\n";
-	$text .= sprintf "%s\n", '  [nop] (————————————) {}',
+	$text .= sprintf "%s\n", '  [nop] ('. "\N{EM DASH}" x 12 .') {}';
 	$text .= "\n";
 	$text .= sprintf "%s\n", '  [exit] (Exit)';
 	$text .= sprintf "%s\n", '[end]';
@@ -167,7 +167,7 @@ sub Header {
 }
 sub Separator {
 	my ($self,$item,$indent) = @_;
-	return sprintf "\n%s[nop] (————————————) {}\n\n",
+	return sprintf "\n%s[nop] (". "\N{EM DASH}" x 12 .") {}\n\n",
 	       $indent;
 }
 sub Application {

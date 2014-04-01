@@ -158,6 +158,7 @@ my %outputs = (
     twm		=> [ "$HOME/.twm/menu" ],
     echinus	=> [ "$HOME/.echinus/menu" ],
     awesome	=> [ "$HOME/.awesome/menu" ],
+    adwm	=> [ "$HOME/.adwm/menu" ],
 );
 
 my %formats = (
@@ -175,6 +176,7 @@ my %formats = (
     twm		=> [qw(TWM	XDG::Menu::Tray	)],
     echinus	=> [qw(ECHINUS	XDG::Menu::Tray )],
     awesome	=> [qw(AWESOME	XDG::Menu::Tray )],
+    adwm	=> [qw(ADWM	XDG::Menu::Tray )],
 );
 
 my %desktops = (
@@ -192,6 +194,7 @@ my %desktops = (
     ECHINUS	=> [qw(echinus	XDG::Menu::Tray )],
     AWESOME	=> [qw(awesome	XDG::Menu::Tray )],
     LXDE	=> [qw(openbox3 XDG::Menu::Tray	)],
+    ADWM	=> [qw(adwm	XDG::Menu::Tray )],
 );
 
 

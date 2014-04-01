@@ -281,4 +281,6 @@ sub Directory {
 
 1;
 
+__END__
+
 # vim: set sw=4 tw=72 fo=tcqlorn foldmarker==head,=head foldmethod=marker:
