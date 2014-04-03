@@ -1,5 +1,7 @@
 #!/usr/bin/perl
 
+binmode STDOUT, "encoding(UTF-8)";
+
 # in case we get executed (not sourced) as a shell program
 eval 'exec perl -S $0 ${1+"@"}'
     if $running_under_some_shell;
@@ -15,6 +17,8 @@ BEGIN {
     }
     unshift @INC, "$here/lib" unless $here =~ m{^/usr/bin};
 }
+
+=encoding UTF-8
 
 =head1 NAME
 
@@ -51,6 +55,7 @@ use XDG::Menu::Vtwm;
 use XDG::Menu::Twm;
 use XDG::Menu::Uwm;
 use XDG::Menu::Waimea;
+use XDG::Menu::PerlPanel;
 use Getopt::Long;
 use Encode;
 use I18N::Langinfo qw(langinfo CODESET);
@@ -157,6 +162,7 @@ my %outputs = (
     twm		=> [ "$HOME/.twm/menu" ],
     uwm		=> [ "$HOME/.uwm/menu" ],
     waimea	=> [ "$HOME/.waimea/menu" ],
+    perlpanel	=> [ "$HOME/.perlpanel/menu" ],
 );
 
 my %formats = (
@@ -174,6 +180,7 @@ my %formats = (
     twm		=> [qw(TWM	XDG::Menu::Twm	    )],
     uwm		=> [qw(UWM	XDG::Menu::Uwm	    )],
     waimea	=> [qw(WAIMEA	XDG::Menu::Waimea   )],
+    perlpanel	=> [qw(PERLPANEL XDG::Menu::PerlPanel )],
 );
 
 my %desktops = (
