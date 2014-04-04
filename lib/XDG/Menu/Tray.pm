@@ -132,8 +132,9 @@ sub Header {
     if (my $tool = $item->{Entry}{Comment}) {
 	$mi->set_tooltip_text($tool);
     }
-    my $ic = $item->{Entry}{Icon}; $ic = 'gtk-unknown' unless $ic;
-    my $im = Gtk2::Image->new_from_icon_name($ic,'menu');
+    my $fi = $item->Icon([qw(png xpm svg)]);
+    my $pb = Gtk2::Gdk::Pixbuf->new_from_file_at_size($fi,16,16) if $fi;
+    my $im = Gtk2::Image->new_from_pixbuf($pb) if $pb;
     $self->apply_style($im) if $im;
     $mi->set_image($im) if $im;
     $mi->show_all;
@@ -155,8 +156,9 @@ sub Application {
     if (my $tool = $item->{Entry}{Comment}) {
 	$mi->set_tooltip_text($tool);
     }
-    my $ic = $item->{Entry}{Icon}; $ic = 'gtk-unknown' unless $ic;
-    my $im = Gtk2::Image->new_from_icon_name($ic,'menu');
+    my $fi = $item->Icon([qw(png xpm svg)]);
+    my $pb = Gtk2::Gdk::Pixbuf->new_from_file_at_size($fi,16,16) if $fi;
+    my $im = Gtk2::Image->new_from_pixbuf($pb) if $pb;
     $self->apply_style($im) if $im;
     $mi->set_image($im) if $im;
     $mi->signal_connect(activate=>sub{system $item->Exec.' &'});
@@ -179,8 +181,9 @@ sub Directory {
     if (my $tool = $item->{Entry}{Comment}) {
 	$mi->set_tooltip_text($tool);
     }
-    my $ic = $item->{Entry}{Icon}; $ic = 'gtk-unknown' unless $ic;
-    my $im = Gtk2::Image->new_from_icon_name($ic,'menu');
+    my $fi = $item->Icon([qw(png xpm svg)]);
+    my $pb = Gtk2::Gdk::Pixbuf->new_from_file_at_size($fi,16,16) if $fi;
+    my $im = Gtk2::Image->new_from_pixbuf($pb) if $pb;
     $self->apply_style($im) if $im;
     $mi->set_image($im) if $im;
     $mi->set_submenu($m);
@@ -190,8 +193,12 @@ sub Directory {
 
 1;
 
+__END__
+
 =head1 SEE ALSO
 
 L<XDG::Menu(3pm)>
 
 =cut
+
+# vim: set sw=4 tw=72 fo=tcqlorn foldmarker==head,=head foldmethod=marker:

@@ -42,6 +42,11 @@ sub new {
     }, $type;
 }
 
+sub Icon {
+    my ($self,$exts) = @_;
+    return $self->SUPER::Icon($exts,'unknown');
+}
+
 package XDG::Menu::Layout::Separator;
 use base qw(XDG::Menu::Layout::Item);
 use strict;
@@ -87,6 +92,11 @@ sub StartupWMClass {
     return $self->{Entry}->{StartupWMClass};
 }
 
+sub Icon {
+    my ($self,$exts) = @_;
+    return $self->SUPER::Icon($exts,'exec');
+}
+
 package XDG::Menu::Layout::Directory;
 use base qw(XDG::Menu::Layout::Entry);
 use strict;
@@ -100,6 +110,11 @@ sub new {
 	Name =>	    $menu->{Directory}{Name},
 	Path =>	    $menu->{Path},
     }, $type;
+}
+
+sub Icon {
+    my ($self,$exts) = @_;
+    return $self->SUPER::Icon($exts,'folder');
 }
 
 package XDG::Menu::DesktopEntry;
@@ -136,6 +151,11 @@ sub new {
 	}
 	elsif ($parsing and /^([^=]*)=([^[:cntrl:]]*)/) {
 	    my ($label,$value) = ($1,$2);
+	    # some .desktop files put illegal spaces
+	    $label =~ s/^\s+//;
+	    $label =~ s/\s+$//;
+	    $value =~ s/^\s+//;
+	    $value =~ s/\s+$//;
 	    $self->{$label} = $value
 		unless $label =~ /[[]/;
 	}
@@ -147,7 +167,8 @@ sub new {
 }
 
 sub Icon {
-    my ($self,$exts) = @_;
+    my ($self,$exts,$dflt) = @_;
+    $dflt = 'exec' unless $dflt;
     my $icon = $self->{Icon};
     $icon = '' unless $icon;
     $exts = ['xpm'] unless $exts and @$exts;
@@ -161,7 +182,7 @@ sub Icon {
     $name =~ s/\.[a-z]{3,4}$//;
     if (my $icons = $self->get_icons) {
 	$icon = $icons->FindIcon($name,16,$exts) if $name;
-	$icon = $icons->FindIcon('exec',16,$exts) unless $icon;
+	$icon = $icons->FindIcon($dflt,16,$exts) unless $icon;
 	return $icon if $icon;
     }
     return '';
