@@ -399,7 +399,7 @@ sub read_gvfsapps {
 	$e{'X-UsesGnomeVFS'} = $a{uses_gnomevfs}
 	    if $a{uses_gnomevfs};
 
-	my $desktop = $self->{XDG_CURRENT_DESKTOP};
+	my @desktops = split(/:/,$self->{XDG_CURRENT_DESKTOP});
 	unless ($e{Name}) {
 	    $e{'X-Disable'} = 'true';
 	    $e{'X-Disable-Reason'} = 'No Name';
@@ -412,13 +412,31 @@ sub read_gvfsapps {
 	    $e{'X-Disable'} = 'true';
 	    $e{'X-Disable-Reason'} = 'Hidden';
 	}
-	if ($e{OnlyShowIn} and ";$e{OnlyShowIn};" !~ /;$desktop;/) {
-	    $e{'X-Disable'} = 'true';
-	    $e{'X-Disable-Reason'} = "Only shown in $e{OnlyShowIn}";
+	if ($e{OnlyShowIn}) {
+	    my $found = 0;
+	    foreach my $desktop (@desktops) {
+		if (";$e{OnlyShowIn};" =~ /;$desktop;/) {
+		    $found = 1;
+		    last;
+		}
+	    }
+	    if (!$found) {
+		$e{'X-Disable'} = 'true';
+		$e{'X-Disable-Reason'} = "Only shown in $e{OnlyShowIn}";
+	    }
 	}
-	if ($e{NotShowIn} and ";$e{NotShowIn};" =~ /;$desktop;/) {
-	    $e{'X-Disable'} = 'true';
-	    $e{'X-Disable-Reason'} = "Not shown in $e{NotShowIn}";
+	if ($e{NotShowIn}) {
+	    my $found = 0;
+	    foreach my $desktop (@desktops) {
+		if (";$e{NotShowIn};" =~ /;$desktop;/) {
+		    $found = 1;
+		    last;
+		}
+	    }
+	    if ($found) {
+		$e{'X-Disable'} = 'true';
+		$e{'X-Disable-Reason'} = "Not shown in $e{NotShowIn}";
+	    }
 	}
 	unless ($e{TryExec}) {
 	    ($e{TryExec}) = split(/\s+/,$e{Exec},2) if $e{Exec};

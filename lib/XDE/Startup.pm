@@ -67,6 +67,13 @@ sub defaults {
     $session = $self->{XDG_CURRENT_DESKTOP} unless $session;
     $session = $self->{ops}{session} unless $session;
     $session = 'XDE' unless $session;
+    if ($session =~ m{:}) {
+	$session = ":$session:";
+	$session =~ s{:XDE:}{:}g;
+	$session =~ s{^:+}{};
+	$session =~ s{:+$}{};
+	$session =~ s{:.*$}{};
+    }
     $session = "\U$session\E";
     $self->{ops}{message} = "Logout $session session?"
 	unless exists $self->{ops}{message};

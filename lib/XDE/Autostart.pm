@@ -571,6 +571,14 @@ sub autostart_execs {
     my $self = shift;
     my $desktop = $self->{XDG_CURRENT_DESKTOP};
     $desktop = 'default' unless $desktop;
+    if ($desktop =~ m{:}) {
+	$desktop = ":$desktop:";
+	$desktop =~ s{:XDE:}{:}g;
+	$desktop =~ s{^:+}{};
+	$desktop =~ s{:+$}{};
+	$desktop =~ s{:.*$}{};
+    }
+    $desktop = "\U$desktop\E";
     my @files = ();
     foreach (map{"$_/xde-session/$desktop"}$self->XDG_CONFIG_ARRAY) {
 	next unless -f "$_/autostart";

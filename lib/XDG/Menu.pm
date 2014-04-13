@@ -117,7 +117,7 @@ sub Icon {
     return $self->SUPER::Icon($exts,'folder');
 }
 
-package XDG::Menu::DesktopEntry;
+package XDG::Menu::DesktopAction;
 use Carp qw(cluck croak confess);
 use strict;
 use warnings;
@@ -133,46 +133,13 @@ sub get_icons {
     return $icons;
 }
 
-sub new {
-    my $self = bless {}, shift;
-    my $file = shift;
-    return undef unless -f $file;
-    open (my $fh, "<", $file) or warn $!;
-    return undef unless $fh;
-    my $parsing = 0;
-    while (<$fh>) {
-	if (/^\[/) {
-	    if (/^\[Desktop Entry\]/) {
-		$parsing = 1;
-	    }
-	    elsif (/^\[.*\]/) {
-		$parsing = 0;
-	    }
-	}
-	elsif ($parsing and /^([^=]*)=([^[:cntrl:]]*)/) {
-	    my ($label,$value) = ($1,$2);
-	    # some .desktop files put illegal spaces
-	    $label =~ s/^\s+//;
-	    $label =~ s/\s+$//;
-	    $value =~ s/^\s+//;
-	    $value =~ s/\s+$//;
-	    $self->{$label} = $value
-		unless $label =~ /[[]/;
-	}
-    }
-    close($fh);
-    $self->{file} = $file;
-    return undef unless $self->{Name};
-    return $self;
-}
-
 sub Icon {
     my ($self,$exts,$dflt) = @_;
     $dflt = 'exec' unless $dflt;
     my $icon = $self->{Icon};
     $icon = '' unless $icon;
     $exts = ['xpm'] unless $exts and @$exts;
-    if ($icon =~ m{/} and -f $icon) {
+    if ($icon =~ m{^/} and -f $icon) {
 	foreach (@$exts) {
 	    return $icon if $icon =~ m{\.$_$};
 	}
@@ -188,8 +155,154 @@ sub Icon {
     return '';
 }
 
+package XDG::Menu::DesktopEntry;
+use base qw(XDG::Menu::DesktopAction);
+use Encode qw(decode encode);
+use strict;
+use warnings;
+
+sub new {
+    my $self = bless {}, shift;
+    my $file = shift;
+    my $lang = shift;
+    return undef unless -f $file;
+    open (my $fh, "<", $file) or warn $!;
+    return undef unless $fh;
+    my ($section,$action) = ('','');
+    my %xl = ();
+    while (<$fh>) {
+	if (/^\[([^]]*)\]/) {
+	    $section = $1;
+	    if ($section =~ /^Desktop Action (\w+)$/) {
+		$action = $1;
+		$self->{_actions}{$action} = bless {}, 'XDG::Menu::DesktopAction';
+	    } else {
+		$action = '';
+	    }
+	     #print "I: $file parsing section $section\n";
+	    $section = '' unless
+		$section eq 'Desktop Entry' or $action;
+	    }
+	elsif ($section and /^([^=\[]+)\[([^=\]]+)\]\s*=\s*([^[:cntrl:]]*)/) {
+	    my ($label,$trans,$value) = ($1,$2,$3);
+	    $value =~ s/\s+$//;
+	    if ($action) {
+		$xl{_actions}{$action}{$label}{$trans} = decode('UTF-8', $value);
+		 #print "I: $file action $action $label\[$trans\]=$value\n";
+	    } else {
+		$xl{$label}{$trans} = decode('UTF-8', $value);
+		 #print "I: $file $label\[$trans\]=$value\n";
+	    }
+	}
+	elsif ($section and /^([^=]*)\s*=\s*([^[:cntrl:]]*)/) {
+	    my ($label,$value) = ($1,$2);
+	    $value =~ s/\s+$//;
+	    if ($action) {
+		$self->{_actions}{$action}{$label} = decode('UTF-8', $value);
+		 #print "I: $file action $action $label=$value\n";
+	    } else {
+		$self->{$label} = decode('UTF-8', $value);
+		 #print "I: $file $label=$value\n";
+	    }
+	}
+    }
+    close($fh);
+    if ($lang) {
+	$lang =~ m{^(..)}; my $short = $1;
+	if (exists $xl{_actions}) {
+	    foreach $action (keys %{$xl{_actions}}) {
+		foreach (keys %{$xl{_actions}{$action}}) {
+		    if (exists $xl{_actions}{$action}{$_}{$lang}) {
+			$self->{_actions}{$action}{$_} = $xl{_actions}{$action}{$_}{$lang};
+		    }
+		    elsif ($short and exists $xl{_actions}{$action}{$_}{$short}) {
+			$self->{$_} = $xl{$_}{$short};
+		    }
+		}
+	    }
+	}
+	foreach (keys %xl) {
+	    next if $_ eq '_actions';
+	    if (exists $xl{$_}{$lang}) {
+		$self->{$_} = $xl{$_}{$lang};
+	    }
+	    elsif (exists $xl{$_}{$short}) {
+		$self->{$_} = $xl{$_}{$short};
+	    }
+	}
+    }
+    $self->{file} = $file;
+    unless ($self->{Type}) {
+	print STDERR "ERROR: $file has no Type key\n";
+	return undef;
+    }
+    unless ($self->{Type} =~ m{^(Application|Directory)$}) {
+	print STDERR "ERROR: $file is of Type $self->{Type}\n";
+	return undef;
+    }
+    unless ($self->{Name}) {
+	print STDERR "ERROR: $file has no Name key\n";
+	return undef;
+    }
+    unless ($file =~ m{\.desktop$}) {
+    return $self;
+    }
+    my $d = $file; $d =~ s{/[^/]*$}{};
+    my $f = $file; $f =~ s{.*/}{};
+    my $id = $f; $id =~ s{\.desktop$}{};
+    unless ($self->{Name}) {
+	$self->{Name} = $id;
+	#print STDERR "WARNING: $file has no Name key, using $id\n";
+    }
+    unless ($self->{Exec}) {
+	$self->{Exec} = '';
+	#print STDERR "WARNING: $file has no Exec key\n";
+    }
+    unless ($self->{Comment}) {
+	$self->{Comment} = $self->{Name};
+	#print STDERR "WARNING: $file has no Comment key, using $self->{Name}\n";
+    }
+    unless ($self->{Icon}) {
+	$self->{Icon} = $id;
+	#print STDERR "WARNING: $file has no Icon key, using $id\n";
+    }
+    unless ($self->{Icon} =~ m{^/}) {
+	if ($self->{Icon} =~ m{\.(png|jpg|xpm|svg|jpeg|tiff|gif)$}) {
+	    #print STDERR "WARNING: $file Icon $self->{Icon} should not have .$1 extension\n";
+	    $self->{Icon} =~ s{\.(png|jpg|xpm|svg|jpeg|tiff|gif)$}{};
+	}
+    }
+    if ($self->{_actions}) {
+	my @todelete = ();
+	foreach $action (keys %{$self->{_actions}}) {
+	    unless ($self->{_actions}{$action}{Name}) {
+		$self->{_actions}{$action}{Name} = $action;
+		push @todelete, $action;
+		continue;
+	    }
+	    unless ($self->{_actions}{$action}{Exec}) {
+		$self->{_actions}{$action}{Exec} = '';
+	    }
+	    unless ($self->{_actions}{$action}{Icon}) {
+		$self->{_actions}{$action}{Icon} = $self->{Icon};
+	    }
+	    unless ($self->{_actions}{$action}{Icon} =~ m{^/}) {
+		if ($self->{_actions}{$action}{Icon} =~ m{\.(png|jpg|xpm|svg|jpeg|tiff|gif)$}) {
+		    #print STDERR "WARNING: $file action $action Icon $self->{_actions}{$action}{Icon} should not have .$1 extension\n";
+		    $self->{_actions}{$action}{Icon} =~ s{\.(png|jpg|xpm|svg|jpeg|tiff|gif)$}{};
+		}
+	    }
+	}
+	foreach $action (@todelete) {
+	    delete $self->{_actions}{$action};
+	}
+    }
+    return $self;
+}
+
 package XDG::Menu::DesktopApplication;
 use base qw(XDG::Menu::DesktopEntry);
+use Carp qw(cluck);
 use strict;
 use warnings;
 
@@ -451,15 +564,46 @@ sub resolve {
     $self->XDG::Menu::Element::resolve($pars);
     # cull {Applications} based on (Only|Not)ShowIn, Hidden, NoDisplay
     if ($self->{Applications}) {
-	my $de = ";$pars->{XDG_CURRENT_DESKTOP};";
+	my @des = split(/:/,$pars->{XDG_CURRENT_DESKTOP});
 	my @deletions = ();
 	foreach (keys %{$self->{Applications}}) {
 	    my $app = $self->{Applications}{$_};
-	    if ($app->{OnlyShowIn} and ";$app->{OnlyShowIn};" !~ /$de/) {
+	    if ($app->{OnlyShowIn}) {
+		my $found = 0;
+		foreach my $de (@des) {
+		    if (";$app->{OnlyShowIn};" =~ /;$de;/) {
+			$found = 1;
+			last;
+		    }
+		}
+		if (!$found) {
 		push @deletions, $_;
 		next;
 	    }
-	    if ($app->{NotShowIn} and ";$app->{NotShowIn};" =~ /$de/) {
+	    }
+	    if ($app->{NotShowIn}) {
+		my $found = 0;
+		foreach my $de (@des) {
+		    if (";$app->{OnlyShowIn};" =~ /;$de;/) {
+			$found = 1;
+			last;
+		    }
+		}
+		if ($found) {
+		    push @deletions, $_;
+		    next;
+		}
+	    }
+	    if ($app->{Hidden} and $app->{Hidden} =~ /true/i) {
+		push @deletions, $_;
+		next;
+	    }
+	    if ($app->{NoDisplay} and $app->{NoDisplay} =~ /true/i) {
+		push @deletions, $_;
+		next;
+	    }
+	    unless ($app->{Exec}) {
+		print STDERR "WARNING: $app->{file} has no Exec statement\n";
 		push @deletions, $_;
 		next;
 	    }
@@ -472,14 +616,17 @@ sub resolve {
 		    push @deletions, $_;
 		    next;
 		}
-	    }
-	    if ($app->{Hidden} and $app->{Hidden} =~ /true/i) {
+	    } else {
+		my $exec = $app->{Exec};
+		$exec =~ s/\s.*$//;
+		if ($exec =~ m{/} and not -x $exec) {
 		push @deletions, $_;
 		next;
 	    }
-	    if ($app->{NoDisplay} and $app->{NoDisplay} =~ /true/i) {
+		if ($exec !~ m{/} and not which($exec)) {
 		push @deletions, $_;
 		next;
+		}
 	    }
 	}
 	foreach (@deletions) {

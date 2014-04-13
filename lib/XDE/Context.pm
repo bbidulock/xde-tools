@@ -176,11 +176,37 @@ sub xde_default {
     $self->{DESKTOP_SESSION} = $self->{FBXDG_DE} unless $self->{DESKTOP_SESSION};
     $self->{DESKTOP_SESSION} = '' unless $self->{DESKTOP_SESSION};
     $self->{DESKTOP_SESSION} = "\U$self->{DESKTOP_SESSION}\E" if $self->{DESKTOP_SESSION};
+    if ($self->{DESKTOP_SESSION} =~ m{:}) {
+	$self->{DESKTOP_SESSION} = ":$self->{DESKTOP_SESSION}:";
+	$self->{DESKTOP_SESSION} =~ s{:XDE:}{:}g;
+	$self->{DESKTOP_SESSION} =~ s{^:+}{};
+	$self->{DESKTOP_SESSION} =~ s{:+$}{};
+	foreach my $session (split(/:/,$self->{DESKTOP_SESSION})) {
+	    if (exists &SESSIONS->{"\L$session\E"}) {
+		$self->{DESKTOP_SESSION} = "\U$session\E";
+		last;
+	    }
+	}
+	$self->{DESKTOP_SESSION} =~ s{:.*$}{};
+    }
 
     $self->{FBXDG_DE} = $self->{XDG_CURRENT_DESKTOP} unless $self->{FBXDG_DE};
     $self->{FBXDG_DE} = $self->{DESKTOP_SESSION} unless $self->{FBXDG_DE};
     $self->{FBXDG_DE} = '' unless $self->{FBXDG_DE};
     $self->{FBXDG_DE} = "\U$self->{FBXDG_DE}\E" if $self->{FBXDG_DE};
+    if ($self->{FBXDG_DE} =~ m{:}) {
+	$self->{FBXDG_DE} = ":$self->{FBXDG_DE}:";
+	$self->{FBXDG_DE} =~ s{:XDE:}{:}g;
+	$self->{FBXDG_DE} =~ s{^:+}{};
+	$self->{FBXDG_DE} =~ s{:+$}{};
+	foreach my $session (split(/:/,$self->{FBXDG_DE})) {
+	    if (exists &SESSIONS->{"\L$session\E"}) {
+		$self->{FBXDG_DE} = "\U$session\E";
+		last;
+	    }
+	}
+	$self->{FBXDG_DE} =~ s{:.*$}{};
+    }
 
     $self->{XDE_SESSION} = $self->{ops}{session};
     $self->{XDE_SESSION} = '' unless $self->{XDE_SESSION};
@@ -188,6 +214,19 @@ sub xde_default {
     $self->{XDE_SESSION} = $self->{DESKTOP_SESSION} unless $self->{XDE_SESSION};
     $self->{XDE_SESSION} = $self->{FBXDG_DE} unless $self->{XDE_SESSION};
     $self->{XDE_SESSION} = "\L$self->{XDE_SESSION}\E" if $self->{XDE_SESSION};
+    if ($self->{XDE_SESSION} =~ m{:}) {
+	$self->{XDE_SESSION} = ":$self->{XDE_SESSION}:";
+	$self->{XDE_SESSION} =~ s{:XDE:}{:}g;
+	$self->{XDE_SESSION} =~ s{^:+}{};
+	$self->{XDE_SESSION} =~ s{:+$}{};
+	foreach my $session (split(/:/,$self->{XDE_SESSION})) {
+	    if (exists &SESSIONS->{"\L$session\E"}) {
+		$self->{XDE_SESSION} = "\U$session\E";
+		last;
+	    }
+	}
+	$self->{XDE_SESSION} =~ s{:.*$}{};
+    }
 
     if (exists &SESSIONS->{$self->{XDE_SESSION}}) {
 	my $session = $self->{XDE_SESSION} = &SESSIONS->{$self->{XDE_SESSION}};
@@ -371,8 +410,12 @@ C<undef>.
 sub set_session {
     my $self = shift;
     my $session = $self->{session} = shift;
-    if (exists &SESSIONS->{"\L$session\E"}) {
-	$session = &SESSIONS->{"\L$session\E"};
+    my @sessions = split(/:/,"\L$session\E");
+    foreach $session (@sessions) {
+	if (exists &SESSIONS->{"\L$session\E"}) {
+	    $session = &SESSIONS->{"\L$session\E"};
+	    last;
+	}
     }
     my $desktop = "\U$session\E";
     $self->setup(

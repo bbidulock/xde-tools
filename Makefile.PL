@@ -44,7 +44,7 @@ WriteMakefile(
 		xde-settings
 		xde-setup
 		xde-startup
-		xde-style
+		xde_style
 		xde-test
 		xde-test2
 		xde-test3
@@ -52,12 +52,12 @@ WriteMakefile(
 		xde-test5
 		xde-test7
 		xde-test8
-		xde-theme
+		xde_theme
 		xde-theme2
 		xde-theme3
 		xde-traymenu
 		xde-xset
-		xdg-launch
+		xdg_launch
 		xlib-test
 	)],
 	PREREQ_PM => {

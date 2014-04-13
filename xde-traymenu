@@ -603,7 +603,7 @@ $icon->set_visible(1);
 $icon->signal_connect(button_press_event=>sub{
     my ($icon,$ev) = @_;
     my $button = $ev->button;
-    return Gtk2::EVENT_PROPAGATE unless $button == 1 or $button == 2 or $button == 3;
+    return Gtk2::EVENT_PROPAGATE unless $button == 1 or $button == 2;
     my $time = $ev->time;
 #   my $menu = $tray->create($tree);
 #    Gtk2::Rc->reparse_all;
@@ -622,6 +622,39 @@ $icon->signal_connect(popup_menu=>sub{
 #    Gtk2::Rc->reparse_all;
 #    Gtk2::Rc->parse("$ENV{HOME}/.gtkrc-2.0");
 #    Gtk2::Rc->reset_styles('gtk-theme-name');
+    my ($menu,$mi,$im) = Gtk2::Menu->new;
+    $mi = Gtk2::ImageMenuItem->new_with_label('About...');
+    $mi->signal_connect(activate=>sub{
+	    Gtk2->show_about_dialog(undef,
+		    logo_icon_name=>'start-here',
+		    program_name=>'xde-traymenu',
+		    version=>'0.01',
+		    comments=>'An XDG compliant tray menu for XDE.',
+		    copyright=>'Copyright (c) 2013, 2014  OpenSS7 Corporation.',
+		    website=>'http://www.unexicon.com/',
+		    website_label=>'Unexicon - Linux spun for telecom',
+		    authors=>['Brian F. G. Bidulock <bidulock@openss7.org>'],
+		    license=><<EOF,
+Do what thou wilt shall be the whole of the law.
+
+-- Aleister Crowley
+EOF
+		    # logo=>,
+	    );
+    });
+    $im = Gtk2::Image->new_from_stock('gtk-about','menu');
+    $mi->set_image($im);
+    $mi->show_all;
+    $menu->append($mi);
+    $mi = Gtk2::SeparatorMenuItem->new;
+    $mi->show_all;
+    $menu->append($mi);
+    $mi = Gtk2::ImageMenuItem->new_with_label('Quit');
+    $im = Gtk2::Image->new_from_stock('gtk-quit','menu');
+    $mi->set_image($im);
+    $mi->show_all;
+    $mi->signal_connect(activate=>sub{ Gtk2->main_quit(); 1; });
+    $menu->append($mi);
     $menu->popup(undef,undef,'Gtk2::StatusIcon::position_menu',$icon,$button,$time);
     return Gtk2::EVENT_PROPAGATE;
 });
@@ -759,7 +792,7 @@ F<$HOME/.gtkrc-2.0>).
 
 =head1 HISTORY
 
-B<xde-traymenu> was written for a number of reasons:
+I wrote B<xde-traymenu> for a number of reasons:
 
 =over
 
