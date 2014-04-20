@@ -28,10 +28,7 @@ sub new {
     my @XDG_CONFIG_DIRS = ( $XDG_CONFIG_HOME, split(/:/,$XDG_CONFIG_DIRS) );
     my $XDG_MENU = 'applications';
     my @XDG_MERGED_DIRS = map{$_?"$_/menus/${XDG_MENU}-merged":()} @XDG_CONFIG_DIRS;
-    my @XDG_APPLICATIONS_DIRS = (
-	    (map {$_?"$_/dockapps":()} @XDG_DATA_DIRS),
-	    (map {$_?"$_/applications":()} @XDG_DATA_DIRS),
-	    (map {$_?"$_/fallback":()} @XDG_DATA_DIRS) );
+    my @XDG_APPLICATIONS_DIRS = map {$_?"$_/applications":()} @XDG_DATA_DIRS;
     my @XDG_DIRECTORY_DIRS = map{$_?"$_/desktop-directories":()} @XDG_DATA_DIRS;
     my $XDG_CURRENT_DESKTOP = $ENV{XDG_CURRENT_DESKTOP};
     $XDG_CURRENT_DESKTOP = 'FLUXBOX' unless $XDG_CURRENT_DESKTOP;

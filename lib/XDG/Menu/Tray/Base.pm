@@ -174,4 +174,3 @@ L<XDG::Menu::Base(3pm)>
 =cut
 
 # vim: set sw=4 tw=72 fo=tcqlorn foldmarker==head,=head foldmethod=marker:
-
