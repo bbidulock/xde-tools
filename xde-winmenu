@@ -1,0 +1,151 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+    if $running_under_some_shell;
+
+BEGIN {
+    use strict;
+    use warnings;
+    my $here = $0; $here =~ s{/[^/]*$}{};
+    if ($here =~ s{^\.}{}) {
+	chomp(my $cwd = `pwd`);
+	$here = "/$here" if $here;
+	$here = "$cwd$here";
+    }
+    unshift @INC, "$here/lib" unless $here =~ m{^/usr/bin};
+}
+
+=head1 NAME
+
+wm-winmenu - an EWMH/WMH compliant window menu
+
+=head1 SYNOPSIS
+
+wm-winmenu [OPTIONS]
+
+=head1 DESCRIPTION
+
+B<wm-winlist> provides an EWMH compliant window menu.  The tool is
+capable of generating window menus on EWMH/WMH compliant window
+managers.
+
+=head1 OPTIONS
+
+=over
+
+=item B<--wmname>,B<-w> I<WMNAME>
+
+Identifies the window manager as like I<WMNAME>.  This option is only
+necessary when the window manager cannot be identified or is not on the
+supported list.
+
+=item B<--active>,B<-a>
+
+Use the active window.  This posts a client menu for the active client
+window.  The active client window is the one specified with the root
+window property C<_NET_ACTIVE_WINDOW>.  This is the default when no
+other window selection mechanism is specified.
+
+=item B<--focus>,B<-f>
+
+Use the focused window instead of the active window.  This posts a
+client menu for the client window that currently has the input focus.
+This is not necessarily the active client window.  This is a useful
+option to add when the client window menu is posted as a result of a key
+binding.
+
+=item B<--pointer>,B<-p>
+
+Use the client window under the pointer.  If B<--active> is also
+specified, use the client window under the pointer only as a fallback
+when C<_NET_ACTIVE_WINDOW> does not exists, or does not identify a
+window.  This is a useful option to add when the client window menu is
+posted as a result of a mouse button binding.
+
+=item B<--keyboard>,B<-k>
+
+Use the client window with the keyboard focus.  If B<--focus> is also
+specified, use the client window with the keyboard focus only as a
+fallback when C<_NET_WM_STATE_FOCUSED> is not set on any window.  This
+is a useful option to add when the client window menu is posted as a
+result of a key binding.
+
+=item B<--all>,B<-A>
+
+List all available functions that can be performed on the client window
+regardless of whether the window manager advertises support or
+permission for them or not.  This is useful as some lightweight window
+managers do not report all of their capabilities.  The default when this
+option is not specified is to restrict the actions displayed in the list
+only to the actions supported by the window manager and stated as
+available for the specific client window.
+
+=back
+
+=head1 ACTIONS
+
+The following actions are available:
+
+=over
+
+=item I<Restore>
+
+Restore the window to an unmaximized state.
+
+=item I<Maximize>
+
+Maximize the window to the full size of the work area.
+
+=item I<Maximize Horizontal>
+
+Maximize the window horizontally.
+
+=item I<Maximize Vertical>
+
+Maximize the window vertically.
+
+=item I<Maximize Left Half>
+
+Maximize the window to cover the left half of the work area.  This
+action cannot be restored.
+
+=item I<Maximize Right Half>
+
+Maximize the window to cover the right half of the work area.  This
+action cannot be restored.
+
+=item Fullscreen
+
+Maximized the window to the full screen.  There is a submenu that can
+control the fullscreen maximization to cover only an individual monitor
+or all monitors.  The submenu is only available when Xinerama or Xrandr
+is supported and C<_NET_FULLSCREEN_MONITORS> is supported.
+
+
+=back
+
+=cut
+
+__END__
+
+=head1 HISTORY
+
+I wrote B<wm-winmenu> to provide window menus for lightweight window
+managers (usually tiling) that do not support client window menus (or
+menus for that matter).  Some window managers that can benefit from this
+are dwm(1), xdwm(1), velox(1), adwm(1), cwm(1).  Basicaly any window
+manager that supports some amount of EWMH/WMH specifications but doesn't
+provide a client window menu.
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
+
+L<Gnome2::Wnck(3pm)>
+
+=cut
+
+# vim: set tw=72:

@@ -132,7 +132,7 @@ sub Header {
     if (my $tool = $item->{Entry}{Comment}) {
 	$mi->set_tooltip_text($tool);
     }
-    my $fi = $item->Icon([qw(png xpm svg)]);
+    my $fi = $item->Icon([qw(png xpm svg jpg)]);
     my $pb = Gtk2::Gdk::Pixbuf->new_from_file_at_size($fi,16,16) if $fi;
     my $im = Gtk2::Image->new_from_pixbuf($pb) if $pb;
     $self->apply_style($im) if $im;
@@ -153,10 +153,35 @@ sub Application {
     my $mi = Gtk2::ImageMenuItem->new;
     $self->apply_style($mi);
     $mi->set_label($name);
-    if (my $tool = $item->{Entry}{Comment}) {
-	$mi->set_tooltip_text($tool);
+    my $fi = $item->Icon([qw(png xpm svg jpg)]);
+    if (1) {
+	my $tool = '';
+	$tool .= "<b>Name:</b> $item->{Entry}{Name}\n";
+	$tool .= "<b>GenericName:</b> ";
+	$tool .= $item->{Entry}{GenericName} if $item->{Entry}{GenericName};
+	$tool .= "\n";
+	$tool .= "<b>Comment:</b> ";
+	$tool .= $item->{Entry}{Comment} if $item->{Entry}{Comment};
+	$tool .= "\n";
+	$tool .= "<b>Exec:</b> ";
+	$tool .= $item->{Entry}{Exec} if $item->{Entry}{Exec};
+	$tool .= "\n";
+	$tool .= "<b>Icon:</b> ";
+	$tool .= $item->{Entry}{Icon} if $item->{Entry}{Icon};
+	$tool .= "\n";
+	$tool .= "<b>Categories:</b> ";
+	$tool .= $item->{Entry}{Categories} if $item->{Entry}{Categories};
+	$tool .= "\n";
+	$tool .= "<b>file:</b> $item->{Entry}{file}\n";
+	$tool .= "<b>icon_file:</b> ";
+	$tool .= $fi if $fi;
+	$tool =~ s{\&}{\&amp;}g;
+	$mi->set_tooltip_markup($tool) if $tool;
+    } else {
+	if (my $tool = $item->{Entry}{Comment}) {
+	    $mi->set_tooltip_text($tool);
+	}
     }
-    my $fi = $item->Icon([qw(png xpm svg)]);
     my $pb = Gtk2::Gdk::Pixbuf->new_from_file_at_size($fi,16,16) if $fi;
     my $im = Gtk2::Image->new_from_pixbuf($pb) if $pb;
     $self->apply_style($im) if $im;
@@ -181,7 +206,7 @@ sub Directory {
     if (my $tool = $item->{Entry}{Comment}) {
 	$mi->set_tooltip_text($tool);
     }
-    my $fi = $item->Icon([qw(png xpm svg)]);
+    my $fi = $item->Icon([qw(png xpm svg jpg)]);
     my $pb = Gtk2::Gdk::Pixbuf->new_from_file_at_size($fi,16,16) if $fi;
     my $im = Gtk2::Image->new_from_pixbuf($pb) if $pb;
     $self->apply_style($im) if $im;

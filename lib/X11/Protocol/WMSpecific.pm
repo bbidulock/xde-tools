@@ -207,6 +207,11 @@ sub wm_check {
 	$name = $maybe unless $name;
 	$name = "ctwm" if $name and $name eq 'workspacemanager';
 #
+# WMX in its oriinal version 7 mistakenly sets the name to only the
+# first character ("w").
+#
+	$name = "wmx" if $name and $name eq 'w';
+#
 # When there is no name found with these approaches, we need to go look
 # for windows to check.
 #

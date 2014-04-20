@@ -59,6 +59,8 @@ WriteMakefile(
 		xde-xset
 		xdg_launch
 		xlib-test
+		xde-winlist
+		xde-winmenu
 	)],
 	PREREQ_PM => {
 		'Carp' => 0,			# perl

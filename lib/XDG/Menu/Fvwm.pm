@@ -230,6 +230,14 @@ sub build {
     return $self->$name($item,@args) if $self->can($name);
     return '';
 }
+
+# Creation of the FVWM menu is somewhat different from other menus
+# because menu definitions are not nested.  Each menu is defined in a
+# list (from shallowest to deepest).  Menus that contain other menus are
+# referred to by name rather than being nested in the superior menu's
+# definition.  So what we need to do is traverse breadth first and
+# outputting the definitions before going deep.
+
 sub Menu {
     my ($self,$item,@args) = @_;
     my $text = '';

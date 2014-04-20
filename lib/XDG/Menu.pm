@@ -584,7 +584,7 @@ sub resolve {
 	    if ($app->{NotShowIn}) {
 		my $found = 0;
 		foreach my $de (@des) {
-		    if (";$app->{OnlyShowIn};" =~ /;$de;/) {
+		    if (";$app->{NotShowIn};" =~ /;$de;/) {
 			$found = 1;
 			last;
 		    }

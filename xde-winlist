@@ -1,0 +1,88 @@
+#!/usr/bin/perl
+
+# in case we get executed (not sourced) as a shell program
+eval 'exec perl -S $0 ${1+"@"}'
+    if $running_under_some_shell;
+
+BEGIN {
+    use strict;
+    use warnings;
+    my $here = $0; $here =~ s{/[^/]*$}{};
+    if ($here =~ s{^\.}{}) {
+	chomp(my $cwd = `pwd`);
+	$here = "/$here" if $here;
+	$here = "$cwd$here";
+    }
+    unshift @INC, "$here/lib" unless $here =~ m{^/usr/bin};
+}
+
+=head1 NAME
+
+wm-winlist - an EWMH/WMH compliant window list
+
+=head1 SYNOPSIS
+
+wm-winlist [OPTIONS]
+
+=head1 DESCRIPTION
+
+B<wm-winlist> provides an EWMH compliant window list.  The tool is
+capable of generating window lists for EWMH/WMH/ICCCM compliant window
+managers.  Its purpose is to provides window lists for lightweight
+window managers that do not support them directly but which provide some
+modicum of support for EWMH/WMH/ICCCM.
+
+=head1 OPTIONS
+
+=over
+
+=item B<--wmname>,B<-w> I<WMNAME>
+
+Identifies the window manager as like I<WMNAME>.  This option is only
+necessary when the window manager cannot be identified or is not on the
+supported list.
+
+=back
+
+=head1 ACTIONS
+
+Actions that can be performed on window in the window list are the same
+s those provided by L<wm-winmenu(1)> with additional actions that can be
+performed on groups of windows or on all windows as follows:
+
+=over
+
+=item Minimize All
+
+=item Hide All
+
+=item Arrange
+
+There might be further choices.  Basically this rearranges windows on
+the current desktop by moving them about and resizing them.  In
+general this option is only presented for stacking window managers and
+is not 
+
+=back
+
+=cut
+
+__END__
+
+=head1 HISTORY
+
+I wrote B<wm-winlist> to provide window lists for lightweight window
+managers (usualling tiling) that do not support window lists (or menus
+for that matter).
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
+
+L<Gnome2::Wnck(3pm)>
+
+=cut
+
+# vim: set tw=72:

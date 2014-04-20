@@ -37,7 +37,7 @@ sub icon {
     my($self,@names) = @_;
     my $icon;
     foreach (@names) {
-	$icon = $self->SUPER::icon($_,qw(png svg xpm));
+	$icon = $self->SUPER::icon($_,qw(png svg xpm jpg));
 	last if $icon;
     }
     $icon = '-' unless $icon;
@@ -148,6 +148,7 @@ sub rootmenu {
     my $text = '';
     $text .= $entries;
     $text .= $self->wmmenu();
+    $text .= 'prog "Refresh Menu" '.$self->icon('gtk-refresh').' xdg-menugen -format icewm -launch >'.$ENV{HOME}.'/.icewm/menu'."\n";
     return $text;
 }
 sub build {
@@ -178,7 +179,7 @@ sub Separator {
 }
 sub Application {
     my ($self,$item,$indent) = @_;
-    my $icon = $item->Icon([qw(png xpm)]);
+    my $icon = $item->Icon([qw(png svg xpm jpg)]);
     $icon = '-' unless $icon;
     if ($self->{ops}{launch}) {
 	return sprintf "%sprog \"%s\" %s xdg-launch %s\n",
@@ -190,7 +191,7 @@ sub Application {
 }
 sub Directory {
     my ($self,$item,$indent) = @_;
-    my $icon = $item->Icon([qw(png xpm)]);
+    my $icon = $item->Icon([qw(png svg xpm jpg)]);
     $icon = '-' unless $icon;
     my $text = '';
     $text .= sprintf "%smenu \"%s\" %s {\n",
