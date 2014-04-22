@@ -33,9 +33,11 @@ specific menus for a number of window-managers.
 =cut
 
 use Getopt::Long;
-use Encode;
+use Encode qw(encode decode);
 use I18N::Langinfo qw(langinfo CODESET);
 use POSIX qw(locale_h);
+use MIME::Base64;
+use Storable qw(nfreeze thaw);
 use Glib qw(TRUE FALSE);
 use Gtk2;
 use Gtk2::Unique;
@@ -60,6 +62,7 @@ unless ($here =~ m{^/usr/bin}) {
     $ENV{PATH} = "$here:$ENV{PATH}" unless exists $path{$here};
 }
 
+my $executable = $0;
 my $program = $0; $program =~ s{^.*/}{};
 
 Gtk2::Rc->set_default_files("$ENV{HOME}/.gtkrc-2.0.xde");
@@ -73,6 +76,37 @@ Gtk2::Rc->set_default_files("$ENV{HOME}/.gtkrc-2.0.xde");
 #Gtk2::Rc->parse_string('gtk-theme-name="Squared-blue"'."\n");
 
 Gtk2->init;
+
+sub reparse {
+	my ($root,$property) = @_;
+	my ($type,$format,@data) = $root->property_get($property,undef,0,255,FALSE);
+	if ($type and $data[0]) {
+		Gtk2::Rc->reparse_all;
+		Gtk2::Rc->parse_string("gtk-theme-name=\"$data[0]\"");
+	}
+}
+
+{
+	my $manager = Gtk2::Gdk::DisplayManager->get;
+	my $dpy = $manager->get_default_display;
+	my $screen = $dpy->get_default_screen;
+	my $root = $screen->get_root_window;
+	my $property = Gtk2::Gdk::Atom->new(_XDE_THEME_NAME=>FALSE);
+
+	$root->set_events([qw(property-change-mask structure-mask substructure-mask)]);
+
+	Gtk2::Gdk::Event->handler_set(sub{
+		my ($event,$data) = @_;
+		if (($event->type eq 'client-message' and $event->message_type->name eq "_GTK_READ_RCFILES") ||
+		    ($event->type eq 'property-notify' and $event->atom->name eq "_XDE_THEME_NAME")) {
+			reparse($root,$property);
+			return;
+		}
+		Gtk2->main_do_event($event);
+	},$root);
+
+	reparse($root,$property);
+}
 
 require XDG::Menu::Parser;
 require XDG::Menu::Tray;
@@ -162,45 +196,56 @@ my %outputs = (
 );
 
 my %formats = (
-    fluxbox	=> [qw(FLUXBOX	XDG::Menu::Tray	)],
-    blackbox	=> [qw(BLACKBOX	XDG::Menu::Tray	)],
-    openbox	=> [qw(OPENBOX	XDG::Menu::Tray	)],
-    openbox3	=> [qw(LXDE	XDG::Menu::Tray	)],
-    icewm	=> [qw(ICEWM	XDG::Menu::Tray	)],
-    pekwm	=> [qw(PEKWM	XDG::Menu::Tray	)],
-    jwm		=> [qw(JWM	XDG::Menu::Tray	)],
-    fvwm	=> [qw(FVWM	XDG::Menu::Tray	)],
-    wmaker	=> [qw(WMAKER	XDG::Menu::Tray	)],
-    ctwm	=> [qw(CTWM	XDG::Menu::Tray	)],
-    vtwm	=> [qw(VTWM	XDG::Menu::Tray	)],
-    twm		=> [qw(TWM	XDG::Menu::Tray	)],
-    echinus	=> [qw(ECHINUS	XDG::Menu::Tray )],
-    awesome	=> [qw(AWESOME	XDG::Menu::Tray )],
-    adwm	=> [qw(ADWM	XDG::Menu::Tray )],
+    fluxbox	=> [qw(FLUXBOX	XDG::Menu::Tray::Fluxbox	)],
+    blackbox	=> [qw(BLACKBOX	XDG::Menu::Tray::Blackbox	)],
+    openbox	=> [qw(OPENBOX	XDG::Menu::Tray::Openbox	)],
+    openbox3	=> [qw(LXDE	XDG::Menu::Tray::Openbox3	)],
+    icewm	=> [qw(ICEWM	XDG::Menu::Tray::Icewm		)],
+    pekwm	=> [qw(PEKWM	XDG::Menu::Tray::Pekwm		)],
+    jwm		=> [qw(JWM	XDG::Menu::Tray::Jwm		)],
+    fvwm	=> [qw(FVWM	XDG::Menu::Tray::Fvwm		)],
+    wmaker	=> [qw(WMAKER	XDG::Menu::Tray::Wmaker		)],
+    ctwm	=> [qw(CTWM	XDG::Menu::Tray::Ctwm		)],
+    vtwm	=> [qw(VTWM	XDG::Menu::Tray::Vtwm		)],
+    twm		=> [qw(TWM	XDG::Menu::Tray::Twm		)],
+    echinus	=> [qw(ECHINUS	XDG::Menu::Tray::Echinus	)],
+    awesome	=> [qw(AWESOME	XDG::Menu::Tray::Awesome	)],
+    adwm	=> [qw(ADWM	XDG::Menu::Tray::Adwm		)],
+    mwm		=> [qw(MWM	XDG::Menu::Tray::Mwm		)],
 );
 
 my %desktops = (
-    FLUXBOX	=> [qw(fluxbox  XDG::Menu::Tray	)],
-    BLACKBOX	=> [qw(blackbox XDG::Menu::Tray	)],
-    OPENBOX	=> [qw(openbox  XDG::Menu::Tray	)],
-    ICEWM	=> [qw(icewm    XDG::Menu::Tray	)],
-    PEKWM	=> [qw(pekwm    XDG::Menu::Tray	)],
-    JWM		=> [qw(jwm      XDG::Menu::Tray	)],
-    FVWM	=> [qw(fvwm	XDG::Menu::Tray	)],
-    WMAKER	=> [qw(wmaker   XDG::Menu::Tray	)],
-    CTWM	=> [qw(ctwm	XDG::Menu::Tray	)],
-    VTWM	=> [qw(vtwm	XDG::Menu::Tray	)],
-    TWM		=> [qw(twm	XDG::Menu::Tray	)],
-    ECHINUS	=> [qw(echinus	XDG::Menu::Tray )],
-    AWESOME	=> [qw(awesome	XDG::Menu::Tray )],
-    LXDE	=> [qw(openbox3 XDG::Menu::Tray	)],
-    ADWM	=> [qw(adwm	XDG::Menu::Tray )],
+    FLUXBOX	=> [qw(fluxbox	XDG::Menu::Tray::Fluxbox	)],
+    BLACKBOX	=> [qw(blackbox	XDG::Menu::Tray::Blackbox	)],
+    OPENBOX	=> [qw(openbox	XDG::Menu::Tray::Openbox	)],
+    ICEWM	=> [qw(icewm	XDG::Menu::Tray::Icewm		)],
+    PEKWM	=> [qw(pekwm	XDG::Menu::Tray::Pekwm		)],
+    JWM		=> [qw(jwm	XDG::Menu::Tray::Jwm		)],
+    FVWM	=> [qw(fvwm	XDG::Menu::Tray::Fvwm		)],
+    WMAKER	=> [qw(wmaker	XDG::Menu::Tray::Wmaker		)],
+    CTWM	=> [qw(ctwm	XDG::Menu::Tray::Ctwm		)],
+    VTWM	=> [qw(vtwm	XDG::Menu::Tray::Vtwm		)],
+    TWM		=> [qw(twm	XDG::Menu::Tray::Twm		)],
+    ECHINUS	=> [qw(echinus	XDG::Menu::Tray::Echinus	)],
+    AWESOME	=> [qw(awesome	XDG::Menu::Tray::Awesom		)],
+    LXDE	=> [qw(openbox3 XDG::Menu::Tray::Openbox3	)],
+    ADWM	=> [qw(adwm	XDG::Menu::Tray::Adwm		)],
+    MWM		=> [qw(mwm	XDG::Menu::Tray::Mwm		)],
 );
 
 
 =head1 OPTIONS
 
 B<xde-traymenu> accepts the following options:
+
+=head2 COMMAND OPTIONS
+
+The default when no command option is specified is to launch the
+traymenu.  Only one instance of a tray menu will be launched for one
+display at one time.
+
+When specified, the following options alter the primary operating mode
+of B<xde->traymenu>:
 
 =over
 
@@ -209,6 +254,60 @@ B<xde-traymenu> accepts the following options:
 Print usage information, including the current values of option
 defaults, and exit.
 
+=item B<--refresh>, B<-r>
+
+Asks a running instance of B<xde-traymenu> to refresh the menu.  This is
+normally not required as B<xde-traymenu> detects when desktop files or
+icons or theme files have changed.
+
+This is the default when B<xde-traymenu> is invoked as
+B<xde-traymenu-refresh>.
+This option causes an error when no current instance of B<xde-traymenu>
+is running.
+
+=item B<--restart>, B<-R>
+
+Asks a running instance of B<xde-traymenu> to restart (re-execute itself
+with the same arguments).  This is useful when the B<xde-traymenu>
+executables have been upgraded.
+
+This is the default when B<xde-traymenu> is invoked as
+B<xde-traymenu-restart>.
+This option causes an error when no current instance of B<xde-traymenu>
+is running.
+
+=item B<--quit>, B<-q>
+
+Asks a running instance of B<xde-traymenu> to quit.
+
+This is the default when B<xde-traymenu> is invoked as
+B<xde-traymenu-quit>.
+This option causes an error when no current instance of B<xde-traymenu>
+is running.
+
+=item B<--popup>, B<-p>
+
+Asks a running instance of B<xde-traymenu> to popup the menu.  Depending
+on the setting of the B<--button> option, this will either popup the
+menu at the current pointer position, or will popup the menu at the
+center of the screen.  When multiple monitors are present, the menu will
+popup at the center of the monitor in which the pointer currently
+resides (which is used by most tiling window managers as the "current"
+monitor).
+
+This is the default when B<xde-traymenu> is invoked as
+B<xde-traymenu-popup>.
+This option causes an error when no current instance of B<xde-traymenu>
+is running.
+
+=back
+
+=head2 GENERAL OPTIONS
+
+The following options are general options:
+
+=over
+
 =item B<--verbose>, B<-v>
 
 Print debugging information on standard error during operation.
@@ -216,14 +315,21 @@ Print debugging information on standard error during operation.
 =item B<--format>, B<-f> I<FORMAT>
 
 Specify the output format.  Recognized output formats are as follows:
-C<twm>, C<wmaker>, C<windowmaker>, C<fvwm>, C<fvwm2>, C<fvwm-crystal>,
-C<ion3>, C<blackbox>, C<fluxbox>, C<openbox>, C<xfce4>, C<openbox3>,
-C<openbox3-pipe>, C<awesome>, C<icewm>, C<jwm>, C<pekwm>.
+L<fluxbox(1)>, L<blackbox(1)>, L<openbox(1)>, L<icewm(1)>, L<jwm(1)>,
+L<pekwm(1)>, L<fvwm(1)>, L<wmaker(1)>, L<afterstep(1)>, L<metacity(1)>,
+L<twm(1)>, L<ctwm(1)>, L<vtwm(1)>, L<etwm(1)>, L<cwm(1)>, L<echinus(1)>,
+L<uwm(1)>, L<awesome(1)>, L<matwm2(1)>, L<waimea(1)>, L<2bwm(1)>,
+L<wmx(1)>, L<flwm(1)>, L<mwm(1)>, L<dtwm(1)>, L<spectrwm(1)>,
+L<yeahwm(1)>.
 
-When unspecified, the setting of the B<XDG_CURRENT_DESKTOP> environment
-variable is used to determine the format.  This is accomplished by
-converting the value of B<XDG_CURRENT_DESKTOP> to lower-case.  See
-L</ENVIRONMENT>.
+When unspecified and L<xde-identify(1)> is available, B<xde-traymenu>
+uses L<xde-identify> to identify a running window manager.
+
+When unspecified and either L<xde-identify> is unavailable, or cannot
+determine a running window manager, the setting of the
+B<XDG_CURRENT_DESKTOP> environment variable is used to determine the
+format.  This is accomplished by converting the value of
+B<XDG_CURRENT_DESKTOP> to lower-case.  See L</ENVIRONMENT>.
 
 When the B<XDG_CURRENT_DESKTOP> environment variable is undefined, the X
 Display is examined to determine the window-manager in use.  See
@@ -238,7 +344,7 @@ sub-menu, or not.  The default is to output a full menu.
 
 Specify the desktop name for C<NotShowIn> and C<OnlyShowIn> comparisons.
 The default is the all upper-case value corresponding to the format
-unless C<XDG_CURRENT_DESKTOP> is defined (see L</ENVIRONMENT>).
+unless B<XDG_CURRENT_DESKTOP> is defined (see L</ENVIRONMENT>).
 
 =item B<--charset>, B<-c> I<CHARSET>
 
@@ -289,17 +395,103 @@ generating the menu, but to monitor pertinent directories for changes,
 and regenerate the menu when changes are detected.  This option implies
 the B<--output> option.  This option requires L<Linux::Inotify2(3pm)>.
 
+=item B<--button>, B<-b> BUTTON
+
+=item B<--timestamp>, B<-T> TIMESTAMP
+
+
 =back
 
 =cut
 
 my (@SAVEARGS) = (@ARGV);
 
+my ($wmname,$format);
+
+# If we can identify a running window manager, use that format before
+# that specified by XDG_CURRENT_DESKTOP.  I would like to use Gnome2::Wnck
+# for this but it cannot even identify icewm(1).
+#
+{
+	my $screen = Gtk2::Gdk::Screen->get_default;
+	my $root = $screen->get_root_window;
+	my $atom = Gtk2::Gdk::Atom->new('_NET_SUPPORTING_WM_CHECK');
+	my $type = Gtk2::Gdk::Atom->new('WINDOW');
+	my ($prop,$form,$data) = $root->property_get($atom,$type,0,1,FALSE);
+	if ($prop and $form and $data) {
+		if ((my $check = Gtk2::Gdk::Window->foreign_new($data))) {
+			($prop,$form,$data) = $check->property_get($atom,$type,0,1,FALSE);
+			if ($data == $check->XID) {
+				if ($prop and $form and $data) {
+					$atom = Gtk2::Gdk::Atom->new('_NET_WM_NAME');
+					$type = Gtk2::Gdk::Atom->new('UTF8_STRING');
+					($prop,$form,$data) = $check->property_get($atom,$type,0,256,FALSE);
+					if ($prop and $form and $data) {
+						($wmname) = split(/\s+/,$data,2);
+						$wmname = "\L$wmname\E";
+					} else {
+						$atom = Gtk2::Gdk::Atom->new('_WINDOWMAKER_NOTICEBOARD');
+						$type = Gtk2::Gdk::Atom->new('WINDOW');
+						($prop,$form,$data) = $check->property_get($atom,$type,0,1,FALSE);
+						if ($prop and $form and $data) {
+							$format = 'wmaker';
+						}
+					}
+				}
+			}
+		}
+	} else {
+		$atom = Gtk2::Gdk::Atom->new('_WIN_SUPPORTING_WM_CHECK');
+		$type = Gtk2::Gdk::Atom->new('CARDINAL');
+		($prop,$form,$data) = $root->property_get($atom,$type,0,1,FALSE);
+		if ($prop and $form and $data) {
+			if ((my $check = Gtk2::Gdk::Window->foreign_new($data))) {
+				($prop,$form,$data) = $check->property_get($atom,$type,0,1,FALSE);
+				if ($data == $check->XID) {
+					if ($prop and $form and $data) {
+						$atom = Gtk2::Gdk::Atom->new('WM_NAME');
+						$type = Gtk2::Gdk::Atom->new('STRING');
+						($prop,$form,$data) = $check->property_get($atom,$type,0,256,FALSE);
+						if ($prop and $form and $data) {
+							($wmname) = split(/\s+/,$data,2);
+							$wmname = "\L$wmname\E";
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+$wmname = '' unless $wmname;
+$wmname = 'wmaker' if "\L$wmname\E" eq 'windowmaker';
+$wmname = 'ctwm' if "\L$wmname\E" eq 'workspacemanager';
+
+# handle XDG_CURRENT_DESKTOP with multiple values separated by ':'
+#
+if ($wmname) {
+	$format = $wmname;
+} else {
+	$format = "\L$XDG_CURRENT_DESKTOP\E";
+}
+if ($format =~ m{:}) {
+	foreach my $f (keys %formats) {
+		if ($format =~ m{:$f:}i) {
+			$format = $f;
+			last;
+		}
+	}
+	if ($format =~ m{:}) {
+		$format =~ s{.*:}{};
+	}
+}
+
 my %ops = (
     help	=> '',
-    format	=> "\L$XDG_CURRENT_DESKTOP\E",
+    wmname	=> "\L$wmname\E",
+    format	=> "\L$format\E",
     fullmenu	=> '',
-    desktop	=> "\U$XDG_CURRENT_DESKTOP\E",
+    desktop	=> "\U$format\E",
     charset	=> langinfo(CODESET),
     language	=> setlocale(LC_MESSAGES),
     root_menu	=> $XDG_ROOT_MENU,
@@ -310,13 +502,17 @@ my %ops = (
     noicons	=> '',
     theme	=> $XDG_ICON_THEME,
     monitor	=> '',
-    button	=> 3,
+    button	=> 0,
     timestamp	=> 0,
     popup	=> '',
+    refresh	=> '',
+    restart	=> '',
+    quit	=> '',
 );
 
 my $syntax = GetOptions(
     "help|h"	    =>\$ops{help},
+    "wmname|w=s"    =>\$ops{wmname},
     "format|f=s"    =>\$ops{format},
     "fullmenu|F!"   =>\$ops{fullmenu},
     "N"		    =>sub{$ops{fullmenu}=0},
@@ -334,7 +530,30 @@ my $syntax = GetOptions(
     "timestamp|T=i" =>\$ops{timestamp},
     "button|b=i"    =>\$ops{button},
     "popup|p"	    =>\$ops{popup},
+    "refresh|r"	    =>\$ops{refresh},
+    "restart|R"	    =>\$ops{restart},
+    "quit|q"	    =>\$ops{quit},
 );
+
+# to support symbolic links to this program
+$ops{popup}   = 1 if $program =~ m{-popup$};
+$ops{quit}    = 1 if $program =~ m{-quit$};
+$ops{refresh} = 1 if $program =~ m{-refresh$};
+$ops{restart} = 1 if $program =~ m{-restart$};
+
+my $cmds = 0;
+
+$cmds++ if $ops{popup};
+$cmds++ if $ops{quit};
+$cmds++ if $ops{refresh};
+$cmds++ if $ops{restart};
+
+if ($cmds > 1) {
+    print STDERR "only one of -popup, -quit, -refresh or -restart can be specified\n";
+    usage(2);
+}
+
+undef $cmds;
 
 if ($ops{output} eq '') {
     if (exists $outputs{$ops{format}}) {
@@ -422,61 +641,57 @@ sub usage {
     my $retval = shift;
     print STDERR<<EOF;
 USAGE:
-    xde-traymenu [OPTIONS]
+    $program [OPTIONS]
 
-OPTIONS:
-    --help,-h
+COMMAND OPTIONS:
+  --help,-h
         print this usage info and exit
+  --popup,-p
+        ask a running instance to popup its menu
+  --refresh,-r
+        ask a running instance to refresh its menu
+  --restart,-R
+        ask a running instance to restart
+  --quit,-q
+        ask a running instance to quit
 
-    --format,-f FORMAT      [default: $ops{format}]
+GENERAL OPTIONS:
+  --format,-f FORMAT      [default: $ops{format}]
         specify the output format to use; defaults to the lowercase
         value of XDG_CURRENT_DESKTOP.
-
-    --fullmenu,-F
+  --fullmenu,-F
         generate a full menu instead of a submenu; default is to
         generate a full menu.
-
-    --nofullmenu,-N
-	generate a submenu instead of a full menu; default is to
-	generate a full menu.
-
-    --desktop,-d DESKTOP    [default: $ops{desktop}]
+  --nofullmenu,-N
+        generate a submenu instead of a full menu; default is to
+        generate a full menu.
+  --desktop,-d DESKTOP    [default: $ops{desktop}]
         specify the desktop string for OnlyShowIn and NotShowIn desktop
         entries; defaults is XDG_CURRENT_DESKTOP or the uppercase FORMAT
         value.
-
-    --charset,-c CHARSET    [default: $ops{charset}]
+  --charset,-c CHARSET    [default: $ops{charset}]
         specify the character set to use to output the menu; defaults to
         the charset of the current locale.
-
-    --language,-l LANGUAGE  [default: $ops{language}]
+  --language,-l LANGUAGE  [default: $ops{language}]
         specify the language to use to output the menu; defaults to the
         value of the current locale.
-
-    --root-menu,-r ROOTMENU [default: $ops{root_menu}]
+  --root-menu,-r ROOTMENU [default: $ops{root_menu}]
         specify the root menu.  Default is derived from XDG_MENU_PREFIX
         and XDG_CONFIG_DIRS.
-
-    --die-on-error,-e
+  --die-on-error,-e
         abort (do not write output) on any error.
-
-    --verbose,-v
+  --verbose,-v
         print debugging information on standard error.
-
-    --output,-o [FILENAME]  [default: $ops{output}]
+  --output,-o [FILENAME]  [default: $ops{output}]
         print the output to file, FILENAME; default is to print the menu
         to standard output; default FILENAME if unspecified based on
         format.
-
-    --noicons,-n
-        do not include icons in the generated menu; default is to
-        include icons in capable menus.
-
-    --theme,-t THEME        [default: $ops{theme}]
+  --noicons,-n,--icons    [default: --icons]
+        do not include icons in the generated menu
+  --theme,-t THEME        [default: $ops{theme}]
         use the specified icon theme when generating icons; defaults to
         the user icon theme.
-
-    --monitor,-m
+  --monitor,-m
         do not exit after first menu generation, but monitor pertinent
         directories for changes and regenerate the menu when required;
         implies the --output option.
@@ -484,38 +699,57 @@ EOF
     exit($retval);
 }
 
-$program = 'xde-traymenu-popup' if $ops{popup};
+my $prog = $ops{popup} ? "$program-popup" : $program;
 
 my $DESKTOP_STARTUP_ID = delete $ENV{DESKTOP_STARTUP_ID};
 my $unique = Gtk2::UniqueApp->new(
-	'com.unexicon.xde-traymenu', $DESKTOP_STARTUP_ID,
-	'xde-traymenu' => 1,
-	'xde-traymenu-popup' => 2);
+	"com.unexicon.$program", $DESKTOP_STARTUP_ID,
+	"$program" => 1,
+	"$program-popup" => 2);
 if ($unique->is_running) {
-    if ($program eq 'xde-traymenu') {
-	$unique->send_message_by_name($program=>text=>join('|',@SAVEARGS));
-	print STDERR "Another instance of $program is already running.\n";
-    } elsif ($program eq 'xde-traymenu-popup') {
-	$unique->send_message_by_name($program=>text=>join(',',$ops{button},$ops{timestamp}));
+    if ($prog eq $program) {
+	my $text = encode_base64(nfreeze(\%ops));
+	$unique->send_message_by_name($prog=>text=>$text);
+	print STDERR "Another instance of $program is already running.\n"
+	    unless $ops{quit} or $ops{restart} or $ops{refresh} or $ops{popup};
+    } elsif ($prog eq "$program-popup") {
+	$unique->send_message_by_name($prog=>text=>join(',',$ops{button},$ops{timestamp}));
     }
     exit(0);
 }
+if ($ops{quit} or $ops{restart} or $ops{refresh} or $ops{popup}) {
+    die "No other instance of $program is running.\n";
+}
 
-my $menu;
+my($menu,$icon,$parser,$tree,$tray);
 
 my $window = Gtk2::Window->new('toplevel');
 $unique->watch_window($window);
 $unique->signal_connect(message_received=>sub{
 	my ($unique,$command,$message,$time) = @_;
-	if ($command eq 'xde-traymenu') {
+	if ($command eq $program) {
 	    if ($ops{verbose}) {
 		print STDERR "$command command received\n";
 		print STDERR "\tscreen is ", $message->get_screen, "\n";
 		print STDERR "\tworkspace is ", $message->get_workspace, "\n";
 		print STDERR "\tstartup id is ", $message->get_startup_id, "\n";
 	    }
+	    my $text = $message->get_text;
+	    %ops = %{thaw(decode_base64($text))};
+	    if ($ops{quit} or $ops{restart}) {
+		Gtk2->main_quit();
+		# have to return first or no DBus reply generated
+		return 'ok';
+	    }
+	    if ($ops{refresh}) {
+		$parser = new XDG::Menu::Parser;
+		$tree = $parser->parse_menu($ops{root_menu});
+		$tray = new XDG::Menu::Tray;
+		$menu = $tray->create($tree);
+		return 'ok';
+	    }
 	}
-	elsif ($command eq 'xde-traymenu-popup') {
+	elsif ($command eq "$program-popup") {
 	    if ($ops{verbose}) {
 		print STDERR "$command command received\n";
 		print STDERR "\tscreen is ", $message->get_screen, "\n";
@@ -524,12 +758,38 @@ $unique->signal_connect(message_received=>sub{
 	    }
 	    my $text = $message->get_text;
 	    my ($button,$timestamp) = split(/,/,$text);
-	    $button = 3 unless $button == 1 || $button == 2 || $button == 3;
+	    $button = 0 unless $button == 1 || $button == 2 || $button == 3;
 	    $timestamp = $time unless $timestamp;
-	    $menu->show_all;
-	    $menu->show_now;
-	    $menu->map;
-#$menu->popup(undef,undef,undef,undef,$button,$timestamp);
+	    print STDERR "Popping menu $icon, $button, $timestamp\n" if $ops{verbose};
+	    if ($button) {
+		    $menu->popup(undef,undef,sub{
+			my ($menu,$x,$y,$data,$mods) = @_;
+			my $scrn = $message->get_screen;
+			my $disp = $scrn->get_display;
+			($scrn,$x,$y,$mods) = $disp->get_pointer;
+			$menu->set_screen($scrn);
+			my $req = $menu->size_request;
+			$x -= 5;
+			$y -= 5;
+			print STDERR "returning: $x, $y, 1\n" if $ops{verbose};
+			return ($x,$y,1);
+		    },undef,0,0);
+	    } else {
+		    $menu->popup(undef,undef,sub{
+			my ($menu,$x,$y,$data,$mods) = @_;
+			my $scrn = $message->get_screen;
+			my $disp = $scrn->get_display;
+			($scrn,$x,$y,$mods) = $disp->get_pointer;
+			$menu->set_screen($scrn);
+			my $mon = $scrn->get_monitor_at_point($x,$y);
+			my $req = $menu->size_request;
+			my $rect = $scrn->get_monitor_geometry($mon);
+			$x = $rect->x + $rect->width / 2 - $req->width / 2;
+			$y = $rect->y + $rect->height / 2 - $req->height / 2;
+			print STDERR "returning: $x, $y, 1\n" if $ops{verbose};
+			return ($x,$y,1);
+		    },undef,0,0);
+	    }
 	}
 	return 'ok';
 });
@@ -587,17 +847,17 @@ foreach my $state (qw(normal active prelight selected insensitive)) {
 #$style->text($state,$colors{'text'}{$state});
 }
 
-my $parser = new XDG::Menu::Parser;
-my $tree = $parser->parse_menu($ops{root_menu});
-my $tray = new XDG::Menu::Tray;
+$parser = new XDG::Menu::Parser;
+$tree = $parser->parse_menu($ops{root_menu});
+$tray = new XDG::Menu::Tray;
 #$tray->{style} = $style;
 #$tray->{colors} = \@colors;
 $menu = $tray->create($tree);
 
 my $pixbuf = Gtk2::IconTheme->get_default->load_icon('arch-logo',16,['generic-fallback','use-builtin']);
-my $icon =  Gtk2::StatusIcon->new_from_pixbuf($pixbuf);
+$icon =  Gtk2::StatusIcon->new_from_pixbuf($pixbuf);
 
-#my $icon = new Gtk2::StatusIcon->new_from_icon_name('arch-logo');
+#my $icon = new Gtk2::StatusIcon->new_from_icon_name('start-here');
 $icon->set_tooltip_text('Click for menu...');
 $icon->set_visible(1);
 $icon->signal_connect(button_press_event=>sub{
@@ -609,7 +869,7 @@ $icon->signal_connect(button_press_event=>sub{
 #    Gtk2::Rc->reparse_all;
 #    Gtk2::Rc->parse("$ENV{HOME}/.gtkrc-2.0");
 #    Gtk2::Rc->reset_styles('gtk-theme-name');
-    $menu->popup(undef,undef,'Gtk2::StatusIcon::position_menu',$icon,$button,$time);
+    $menu->popup(undef,undef,\&Gtk2::StatusIcon::position_menu,$icon,$button,$time);
     return Gtk2::EVENT_STOP;
 });
 $icon->signal_connect(popup_menu=>sub{
@@ -622,12 +882,22 @@ $icon->signal_connect(popup_menu=>sub{
 #    Gtk2::Rc->reparse_all;
 #    Gtk2::Rc->parse("$ENV{HOME}/.gtkrc-2.0");
 #    Gtk2::Rc->reset_styles('gtk-theme-name');
-    my ($menu,$mi,$im) = Gtk2::Menu->new;
-    $mi = Gtk2::ImageMenuItem->new_with_label('About...');
+    my ($cmenu,$mi,$im) = Gtk2::Menu->new;
+    $mi = Gtk2::ImageMenuItem->new_from_stock('gtk-refresh');
+    $mi->signal_connect(activate=>sub{
+	    $parser = new XDG::Menu::Parser;
+	    $tree = $parser->parse_menu($ops{root_menu});
+	    $tray = new XDG::Menu::Tray;
+	    $menu = $tray->create($tree);
+	    return Gtk2::EVENT_STOP;
+    });
+    $mi->show_all;
+    $cmenu->append($mi);
+    $mi = Gtk2::ImageMenuItem->new_from_stock('gtk-about');
     $mi->signal_connect(activate=>sub{
 	    Gtk2->show_about_dialog(undef,
 		    logo_icon_name=>'start-here',
-		    program_name=>'xde-traymenu',
+		    program_name=>$program,
 		    version=>'0.01',
 		    comments=>'An XDG compliant tray menu for XDE.',
 		    copyright=>'Copyright (c) 2013, 2014  OpenSS7 Corporation.',
@@ -642,20 +912,20 @@ EOF
 		    # logo=>,
 	    );
     });
-    $im = Gtk2::Image->new_from_stock('gtk-about','menu');
-    $mi->set_image($im);
     $mi->show_all;
-    $menu->append($mi);
+    $cmenu->append($mi);
     $mi = Gtk2::SeparatorMenuItem->new;
     $mi->show_all;
-    $menu->append($mi);
-    $mi = Gtk2::ImageMenuItem->new_with_label('Quit');
-    $im = Gtk2::Image->new_from_stock('gtk-quit','menu');
-    $mi->set_image($im);
+    $cmenu->append($mi);
+    $mi = Gtk2::ImageMenuItem->new_from_stock('gtk-redo');
+    $mi->show_all;
+    $mi->signal_connect(activate=>sub{ exec $executable, @SAVEARGS or die; });
+    $cmenu->append($mi);
+    $mi = Gtk2::ImageMenuItem->new_from_stock('gtk-quit');
     $mi->show_all;
     $mi->signal_connect(activate=>sub{ Gtk2->main_quit(); 1; });
-    $menu->append($mi);
-    $menu->popup(undef,undef,'Gtk2::StatusIcon::position_menu',$icon,$button,$time);
+    $cmenu->append($mi);
+    $cmenu->popup(undef,undef,\&Gtk2::StatusIcon::position_menu,$icon,$button,$time);
     return Gtk2::EVENT_PROPAGATE;
 });
 $icon->signal_connect(activate=>sub{
@@ -677,6 +947,16 @@ $icon->signal_connect(size_changed=>sub{
 });
 
 Gtk2->main;
+
+if ($ops{quit}) {
+    exit(0);
+}
+if ($ops{restart}) {
+    exec $executable, @SAVEARGS or die;
+}
+exit(0);
+
+__END__
 
 =head1 X RESOURCES
 

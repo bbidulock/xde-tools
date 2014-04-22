@@ -258,6 +258,7 @@ sub _init {
 	    }
 	    $screen->{pmid} = $pmid;
 	}
+	$X->choose_screen($n);
 	$self->win_bpcheck($screen,$d,$root,$n);
 	$self->win_wmcheck($screen,$d,$root,$n);
 	$self->net_wmcheck($screen,$d,$root,$n);
@@ -630,6 +631,7 @@ sub get_PropertyNotify_screen {
     my ($self,$e,$X,$v) = @_;
     defined(my $n = $self->{roots}{$e->{window}}) or return;
     defined(my $screen = $self->{screen}[$n]) or return;
+    $X->choose_screen($n);
     my $root = $X->{screens}[$n]{root};
     return unless $e->{window} == $root;
     return ($screen,$screen->{desktop},$root,$n);
@@ -1703,6 +1705,23 @@ sub watch_theme_file {
     return 1;
 }
 
+=item $xde->B<set_theme>(I<$name>)
+
+=cut
+
+sub set_theme {
+    my ($self,$name) = @_;
+    return if ($name ? $name : '') eq ($self->{theme} ? $self->{theme} : '');
+    my $X = $self->{X};
+    $self->{theme} = $name ? $name : '';
+    if ($self->{theme}) {
+	$X->ChangeProperty($X->root, $X->atom('_XDE_THEME_NAME'),
+		$X->atom('UTF8_STRING'), 8, 'Replace', $self->{theme});
+    } else {
+	$X->DeleteProperty($X->root,$X->atom('_XDE_THEME_NAME'));
+    }
+}
+
 =item $xde->B<get_theme_by_name>(I<$name>) => %e
 
 Search out in XDG theme directories an L<XDE(3pm)> theme with the name,
@@ -1950,6 +1969,7 @@ sub check_theme_FLUXBOX {
     my %r;
     my $theme = $style; $theme =~ s{/theme\.cfg$}{}; $theme =~ s{.*/}{};
     %r = $self->get_theme_by_name($theme);
+    $self->set_theme($theme) if %r;
     %r = $self->read_anybox_theme($style) unless %r;
     return unless %r;
     $self->{style} = $style;
@@ -2011,6 +2031,7 @@ sub check_theme_BLACKBOX {
     my %r;
     my $theme = $style; $theme =~ s{.*/}{};
     %r = $self->get_theme_by_name($theme);
+    $self->set_theme($theme) if %r;
     %r = $self->read_anybox_theme($style) unless %r;
     return unless %r;
     $self->{style} = $style;
@@ -2073,6 +2094,7 @@ sub check_theme_OPENBOX {
 #   THEME CHANGED
     my %r;
     %r = $self->get_theme_by_name($theme);
+    $self->set_theme($theme) if %r;
     %r = $self->read_anybox_theme($style) unless %r;
     return unless %r;
     $self->{style} = $style;
@@ -2143,6 +2165,7 @@ sub check_theme_ICEWM {
 	$theme =~ s{/default\.theme$}{};
 	$theme =~ s{\.theme$}{};
 	%r = $self->get_theme_by_name($theme);
+	$self->set_theme($theme) if %r;
     }
     if ($style) {
 	%r = $self->read_icewm_theme($style) unless %r;
@@ -2188,6 +2211,7 @@ sub check_theme_JWM {
     my %r;
     my $theme = $style; $theme =~ s{/style$}{}; $theme =~ s{.*/}{};
     %r = $self->get_theme_by_name($theme);
+    $self->set_theme($theme) if %r;
     %r = $self->read_jwm_theme($style) unless %r;
     return unless %r;
     $self->{style} = $style;
@@ -2225,6 +2249,7 @@ sub check_theme_PEKWM {
     my %r;
     my $theme = $style; $theme =~ s{.*/}{};
     %r = $self->get_theme_by_name($theme);
+    $self->set_theme($theme) if %r;
     %r = $self->read_pekwm_theme($style) unless %r;
     return unless %r;
     $self->{style} = $style;
@@ -2247,7 +2272,6 @@ manager.
 sub check_theme {
     my $self = shift;
     print STDERR "Checking theme\n" if $self->{ops}{verbose};
-    my ($screen,$d,$root,$n) = @_;
     my $wm = "\U$self->{wmname}\E" if $self->{wmname};
     return unless $wm;
     my $checker = "check_theme_$wm";
