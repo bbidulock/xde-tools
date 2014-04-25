@@ -4,6 +4,8 @@
 eval 'exec perl -S $0 ${1+"@"}'
     if $running_under_some_shell;
 
+use strict;
+
 #
 # are we installed or running in a sandbox?
 #
@@ -33,11 +35,8 @@ sub reparse {
 	my ($root,$property) = @_;
 	my ($type,$format,@data) = $root->property_get($property,undef,0,255,FALSE);
 	if ($type and $data[0]) {
-		printf STDERR "--> Property changed to %s\n", $data[0];
 		Gtk2::Rc->reparse_all;
 		Gtk2::Rc->parse_string("gtk-theme-name=\"$data[0]\"");
-	} else {
-		printf STDERR "--> Could not read property\n";
 	}
 }
 
@@ -54,7 +53,6 @@ sub reparse {
 		my ($event,$data) = @_;
 		if (($event->type eq 'client-message' and $event->message_type->name eq "_GTK_READ_RCFILES") ||
 		    ($event->type eq 'property-notify' and $event->atom->name eq "_XDE_THEME_NAME")) {
-			print STDERR "--> Got theme name change\n";
 			reparse($root,$property);
 			return;
 		}
