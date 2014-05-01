@@ -23,6 +23,7 @@ use PerlPanel;
 #
 $PerlPanel::PREFIX = (-e '/usr' ? '/usr' : $ENV{PWD});
 $PerlPanel::LIBDIR = (-e '/usr/lib/perlpanel' ? '/usr/lib/perlpanel' : $ENV{PWD}.'/lib/');
+$PerlPanel::DEFAULT_THEME = 'Mist';
 
 #
 # if we're in a sandbox then it's handy to add ./src to the PATH:
