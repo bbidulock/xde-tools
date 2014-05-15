@@ -122,7 +122,7 @@ sub wmmenu {
 	next if "\L$name\E" eq "ctwm";
 	my $exec = $wm->{Exec};
 	my $icon = $self->icon($wm->{Icon});
-	$icon = $self->icon('preferences-desktop-display') unless $icon;
+	$icon = $self->icon('preferences-system-windows') unless $icon;
 	$name =~ s/["]/\\"/g;
 	$exec =~ s/["]/\\"/g;
 	$text .= sprintf "    %-32s  %s\n",'"'.$name.'"','f.startwm "'.$exec.'"';

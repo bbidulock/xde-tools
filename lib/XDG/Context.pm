@@ -70,6 +70,16 @@ use constant {
 	XDG_ICON_APPEND
 	XDG_ICON_FALLBACK
     )],
+    PLACES => {
+	XDG_DESKTOP_DIR		=> [ Desktop	=> qw(Desktop		user-desktop)		],
+	XDG_DOWNLOAD_DIR	=> [ Download	=> qw(Download		folder-download)	],
+	XDG_TEMPLATES_DIR	=> [ Templates	=> qw(Templates		folder-templates)	],
+	XDG_PUBLICSHARE_DIR	=> [ Public	=> qw(Public		folder-publichshare)	],
+	XDG_DOCUMENTS_DIR	=> [ Documents	=> qw(Documents		folder-documents)	],
+	XDG_MUSIC_DIR		=> [ Music	=> qw(Music		folder-music)		],
+	XDG_PICTURES_DIR	=> [ Pictures	=> qw(Pictures		folder-pictures)	],
+	XDG_VIDEOS_DIR		=> [ Videos	=> qw(Videos		folder-videos)		],
+    },
 };
 
 =head1 METHODS
@@ -457,8 +467,8 @@ sub get_autostart {
     my %files;
     foreach my $d (reverse map {"$_/autostart"} @{$self->{XDG_CONFIG_ARRAY}}) {
 	$autostartdirs{$d} = 1;
-	opendir(my $dir, $d) or next;
-	foreach my $f (readdir($dir)) {
+	opendir(my $dh, $d) or next;
+	foreach my $f (readdir($dh)) {
 	    next unless -f "$d/$f" and $f =~ /\.desktop$/;
 	    my %e = $self->get_entry($d,$f,'Desktop Entry');
 	    next unless %e;
@@ -467,7 +477,7 @@ sub get_autostart {
             $e{Comment} = $e{Name} unless $e{Comment};
             $files{$f} = \%e;
 	}
-	closedir($dir);
+	closedir($dh);
     }
     # Mark those that are not to be run...
     my @desktops = split(/:/,$self->{XDG_CURRENT_DESKTOP});
@@ -496,10 +506,10 @@ sub get_autostart {
 		}
 	    }
 	    if (!$found) {
-	    $e->{'X-Disable'} = 'true';
-	    $e->{'X-Disable-Reason'} = "Only shown in $e->{OnlyShowIn}";
-	    next;
-	}
+		$e->{'X-Disable'} = 'true';
+		$e->{'X-Disable-Reason'} = "Only shown in $e->{OnlyShowIn}";
+		next;
+	    }
 	}
 	if ($e->{NotShowIn}) {
 	    my $found = 0;
@@ -510,10 +520,10 @@ sub get_autostart {
 		}
 	    }
 	    if ($found) {
-	    $e->{'X-Disable'} = 'true';
-	    $e->{'X-Disable-Reason'} = "Not shown in $e->{NotShowIn}";
-	    next;
-	}
+		$e->{'X-Disable'} = 'true';
+		$e->{'X-Disable-Reason'} = "Not shown in $e->{NotShowIn}";
+		next;
+	    }
 	}
         unless ($e->{TryExec}) {
             my @words = split(/\s+/,$e->{Exec});
@@ -568,8 +578,8 @@ sub get_xsessions {
     my %files;
     foreach my $d (reverse map {"$_/xsessions"} @{$self->{XDG_DATA_ARRAY}}) {
 	$sessiondirs{$d} = 1;
-        opendir(my $dir, $d) or next;
-        foreach my $f (readdir($dir)) {
+        opendir(my $dh, $d) or next;
+        foreach my $f (readdir($dh)) {
             next unless -f "$d/$f" and $f =~ /\.desktop$/;
 	    my %e = $self->get_entry($d,$f,'Desktop Entry','Window Manager');
 	    next unless %e;
@@ -580,7 +590,7 @@ sub get_xsessions {
             $e{Label} = "\L$e{Name}\E" unless $e{Label};
             $files{$f} = \%e;
         }
-        closedir($dir);
+        closedir($dh);
     }
     my %sessions;
     foreach (values %files) {
@@ -658,9 +668,9 @@ sub get_xsessions {
 =item $xdg->B<get_applications>() => HASHREF
 
 Search out all XDG application files and collect them into a hash
-reference.  The keys of the hash are the names of the F<.desktop> files
-collected.  Application files follow XDG precedence rules for XDG
-data directories.
+reference.  The keys of the hash are the desktop entry identifiers of
+the files collected.  Application files follow XDG precedence rules for
+XDG data directories.
 
 Also establishes a hash reference in C<$xdg-E<gt>{dirs}{applications}>
 that contains all of the directories searched (whether they existed or
@@ -669,28 +679,44 @@ L<XDE::Inotify(3pm)>.
 
 =cut
 
+sub _get_dir_apps {
+    my($self,$dir,$path,$apps,$dirs) = @_;
+    my $d = join('/',$dir,@$path);
+    $dirs->{$d} = 1;
+    if (opendir(my $dh, $d)) {
+	foreach my $f (readdir($dh)) {
+	    next if $f eq '.' or $f eq '..';
+	    if (-d "$d/$f") {
+		push @$path, $f;
+		$self->_get_dir_apps($dir,$path,$apps,$dirs);
+		pop @$path;
+	    } elsif ($f = m{\.desktop$} and -f $f) {
+		my $id = join('-',@$path,$f);
+		$id =~ s{\.desktop$}{};
+		my %e = $self->get_entry($d,$f,'Desktop Entry');
+		next unless %e;
+		$e{Name} = '' unless $e{Name};
+		$e{Exec} = '' unless $e{Exec};
+		$e{Comment} = $e{Name} unless $e{Comment};
+		$apps->{$id} = \%e;
+	    }
+	}
+	closedir($dh);
+    }
+}
+
 sub get_applications {
     my $self = shift;
-    my %appdirs = ();
-    my %files;
-    foreach my $d (reverse map {"$_/applications"} @{$self->{XDG_DATA_ARRAY}}) {
-	$appdirs{$d} = 1;
-	opendir(my $dir, $d) or next;
-	foreach my $f (readdir($dir)) {
-	    next unless -f "$d/$f" and $f =~ /\.desktop$/;
-	    my %e = $self->get_entry($d,$f,'Desktop Entry');
-	    next unless %e;
-            $e{Name} = '' unless $e{Name};
-            $e{Exec} = '' unless $e{Exec};
-            $e{Comment} = $e{Name} unless $e{Comment};
-            $files{$f} = \%e;
-	}
-	closedir($dir);
+    my %dirs = ();
+    my %apps = ();
+    my @path = ();
+    foreach my $dir (reverse map {"$_/applications"} @{$self->{XDG_DATA_ARRAY}}) {
+	$self->_get_dir_apps($dir,\@path,\%apps,\%dirs);
     }
     # Mark those that are not to be run...
     my @desktops = split(/:/,$self->{XDG_CURRENT_DESKTOP});
     my @PATH = split(/:/,$ENV{PATH});
-    foreach my $e (values %files) {
+    foreach my $e (values %apps) {
 	unless ($e->{Name}) {
 	    $e->{'X-Disable'} = 'true';
 	    $e->{'X-Disable-Reason'} = "No Name";
@@ -715,10 +741,10 @@ sub get_applications {
 		}
 	    }
 	    if (!$found) {
-	    $e->{'X-Disable'} = 'true';
+		$e->{'X-Disable'} = 'true';
 		$e->{'X-Disable-Reason'} = "Only shown in $e->{OnlyShowIn}";
-	     #next;
-	}
+		#next;
+	    }
 	}
 	if ($e->{NotShowIn}) {
 	    my $found = 0;
@@ -729,9 +755,9 @@ sub get_applications {
 		}
 	    }
 	    if ($found) {
-	    $e->{'X-Disable'} = 'true';
+		$e->{'X-Disable'} = 'true';
 		$e->{'X-Disable-Reason'} = "Not shown in $e->{NotShowIn}";
-	     #next;
+		#next;
 	    }
 	}
         unless ($e->{TryExec}) {
@@ -763,8 +789,8 @@ sub get_applications {
         }
 #	$e->{'X-Disable'} = 'false';
     }
-    $self->{dirs}{applications} = \%appdirs;
-    return \%files;
+    $self->{dirs}{applications} = \%dirs;
+    return \%apps;
 }
 
 =item $xdg->B<get_mimeapps>() => HASHREF
@@ -806,6 +832,175 @@ sub get_mimeapps {
 	$self->{dirs}{applications}{$_} = 1;
     }
     return \%hash;
+}
+
+=item $xdg->B<get_userdirs>() => HASHREF
+
+Assign all XDG user directories, their locations, names and icon names
+and resturn them as a hash reference to array references containing the
+directory, name and icon name.
+
+=cut
+
+sub get_places {
+    my $self = shift;
+    my $file = "$self->{XDG_CONFIG_HOME}/user-dirs.dirs";
+    if (-r "$file") {
+	foreach (keys %{&PLACES}) {
+	    chomp(my $dir = `sh -c ". $file; echo -n \\"\$$_\\""`);
+	    next if not $dir or $dir eq $self->{HOME} or not -d $dir;
+	    $self->{$_} = $dir;
+	}
+    }
+    my %places = ();
+    foreach (keys %{&PLACES}) {
+	$self->{$_} = "$self->{HOME}/".&PLACES->{$_}[0] unless $self->{$_};
+	if (my $dir = $self->{$_}) {
+	    my $name = $dir;
+	    $name =~ s{.*/}{};
+	    $places{$_} = [ $dir, $name, &PLACES->{$_}[2] ];
+	}
+    }
+    return \%places;
+}
+
+=item $xdg->B<get_links>() => HASHREF
+
+Search out all XDG link files on the desktop and collect them into a
+hash reference.  The keys of the hash are the desktop entry identifiers
+of files collected. Link files follow XDG identification and precedeence
+rules for the XDG data directories.
+
+Also establishes a hash reference in C<$xdg-E<gt>{dirs}{links}> that
+contains all of the directories searched (whether they exist or not) for
+use win conjuction with L<Linux::Inotify2(3pm)>.  See
+L<XDG::Inotify(3pm)>.
+
+=cut
+
+sub _get_dir_links {
+    my($self,$dir,$path,$links,$dirs) = @_;
+    my $d = join('/',$dir,@$path);
+    $dirs->{$d} = 1;
+    if (opendir(my $dh, $d)) {
+	foreach my $f (readdir($dh)) {
+	    next if $f eq '.' or $f eq '..';
+	    if (-d "$d/$f") {
+		push @$path, $f;
+		$self->_get_dir_links($dir,$path,$links,$dirs);
+		pop @$path;
+	    } elsif ($f =~ m{\.desktop$} and -f $f) {
+		my $id = join('-',@$path,$f);
+		$id =~ s{\.desktop$}{};
+		my %e = $self->get_entry($d,$f,'Desktop Entry');
+		next unless %e;
+		$links->{$id} = \%e;
+	    }
+	}
+	closedir($dh);
+    }
+}
+
+sub get_links {
+    my $self = shift;
+    my $places = $self->get_places;
+    my %dirs = ();
+    my %links = ();
+    my @path = ();
+    my $dir = $places->{XDG_DESKTOP_DIR};
+    $self->_get_dir_links($dir,\@path,\%links,\%dirs);
+    # Mark those that are not to be shown.
+    my @desktops = split(/:/,$self->{XDG_CURRENT_DESKTOP});
+    foreach my $e (values %links) {
+	unless ($e->{Type} eq 'Link') {
+	    $e->{'X-Disable'} = 'true';
+	    $e->{'X-Disable-Reason'} = "Not a link";
+	    next;
+	}
+	unless ($e->{Name}) {
+	    $e->{'X-Disable'} = 'true';
+	    $e->{'X-Disable-Reason'} = "No Name";
+	    next;
+	}
+	unless ($e->{URL}) {
+	    $e->{'X-Disable'} = 'true';
+	    $e->{'X-Disable-Reason'} = "No URL";
+	    next;
+	}
+	if ($e->{Hidden} and $e->{Hidden} =~ m{true|yes}i) {
+	    $e->{'X-Disable'} = 'true';
+	    $e->{'X-Disable-Reason'} = "Hidden";
+	    next;
+	}
+	if ($e->{OnlyShowIn}) {
+	    my $found = 0;
+	    foreach my $desktop (@desktops) {
+		if (";$e->{OnlyShowIn};" =~ m{;$desktop;}) {
+		    $found = 1;
+		    last;
+		}
+	    }
+	    if (!$found) {
+		$e->{'X-Disable'} = 'true';
+		$e->{'X-Disable-Reason'} = "Only shown in $e->{OnlyShowIn}";
+		#next;
+	    }
+	}
+	if ($e->{NotShowIn}) {
+	    my $found = 0;
+	    foreach my $desktop (@desktops) {
+		if (";$e->{NotShowIn};" =~ /;$desktop;/) {
+		    $found = 1;
+		    last;
+		}
+	    }
+	    if ($found) {
+		$e->{'X-Disable'} = 'true';
+		$e->{'X-Disable-Reason'} = "Not shown in $e->{NotShowIn}";
+		#next;
+	    }
+	}
+    }
+    $self->{dirs}{links} = \%dirs;
+    return \%links;
+}
+
+=item $xdg->B<get_bookmarks>() => HASHREF
+
+Search out all directory bookmarks on the desktop and collect them into
+a hash reference.  The keys of the hash are the URIs of the bookmarks
+and the values are the names.
+
+=cut
+
+sub _read_bookmarks {
+    my($self,$file,$marks) = @_;
+    if (open(my $fh, "<", $file)) {
+	while (<$fh>) { chomp;
+	    my($uri,$name) = split(/\s+/,$_,2);
+	    next unless $uri and $name;
+	    next unless $uri =~ m{^file:};
+	    $marks->{$uri} = $name;
+	}
+	close($fh);
+    }
+}
+
+sub get_bookmarks {
+    my $self = shift;
+    my %marks = ();
+    $self->{HOME} = $ENV{HOME} unless $self->{HOME};
+    $self->{XDG_CONFIG_HOME} = "$self->{HOME}/.config" unless $self->{XDG_CONFIG_HOME};
+    my @files = (
+	"$self->{XDG_CONFIG_HOME}/gtk-3.0/bookmarks",
+	"$self->{XDG_CONFIG_HOME}/gtk-2.0/bookmarks",
+	"$self->{XDG_CONFIG_HOME}/spacefm/bookmarks",
+	"$self->{HOME}/.gtk-bookmarks",
+    );
+    foreach (@files) {
+	$self->_read_bookmarks($_,\%marks);
+    }
+    return \%marks;
 }
 
 =back
@@ -892,12 +1087,86 @@ C<language> option, above.
 =item desktop => $desktop
 
 Specifies the current XDG desktop environment (e.g. FLUXBOX).  When
-unspecified, defaults will be set from environment variables.
+unspecified, defaults will be set from environment variables (i.e.
+B<XDG_CURRENT_DESKTOP>).
 
 =item vendor => $vendor
 
 Specifies the vendor string for branding.  When unspecified, defaults
-will be taken from environment variables.
+will be taken from environment variables (i.e. B<XDG_VENDOR_ID> or
+B<XDG_MENU_PREFIX>).
+
+=back
+
+=head1 ENVIRONMENT
+
+B<XDG::Context> recognizes the following environment variables:
+
+=over
+
+=item B<XDG_CONFIG_HOME>
+
+Provides the user home configuration directory.  Defaults to
+F<~/.config> if unspecified.
+
+=item B<XDG_CONFIG_DIRS>
+
+Provides the system configuration directories.  Defaults to F</etc/xdg>
+when unspecified.
+
+=item B<XDG_DATA_HOME>
+
+Provides the user home data directory.  Defaults to F<~/.local/share>
+when unspecified.
+
+=item B<XDG_DATA_DIRS>
+
+Provides the system data directories.  Defaults to
+F</usr/local/share:/usr/share> when unspecified.
+
+=item B<XDG_VENDOR_ID>
+
+Provides the vendor id.  This is not an XDG standard.  Provides the
+vendor identifier.  Defaults to B<XDG_MENU_PREFIX> minus any trailing
+dash when unspecified.
+
+=item B<XDG_MENU_PREFIX>
+
+Provides the menu prefix.  Defaults to nothing when unspecified.
+
+=item B<XDG_CURRENT_DESKTOP>
+
+Provides the current desktop as a path-separated list of applicable
+desktop environments.  Defaults to B<XDE> when unspecified.
+
+=back
+
+=head1 FILES
+
+B<XDG::Context> refers to the following files:
+
+=over
+
+=item F<$XDG_CONFIG_HOME/gtk-3.0/bookmarks>
+
+=item F<$XDG_CONFIG_HOME/gtk-2.0/bookmarks>
+
+=item F<$XDG_CONFIG_HOME/spacefm/bookmarks>
+
+=item F<$HOME/.gtk-bookmarks>
+
+These are the files that are searched when looking up directory
+bookmarks.
+
+=item F<$XDG_CONFIG_HOME/user-dirs.dirs>
+
+The location of the shell script for assigning the names and locations
+of user directories.
+
+=item F<$XDG_DESKTOP_DIR>
+
+The location of the "Desktop".  Defaults to F<$HOME/Desktop> when
+unspecified.
 
 =back
 

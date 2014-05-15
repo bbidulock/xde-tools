@@ -124,7 +124,7 @@ sub wmmenu {
 	$name = $_ unless $name;
 	next if $name =~ m{fvwm}i;
 	my $exec = $wm->{Exec};
-	my $icon = $self->icon($wm->{Icon},'preferences-desktop-display');
+	my $icon = $self->icon($wm->{Icon},'preferences-system-windows');
 	$text .= sprintf "+ \"%s%s\" Restart %s\n", $name, $icon, $exec;
 	$gotone = 1;
     }

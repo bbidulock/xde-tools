@@ -1,6 +1,3 @@
-use XDG::Icons;
-
-
 package XDG::Menu::Layout::Item;
 use strict;
 use warnings;
@@ -119,6 +116,7 @@ sub Icon {
 
 package XDG::Menu::DesktopAction;
 use Carp qw(cluck croak confess);
+use XDG::Icons;
 use strict;
 use warnings;
 
@@ -182,7 +180,7 @@ sub new {
 	     #print "I: $file parsing section $section\n";
 	    $section = '' unless
 		$section eq 'Desktop Entry' or $action;
-	    }
+	}
 	elsif ($section and /^([^=\[]+)\[([^=\]]+)\]\s*=\s*([^[:cntrl:]]*)/) {
 	    my ($label,$trans,$value) = ($1,$2,$3);
 	    $value =~ s/\s+$//;
@@ -245,7 +243,7 @@ sub new {
 	return undef;
     }
     unless ($file =~ m{\.desktop$}) {
-    return $self;
+	return $self;
     }
     my $d = $file; $d =~ s{/[^/]*$}{};
     my $f = $file; $f =~ s{.*/}{};
@@ -577,9 +575,9 @@ sub resolve {
 		    }
 		}
 		if (!$found) {
-		push @deletions, $_;
-		next;
-	    }
+		    push @deletions, $_;
+		    next;
+		}
 	    }
 	    if ($app->{NotShowIn}) {
 		my $found = 0;
@@ -620,12 +618,12 @@ sub resolve {
 		my $exec = $app->{Exec};
 		$exec =~ s/\s.*$//;
 		if ($exec =~ m{/} and not -x $exec) {
-		push @deletions, $_;
-		next;
-	    }
+		    push @deletions, $_;
+		    next;
+		}
 		if ($exec !~ m{/} and not which($exec)) {
-		push @deletions, $_;
-		next;
+		    push @deletions, $_;
+		    next;
 		}
 	    }
 	}

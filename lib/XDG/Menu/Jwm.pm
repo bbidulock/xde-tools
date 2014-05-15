@@ -139,7 +139,7 @@ sub wmmenu {
 	$name =~ s/["]/\\"/g;
 	my $exec = $wm->{Exec};
 	my $icon = $self->icon($wm->{Icon});
-	$icon = $self->icon('preferences-desktop-display') unless $icon;
+	$icon = $self->icon('preferences-system-windows') unless $icon;
 	$text .= sprintf "%s%s\n", $indent, q(  <Exit ).$icon.q(label=").escape($name).q(" confirm="false">).$exec.q(</Exit>);
     }
     $text .= sprintf "%s%s\n", $indent, q(</Menu>);

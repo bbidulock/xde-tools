@@ -1,9 +1,16 @@
 package XDG::Icons;
 use base qw(XDG::Context);
-require XDG::IconTheme;
-require XDG::IconData;
 use strict;
 use warnings;
+use vars qw($FAST);
+
+if (!eval { require Gtk2; }) {
+    $FAST = 0;
+    use XDG::Icons::Slow;
+} else {
+    $FAST = 1;
+    use XDG::Icons::Fast;
+}
 
 =head1 NAME
 
@@ -68,10 +75,10 @@ The XDG::Icons module provides the following methods:
 
 =over
 
-=item B<new>($hashref) => XDG::Icons
+=item B<new>({I<%options>}) => XDG::Icons
 
 Establishes the default theme, search directory paths, and reads all
-available theme files.  The options contained in the C<$hashref> can be:
+available theme files.  The I<%options> can be:
 
 =over
 
@@ -100,250 +107,31 @@ arrayref or a scalar comma-separated list of extensions.
 =cut
 
 sub new {
-    my $self = bless {}, shift;
-    my $options = shift; $options = {} unless $options;
-    $self->{dirs} = [];
-    push @{$self->{dirs}}, "$ENV{HOME}/.icons";
-
-    my $XDG_DATA_HOME = $ENV{XDG_DATA_HOME};
-    $XDG_DATA_HOME = "$ENV{HOME}/.local/share" unless $XDG_DATA_HOME;
-    $ENV{XDG_DATA_HOME} = $XDG_DATA_HOME;
-
-    my $XDG_DATA_DIRS = $ENV{XDG_DATA_DIRS};
-    $XDG_DATA_DIRS = "/usr/local/share:/usr/share" unless $XDG_DATA_DIRS;
-    $ENV{XDG_DATA_DIRS} = $XDG_DATA_DIRS;
-
-    my @XDG_DATA_DIRS = split(/:/,$XDG_DATA_HOME.':'.$XDG_DATA_DIRS);
-    push @{$self->{dirs}}, map {"$_/icons"} @XDG_DATA_DIRS;
-    push @{$self->{dirs}}, '/usr/share/pixmaps';
-
-    unshift @{$self->{dirs}}, split(/:/,$options->{Prepend}) if $options->{Prepend};
-    push    @{$self->{dirs}}, split(/:/,$options->{Append})  if $options->{Append};
-    
-
-    my $XDG_ICON_THEME = $ENV{XDG_ICON_THEME};
-    unless ($XDG_ICON_THEME) {
-	if (-f "$ENV{HOME}/.gtkrc-2.0") {
-	    my @lines = (`cat $ENV{HOME}/.gtkrc-2.0`);
-	    foreach (@lines) { chomp;
-		if (m{gtk-icon-theme-name=["]?(.*[^"])["]?$}) {
-		    $XDG_ICON_THEME = "$1";
-		    last;
-		}
-	    }
-	} else {
-	    $XDG_ICON_THEME = 'hicolor';
-	}
+    my($type,$options) = @_;
+    if ($FAST) {
+	return XDG::Icons::Fast->new($options);
+    } else {
+	return XDG::Icons::Slow->new($options);
     }
-    $XDG_ICON_THEME = $options->{Theme} if $options->{Theme};
-    $ENV{XDG_ICON_THEME} = $XDG_ICON_THEME;
-
-    $self->{extensions} = [qw(png svg xpm)];
-    if (my $ext = $options->{Extensions}) {
-        if (ref $ext eq 'ARRAY') {
-            $self->{extensions} = $ext;
-        }
-        else {
-            $self->{extensions} = split(/,/,$ext);
-        }
-    }
-    $self->{theme} = $XDG_ICON_THEME;
-    return $self->Rescan();
-}
-
-=item B<FindIcon>($icon,$size,[$ext]) => $filename
-
-Requests that the filename of an icon with name, C<$icon>, be found for
-size, C<$size>, with extensions optionally specified with the arrayref
-C<$ext>.  The filename is returned or undef when no suitable icon file
-could be found.  When no icon file can be found with the specified size,
-an icon of a suitably close size will be sought.  This method falls back
-to fall-back directories (e.g. F</usr/share/pixmaps>) if a matching name
-is not found, to search a list of alternate names, see L</FindBestIcon>.
-
-=cut
-
-sub FindIcon {
-    my ($self,$icon,$size,$exts) = @_;
-    my $fn = $self->_FindIconHelper($icon,$size,$self->{theme},$exts);
-    return $fn if $fn;
-    $fn = $self->_FindIconHelper($icon,$size,'hicolor',$exts);
-    return $fn if $fn;
-    return $self->_LookupFallbackIcon($icon,$exts);
-}
-
-sub _FindIconHelper {
-    my ($self,$icon,$size,$name,$exts) = @_;
-    my $theme = $self->{themes}{$name};
-    return undef unless $theme;
-    my $fn = $self->_LookupIcon($icon,$size,$theme,$exts);
-    return $fn if $fn;
-    if (my $inherit = $theme->{Inherits}) {
-	$fn = $self->_FindIconHelper($icon,$size,$inherit,$exts);
-	return $fn if $fn;
-    }
-    return $fn;
-}
-
-sub _LookupIcon {
-    my ($self,$iconname,$size,$theme,$exts) = @_;
-    $exts = $self->{extensions} unless $exts;
-    foreach my $subdir ($theme->Directories) {
-	if ($theme->DirectoryMatchesSize($subdir,$size)) {
-	    foreach my $dir (@{$self->{dirs}}) {
-		foreach my $ext (@$exts) {
-			my $fn = "$dir/$theme->{name}/$subdir/$iconname.$ext";
-			return $fn if -f $fn;
-		}
-	    }
-	}
-    }
-    my $minimal_size = 0x7ffffff;
-    my $closest_filename = undef;
-    foreach my $subdir ($theme->Directories) {
-	foreach my $dir (@{$self->{dirs}}) {
-	    foreach my $ext (@$exts) {
-		my $fn = "$dir/$theme->{name}/$subdir/$iconname.$ext";
-		if (-f $fn and $theme->DirectorySizeDistance($subdir,$size) < $minimal_size) {
-		    $closest_filename = $fn;
-		    $minimal_size = $theme->DirectorySizeDistance($subdir,$size);
-		}
-	    }
-	}
-    }
-    if ($closest_filename) {
-	return $closest_filename;
-    }
-    return undef;
-}
-
-sub _LookupFallbackIcon {
-    my ($self,$iconname,$exts) = @_;
-    $exts = $self->{extensions} unless $exts;
-    foreach my $dir (@{$self->{dirs}}) {
-	foreach my $ext (@$exts) {
-	    my $fn = "$dir/$iconname.$ext";
-	    return $fn if -f $fn;
-	}
-    }
-    return undef;
-}
-
-=item B<FindBestIcon>($iconlist,$size,[$ext]) => $filename
-
-Like L</FindIcon>, but searches for icons with the names provided in the
-entire array referenced by C<$iconlist> before falling back to fall-back
-directories (e.g. /usr/share/pixmaps).
-
-=cut
-
-sub FindBestIcon {
-    my ($self,$iconlist,$iconsize,$exts) = @_;
-    my $fn = $self->_FindBestIconHelper($iconlist,$iconsize,$self->{theme},$exts);
-    return $fn if $fn;
-    $fn = $self->_FindBestIconHelper($iconlist,$iconsize,'hicolor',$exts);
-    return $fn if $fn;
-    foreach my $icon (@$iconlist) {
-	$fn = $self->_LookupFallbackIcon($icon,$exts);
-	return $fn if $fn;
-    }
-    return undef;
-}
-
-sub _FindBestIconHelper {
-    my ($self,$iconlist,$iconsize,$name,$exts) = @_;
-    my $theme = $self->{themes}{$name};
-    return undef unless $theme;
-    foreach my $icon (@$iconlist) {
-	my $fn = $self->_LookupIcon($icon,$iconsize,$theme,$exts);
-	return $fn if $fn;
-    }
-    if (my $parent = $theme->{Inherits}) {
-	my $fn = $self->_FindBestIconHelper($iconlist,$iconsize,$parent,$exts);
-	return $fn if $fn;
-    }
-    return undef;
-}
-
-=item B<Directories>() => list
-
-Returns the list of directories in which XDG::Icons searched for files.
-This list can be used with L<Linux::Inotify2(3pm)> to indicate when icon
-calculations many need to be rerun.
-
-=cut
-
-sub Directories {
-	my $self = shift;
-	return @{$self->{dirs}};
-}
-
-=item B<Rescan>() => undef
-
-Ask XDG::Icons to rescan its directories for themes and prepare to have
-icons searched in the new set of directories.
-
-=cut
-
-sub Rescan {
-    my $self = shift;
-    $self->{themes} = {};
-    foreach my $dir (reverse @{$self->{dirs}}) {
-	opendir(my $fh, $dir) or next;
-	foreach my $subdir (readdir($fh)) {
-	    next if $subdir eq '.' or $subdir eq '..';
-	    next unless -d "$dir/$subdir";
-	    if (-f "$dir/$subdir/index.theme") {
-		if (my $theme = new XDG::IconTheme("$dir/$subdir/index.theme")) {
-		    $theme->{name} = $subdir;
-		    $self->{themes}{$subdir} = $theme;
-		}
-	    }
-	}
-	close($fh);
-    }
-    return $self;
 }
 
 =back
-
-=head1 ENVIRONMENT
-
-B<XDG::Icons> interprets the following environment variables:
-
-=over
-
-=item B<HOME>
-
-This environment variable must be set for B<XDG::Icons> to locate other
-directories in accordance with XDG specifications.  Icon themes and
-fall-backs will be sought in F<$HOME/.icons>.
-
-=item B<XDG_DATA_HOME>
-
-The user data directories.  When unset, this variable defaults to
-F<$HOME/.local/share> in accordance with XDG specifications.  Icon
-themes and fall-backs will be sought in F<$XDG_DATA_HOME/icons>.
-
-=item B<XDG_DATA_DIRS>
-
-The system data directories.  When unset, this variable defaults to
-F</usr/local/share:/usr/share> in accordance with XDG specifications.
-Icon themes and fall-backs will be sought in F<$XDG_DATA_DIRS/icons>.
-In addition, a fall-back of F</usr/share/pixmaps> will be appended.
-
-=item B<XDG_ICON_THEME>
-
-The user icon theme.  When unset, the variable will be derived from
-F<$HOME/.gtkrc-2.0> if it exists, and set to C<hicolor>, otherwise.
-
-=back
-
-=head1 SEE ALSO
-
-L<XDG::IconTheme(3pm)>
 
 =cut
 
 1;
-# vim: sw=4 tw=72
+
+__END__
+
+=head1 AUTHOR
+
+Brian Bidulock <bidulock@cpan.org>
+
+=head1 SEE ALSO
+
+L<XDG::Icons::Fast(3pm)>,
+L<XDG::Icons::Slow(3pm)>
+
+=cut
+
+# vim: set sw=4 tw=72 fo=tcqlorn foldmarker==head,=head foldmethod=marker:

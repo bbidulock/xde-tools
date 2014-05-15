@@ -120,7 +120,7 @@ sub wmmenu {
 	next if $name =~ m{openbox}i;
 	my $exec = $wm->{Exec};
 	my $icon = $self->icon($wm->{Icon});
-	$icon = $self->icon('preferences-desktop-display') unless $icon;
+	$icon = $self->icon('preferences-system-windows') unless $icon;
 	$text .= sprintf("      [restart] (Start %s) {%s}%s\n",$name,$exec,$icon);
     }
     $text .= sprintf "%s\n", '    [end] # (Window Managers)';

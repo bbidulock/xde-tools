@@ -124,7 +124,7 @@ sub wmmenu {
 	next if $name =~ m{icewm}i;
 	my $exec = $wm->{Exec};
 	my $icon = $self->icon($wm->{Icon});
-	$icon = $self->icon('preferences-desktop-display') if $icon eq '-';
+	$icon = $self->icon('preferences-system-windows') if $icon eq '-';
 	$text .= sprintf("    restart \"Start %s\" %s %s\n",$name,$icon,$exec);
     }
     $text .= sprintf "  }\n";

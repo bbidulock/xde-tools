@@ -120,7 +120,7 @@ sub wmmenu {
 	next if $name =~ m{fluxbox}i;
 	my $exec = $wm->{Exec};
 	my $icon = $self->icon($wm->{Icon});
-	$icon = $self->icon('preferences-desktop-display') unless $icon;
+	$icon = $self->icon('preferences-system-windows') unless $icon;
 	$text .= sprintf("%s  [restart] (Start %s) {%s}%s\n",$indent,$name,$exec,$icon);
     }
     $text .= sprintf "%s%s\n", $indent, '[end] # (Window Managers)';

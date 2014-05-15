@@ -120,7 +120,7 @@ sub wmmenu {
 	next if $name =~ m{[uμμ]wm}i;
 	my $exec = $wm->{Exec}; $exec =~ s{"}{\\"}g;
 	my $icon = $self->icon($wm->{Icon});
-	$icon = $self->icon('preferences-desktop-display') unless $icon;
+	$icon = $self->icon('preferences-system-windows') unless $icon;
 	$text .= sprintf "%s  [%s text = \"%s\" exit = \"%s\" ]\n",
 	    $indent, $icon, $name, $exec;
     }
