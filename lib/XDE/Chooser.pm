@@ -440,14 +440,19 @@ sub make_login_choice {
             my ($col,$cell,$store,$iter) = @_;
             my ($iname) = $store->get($iter,0);
             $iname =~ s/\.(xpm|svg|png)$// if $iname;
-            $iname = 'gtk-missing-image' unless $iname;
+	    $iname = 'preferences-system-windows' unless $iname;
             my $theme = Gtk2::IconTheme->get_default;
 	    my $pixbuf;
 	    if ($theme->has_icon($iname)) {
 		$pixbuf = $theme->load_icon($iname,32,['generic-fallback','use-builtin']);
 	    } else {
-		my $image = Gtk2::Image->new_from_stock('gtk-missing-image','large-toolbar');
-		$pixbuf = $image->render_icon('gtk-missing-image','large-toolbar');
+		$iname = 'preferences-system-windows';
+		if ($theme->has_icon($iname)) {
+		    $pixbuf = $theme->load_icon($iname,32,['generic-fallback','use-builtin']);
+		} else {
+		    my $image = Gtk2::Image->new_from_stock('gtk-missing-image','large-toolbar');
+		    $pixbuf = $image->render_icon('gtk-missing-image','large-toolbar');
+		}
 	    }
             $cell->set(pixbuf=>$pixbuf);
     });
