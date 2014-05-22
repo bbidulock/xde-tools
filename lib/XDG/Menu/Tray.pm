@@ -186,7 +186,11 @@ sub Application {
     my $im = Gtk2::Image->new_from_pixbuf($pb) if $pb;
     $self->apply_style($im) if $im;
     $mi->set_image($im) if $im;
-    $mi->signal_connect(activate=>sub{system $item->Exec.' &'});
+    if ($self->{ops}{launch}) {
+	$mi->signal_connect(activate=>sub{system "xdg-launch --pointer ".$item->{Entry}{file}.' &'});
+    } else {
+	$mi->signal_connect(activate=>sub{system $item->Exec.' &'});
+    }
     $mi->show_all;
     $menu->append($mi);
 }

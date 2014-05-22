@@ -89,10 +89,10 @@ sub create {
 =cut
 
 sub wmmenu {
-    my $self = shift;
+    my($self,$indent) = @_;
     my $text = '';
-    $text .= sprintf "%s\n", '  [submenu] (Window Managers)';
-    $text .= sprintf "%s\n", '    [restart] (Restart)';
+    $text .= sprintf "%s%s\n", $indent, '[submenu] (Window Managers)';
+    $text .= sprintf "%s%s\n", $indent, '  [restart] (Restart)';
     $self->getenv();
     $self->default();
     my $wms = $self->get_xsessions();
@@ -102,9 +102,9 @@ sub wmmenu {
 	$name = $_ unless $name;
 	next if "\L$name\E" eq "waimea";
 	my $exec = $wm->{Exec};
-	$text .= sprintf("    [restart] (Start %s) {%s}\n",$name,$exec);
+	$text .= sprintf("%s  [restart] (Start %s) {%s}\n",$indent,$name,$exec);
     }
-    $text .= sprintf "%s\n", '  [end]';
+    $text .= sprintf "%s%s\n", $indent, '[end]';
     return $text;
 }
 
@@ -120,25 +120,28 @@ sub rootmenu {
 	my ($self,$entries) = @_;
 	my $text = '';
 	$text .= sprintf "%s\n", '[start] (rootmenu)';
-	$text .= "\n";
 	$text .= $entries;
-	$text .= "\n";
-	$text .= sprintf "%s\n", '  [nop] (------------) {}',
-	$text .= "\n";
+	$text .= sprintf "%s\n", '  [nop] ('. "-" x 32 .') {}';
+	$text .= sprintf "%s\n", '  [submenu] (Waimea)';
 	$text .= sprintf "%s\n", '  [workspaces] (Workspace List)';
+	$text .= sprintf "%s\n", '    [submenu] (Tools)';
+	$text .= sprintf "%s\n", '      [exec] (Window name) {xprop WM_CLASS|cut -d \" -f 2|gxmessage -file - -center}';
+	$text .= sprintf "%s\n", '      [exec] (Screenshot - JPG) {import screenshot.jpg && display -resize 50% screenshot.jpg}';
+	$text .= sprintf "%s\n", '      [exec] (Screenshot - PNG) {import screenshot.png && display -resize 50% screenshot.png}';
+	$text .= sprintf "%s\n", '      [exec] (Run) {fbrun -font 10x20 -fg grey -bg black -title run}';
+	$text .= sprintf "%s\n", '      [exec] (Run Command) {bbrun -a -w}';
+	$text .= sprintf "%s\n", '    [end]';
 	$text .= sprintf "%s\n", '  [config] (Configuration)';
-	$text .= sprintf "%s\n", '  [submenu] (Styles) {Choose a style...}';
-	$text .= sprintf "%s\n", '    [stylesdir] (/usr/share/blackbox/styles)';
-	$text .= sprintf "%s\n", '    [stylesdir] (~/.blackbox/styles)';
-	$text .= sprintf "%s\n", '    [stylesdir] (~/.config/blackbox/styles)';
+	$text .= $self->stylemenu('    ');
+#	$text .= sprintf "%s\n", '    [sub] (Styles) <!stylesdir.pl>';
+	$text .= sprintf "%s\n", '    [sub] (Processes) <!procinfo.pl>';
+	$text .= $self->wmmenu('    ');
 	$text .= sprintf "%s\n", '  [end]';
-	$text .= $self->wmmenu();
 	$text .= sprintf "%s\n", '  [reconfig] (Reconfigure)';
-	$text .= "\n";
-	$text .= sprintf "%s\n", '  [nop] (------------) {}',
-	$text .= "\n";
+	$text .= sprintf "%s\n", '  [nop] ('. "-" x 32 .') {}';
 	$text .= sprintf "%s\n", '  [exit] (Exit)';
 	$text .= sprintf "%s\n", '[end]';
+	$text .= sprintf "%s\n", '[include] (~/.waimea/winmenu)';
 	return $text;
 }
 sub build {
@@ -162,22 +165,22 @@ sub Menu {
 sub Header {
 	my ($self,$item,$indent) = @_;
 	my $name = $item->Name; $name =~ s/[)]/\\)/g;
-	return sprintf "\n%s[nop] (%s)\n\n",
+	return sprintf "%s[nop] (%s)\n",
 	       $indent, $name;
 }
 sub Separator {
 	my ($self,$item,$indent) = @_;
-	return sprintf "\n%s[nop] (------------) {}\n\n",
+	return sprintf "%s[nop] (". "-" x 32 .") {}\n",
 	       $indent;
 }
 sub Application {
 	my ($self,$item,$indent) = @_;
 	my $name = $item->Name; $name =~ s/[)]/\\)/g;
 	if ($self->{ops}{launch}) {
-	    return sprintf "\n%s[exec] (%s) {xdg-launch %s}\n\n",
+	    return sprintf "%s[exec] (%s) {xdg-launch %s}\n",
 		   $indent, $name, $item->Id;
 	} else {
-	    return sprintf "\n%s[exec] (%s) {%s}\n\n",
+	    return sprintf "%s[exec] (%s) {%s}\n",
 		   $indent, $name, $item->Exec;
 	}
 }
@@ -188,12 +191,56 @@ sub Directory {
 	# no empty menus...
 	return $text unless @{$menu->{Elements}};
 	my $name = $item->Name; $name =~ s/[)]/\\)/g;
-	$text .= sprintf "\n%s[submenu] (%s) {%s}\n",
+	$text .= sprintf "%s[submenu] (%s) {%s}\n",
 		$indent, $name, $item->Name." Menu";
 	$text .= $self->build($menu,$indent.'  ');
-	$text .= sprintf "%s[end]\n\n",
+	$text .= sprintf "%s[end]\n",
 		$indent;
 	return $text;
+}
+
+sub stylemenu {
+    my($self,$indent) = @_;
+    my $text = $indent.'[sub] (Styles) <!styledir.pl>'."\n";
+    my $exec;
+    foreach (split(/:/,$ENV{PATH})) {
+	if (-x "$_/xde-style") {
+	    $exec = "$_/xde-style";
+	    last;
+	}
+    }
+    return $text unless $exec;
+    my $styles;
+    my $pl = `$exec -l --perl`;
+    eval "\$styles = $pl;";
+    return $text unless $styles;
+    $text = '';
+    $text .= sprintf "%s%s\n", $indent, '[submenu] (Styles) {Choose a style...}';
+    if ($styles->{user} and %{$styles->{user}}) {
+#	$text .= sprintf "%s%s\n", $indent, '  [submenu] (User Styles) {Choose a style...}';
+	foreach my $name (sort keys %{$styles->{user}}) {
+	    my $label = $name;
+	    $label =~ s{[-_]}{ }g;
+	    $label =~ s{([(){}<>])}{\\$1}g;
+	    $label =~ s{\.style$}{};
+	    $text .= sprintf "%s  [exec] (%s) {xde-style -s -u '%s'}\n", $indent, $label, $name;
+	}
+#	$text .= sprintf "%s%s\n", $indent, '  [end]';
+    }
+    $text .= sprintf "%s  %s\n", $indent, '[nop] ('. "-" x 32 .') {}';
+    if ($styles->{system} and %{$styles->{system}}) {
+#	$text .= sprintf "%s%s\n", $indent, '  [submenu] (System Styles) {Choose a style...}';
+	foreach my $name (sort keys %{$styles->{system}}) {
+	    my $label = $name;
+	    $label =~ s{[-_]}{ }g;
+	    $label =~ s{([(){}<>])}{\\$1}g;
+	    $label =~ s{\.style$}{};
+	    $text .= sprintf "%s  [exec] (%s) {xde-style -s -y '%s'}\n", $indent, $label, $name;
+	}
+#	$text .= sprintf "%s%s\n", $indent, '  [end]';
+    }
+    $text .= sprintf "%s%s\n", $indent, '[end]';
+    return $text;
 }
 
 sub styles {
