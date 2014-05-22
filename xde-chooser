@@ -65,9 +65,6 @@ my %ops = (
     dry_run     => 1,
 );
 
-my $xde = XDE::Chooser->new(%OVERRIDES,ops=>\%ops);
-$xde->getenv;
-
 use constant {
     SIDES=>{top=>1,bottom=>2,left=>3,right=>4},
 };
@@ -100,6 +97,9 @@ if (@ARGV) {
     show_usage();
     exit(2);
 }
+
+my $xde = XDE::Chooser->new(%OVERRIDES,ops=>\%ops);
+$xde->getenv;
 
 $xde->show_settings;
 
