@@ -301,7 +301,7 @@ _NET_MOVERESIZE_WINDOW			Y	Y	N	Y	N	Y	N	Y	Y	N	Y	Y	N	Y	Y	N	Y	(5)
 _NET_NUMBER_OF_DESKTOPS			Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	(23)
 _NET_PROPERTIES				-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-
 _NET_REQUEST_FRAME_EXTENTS		Y	Y	Y	N	N	N	Y	Y	Y	N	N	N	N	Y	N	N	Y
-_NET_RESTACK_WINDOW			N	Y	Y	N	N	N	N	N	Y	N	Y	N	N	Y	Y	N	Y
+_NET_RESTACK_WINDOW			N	Y	Y	N	N	N	N	Y	Y	N	Y	N	N	Y	Y	N	Y
 _NET_RESTART				-	Y	-	-	-	x	-	-	-	-	-	-	-	-	-	-	-
 _NET_SHOWING_DESKTOP			Y	Y	Y	Y	N	N	N	Y	N	N	Y	Y	Y	Y	N	N	Y	(6)
 _NET_SHUTDOWN				-	Y	-	-	-	x	-	-	-	-	-	-	-	-	-	-	-
@@ -394,8 +394,8 @@ _NET_WM_WINDOW_TYPE_UTILITY		Y	Y	N	Y	Y	Y	N	Y	N	Y	Y	Y	Y	Y	N	N	Y
 _NET_WM_WINDOW_TYPE			Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
 _NET_WORKAREA				Y	Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	N	Y	Y	N	Y
 ---------------------------------------	---	---	---	---	---	---	---	---	---	---	---	---	---	---	---	---	---
-Total N					 6N	 0N	32N	17N	31N	25N	42N	14N	22N	22N	 6N	 6N	27N	 9N	25N	48N	11N
-Total Y					74Y	91Y	42Y	60Y	48Y	52Y	31Y	63Y	54Y	55Y	74Y	71Y	50Y	73Y	53Y	29Y	69Y
+Total N					 6N	 0N	32N	17N	31N	25N	42N	13N	22N	22N	 6N	 6N	27N	 9N	25N	48N	11N
+Total Y					74Y	91Y	42Y	60Y	48Y	52Y	31Y	64Y	54Y	55Y	74Y	71Y	50Y	73Y	53Y	29Y	69Y
 ---------------------------------------	---	---	---	---	---	---	---	---	---	---	---	---	---	---	---	---	---
 Total					80	80	80	80	80	80	80	80	80	80	80	80	80	80	80	80	80
 
@@ -405,7 +405,7 @@ Mutter	    74 Y     6 N
 Blackbox    71 Y     6 N	(http://github.com/bbidulock/blackboxwm)
 Openbox	    73 Y     9 N
 Metacity    69 Y    11 N
-JWM	    63 Y    13 N	(http://github.com/joewing/jwm)
+JWM	    64 Y    13 N	(http://github.com/joewing/jwm)
 UWM	    60 Y    17 N
 PeKWM	    55 Y    22 N
 Fluxbox	    54 Y    22 N
