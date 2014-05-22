@@ -619,7 +619,7 @@ sub set_backgrounds {
     $self->modulate_desktops($screen,$screen->{desktops});
 }
 
-=item $xde->B<get_ProprertyNotify_screen>(I<$e>,I<$X>,I<$v>) => $screen,$d,$root,$n
+=item $xde->B<get_event_screen>(I<$e>,I<$X>,I<$v>) => $screen,$d,$root,$n
 
 Internal function to identify the screen, C<$screen>, desktop, C<$d>,
 root window C<$root>, and screen number, C<$n>, from
@@ -627,7 +627,7 @@ L<X11::Protocol(3pm)> C<PropertyNotify> event information.
 
 =cut
 
-sub get_PropertyNotify_screen {
+sub get_event_screen {
     my ($self,$e,$X,$v) = @_;
     defined(my $n = $self->{roots}{$e->{window}}) or return;
     defined(my $screen = $self->{screen}[$n]) or return;
@@ -649,7 +649,7 @@ background.
 sub event_handler_PropertyNotify_XROOTPMAP_ID {
     my $self = shift;
     my ($e,$X,$v) = @_;
-    my ($screen,$d,$root,$n) = $self->get_PropertyNotify_screen(@_);
+    my ($screen,$d,$root,$n) = $self->get_event_screen(@_);
     return unless $screen;
     my ($val,$type) = $X->GetProperty($root,$e->{atom},
 	    $X->atom('PIXMAP'), 0, 1);
@@ -705,7 +705,7 @@ so be it.
 
 #sub event_handler_PropertyNotifyESETROOT_PMAP_ID {
 #    my $self = shift;
-#    $self->check_theme($self->get_PropertyNotify_screen(@_));
+#    $self->check_theme($self->get_event_screen(@_));
 #}
 
 =item $xde->B<event_handler_PropertyNotify_XROOTMAP_ID>(I<$event>,I<$X>,I<$v>)
@@ -720,7 +720,7 @@ so be it.
 
 #sub event_handler_PropertyNotify_XROOTMAP_ID {
 #    my $self = shift;
-#    $self->check_theme($self->get_PropertyNotify_screen(@_));
+#    $self->check_theme($self->get_event_screen(@_));
 #}
 
 =item $xde->B<event_handler_PropertyNotify_XSETROOT_ID>(I<$event>,I<$X>,I<$v>)
@@ -741,7 +741,7 @@ so be it.
 sub event_handler_PropertyNotify_XSETROOT_ID {
     my $self = shift;
     my ($e,$X,$v) = @_;
-    my ($screen,$d,$root,$n) = $self->get_PropertyNotify_screen(@_);
+    my ($screen,$d,$root,$n) = $self->get_event_screen(@_);
     return unless $screen;
     my ($val,$type) = $X->GetProperty($root, $e->{atom},
 	    $X->atom('PIXMAP'), 0, 1);
@@ -797,7 +797,7 @@ determines that the desktop has changed.
 sub event_handler_PropertyNotify_NET_CURRENT_DESKTOP {
     my $self = shift;
     my ($e,$X,$v) = @_;
-    my ($screen,$d,$root,$n) = $self->get_PropertyNotify_screen(@_);
+    my ($screen,$d,$root,$n) = $self->get_event_screen(@_);
     return unless $screen;
     my ($val,$type) = $X->GetProperty($root, $e->{atom},
 	    $X->atom('CARDINAL'), 0, 1);
@@ -834,7 +834,7 @@ XDE::Setbug determines the total number of desktops.
 sub event_handler_PropertyNotify_NET_NUMBER_OF_DESKTOPS {
     my $self = shift;
     my ($e,$X,$v) = @_;
-    my ($screen,$d,$root,$n) = $self->get_PropertyNotify_screen(@_);
+    my ($screen,$d,$root,$n) = $self->get_event_screen(@_);
     return unless $screen;
     my ($val,$type) = $X->GetProperty($root, $e->{atom},
 	    $X->atom('CARDINAL'), 0, 1);
@@ -863,7 +863,7 @@ with older window managers (such as L<wmaker(1)>).
 sub event_handler_PropertyNotify_WIN_WORKSPACE {
     my $self = shift;
     my ($e,$X,$v) = @_;
-    my ($screen,$d,$root,$n) = $self->get_PropertyNotify_screen(@_);
+    my ($screen,$d,$root,$n) = $self->get_event_screen(@_);
     return unless $screen;
     my ($val,$type) = $X->GetProperty($root, $e->{atom},
 	    $X->atom('CARDINAL'), 0, 1);
@@ -900,7 +900,7 @@ with older window managers (such as L<wmaker(1)>).
 sub event_handler_PropertyNotify_WIN_WORKSPACE_COUNT {
     my $self = shift;
     my ($e,$X,$v) = @_;
-    my ($screen,$d,$root,$n) = $self->get_PropertyNotify_screen(@_);
+    my ($screen,$d,$root,$n) = $self->get_event_screen(@_);
     return unless $screen;
     my ($val,$type) = $X->GetProperty($e->{window}, $e->{atom},
 	    $X->atom('CARDINAL'), 0, 1);
@@ -928,7 +928,7 @@ responding to the button proxy when that happens.
 
 sub event_handler_PropertyNotify_WIN_DESKTOP_BUTTON_PROXY {
     my $self = shift;
-    $self->win_bpcheck($self->get_PropertyNotify_screen(@_));
+    $self->win_bpcheck($self->get_event_screen(@_));
 }
 
 =item $xde->B<event_handler_PropertyNotify_WIN_SUPPORTING_WM_CHECK>(I<$event>,I<$X>,I<$v>)
@@ -942,7 +942,7 @@ the new check.
 
 sub event_handler_PropertyNotify_WIN_SUPPORTING_WM_CHECK {
     my $self = shift;
-    $self->win_wmcheck($self->get_PropertyNotify_screen(@_));
+    $self->win_wmcheck($self->get_event_screen(@_));
 }
 
 =item $xde->B<event_handler_PropertyNotify_NET_SUPPORTING_WM_CHECK>(I<$event>,I<$X>,I<$v>)
@@ -957,8 +957,8 @@ L<icewm(1)>).
 
 sub event_handler_PropertyNotify_NET_SUPPORTING_WM_CHECK {
     my $self = shift;
-    $self->net_wmcheck($self->get_PropertyNotify_screen(@_));
-    $self->check_theme($self->get_PropertyNotify_screen(@_));
+    $self->net_wmcheck($self->get_event_screen(@_));
+    $self->check_theme($self->get_event_screen(@_));
 }
 
 =item $xde->B<event_handler_PropertyNotify_OB_THEME>(I<$event>,I<$X>,I<$v>)
@@ -970,7 +970,7 @@ property on the root window.  Check the theme again when it changes.
 
 sub event_handler_PropertyNotify_OB_THEME {
     my $self = shift;
-    $self->check_theme($self->get_PropertyNotify_screen(@_));
+    $self->check_theme($self->get_event_screen(@_));
 }
 
 =item $xde->B<event_handler_PropertyNotify_BB_THEME>(I<$event>,I<$X>,I<$v>)
@@ -983,7 +983,12 @@ changes.
 
 sub event_handler_PropertyNotify_BB_THEME {
     my $self = shift;
-    $self->check_theme($self->get_PropertyNotify_screen(@_));
+    $self->check_theme($self->get_event_screen(@_));
+}
+
+sub event_handler_PropertyNotify_XDE_THEME_NAME {
+    my $self = shift;
+    $self->check_theme($self->get_event_screen(@_));
 }
 
 =item $xde->B<event_handler_PropertyNotify_BLACKBOX_PID>(I<$e>,I<$X>,I<$v>)
@@ -997,7 +1002,12 @@ same value.  When restarting, check the theme again.
 
 sub event_handler_PropertyNotify_BLACKBOX_PID {
     my $self = shift;
-    $self->check_theme($self->get_PropertyNotify_screen(@_));
+    $self->check_theme($self->get_event_screen(@_));
+}
+
+sub event_handler_ClientMessage_GTK_READ_RCFILES {
+    my $self = shift;
+    $self->check_theme($self->get_event_screen(@_));
 }
 
 =item $xde->B<event_handler_ButtonPrees>(I<$event>,I<$X>,I<$v>)
