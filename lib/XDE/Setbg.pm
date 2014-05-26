@@ -441,21 +441,21 @@ defined backgrounds.
 
 sub modulate_desktops {
     my ($self,$screen,$k) = @_;
-    my $n = $self->{defined};
-    if ($k > $n) {
-	# modulate the backgrounds over the available desktops
-	for (my $i=0;$i<$k;$i++) {
-	    next unless $i >= $n;
-	    my $j = $i % $n;
-	    $screen->{pmids}[$i] = $screen->{pmids}[$j];
-	    $screen->{files}[$i] = $screen->{files}[$j];
-	    if ($i == $screen->{desktop}) {
-		#$self->set_deferred_pixmap($screen);
-		$self->set_pixmap($screen->{root},${$screen->{pmids}[$i]});
+    if (my $n = $self->{defined}) {
+	if ($k > $n) {
+	    # modulate the backgrounds over the available desktops
+	    for (my $i=0;$i<$k;$i++) {
+		next unless $i >= $n;
+		my $j = $i % $n;
+		$screen->{pmids}[$i] = $screen->{pmids}[$j];
+		$screen->{files}[$i] = $screen->{files}[$j];
+		if ($i == $screen->{desktop}) {
+		    #$self->set_deferred_pixmap($screen);
+		    $self->set_pixmap($screen->{root},${$screen->{pmids}[$i]});
+		}
 	    }
 	}
     }
-
 }
 
 =item $xde->B<create_pixmap>(I<$screen>,I<$n>,I<$w>,I<$h>,I<$pixbuf>,I<$pmid>,I<$i>)
