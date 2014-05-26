@@ -710,7 +710,7 @@ sub _get_dir_apps {
 		push @$path, $f;
 		$self->_get_dir_apps($dir,$path,$apps,$dirs);
 		pop @$path;
-	    } elsif ($f = m{\.desktop$} and -f $f) {
+	    } elsif ($f =~ m{\.desktop$} and -f $f) {
 		my $id = join('-',@$path,$f);
 		$id =~ s{\.desktop$}{};
 		my %e = $self->get_entry($d,$f,'Desktop Entry');
