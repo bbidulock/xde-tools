@@ -22,7 +22,7 @@ BEGIN {
 
 =head1 NAME
 
- xde-menugen -- generate XDG compliant menus
+xde-menugen -- generate XDG compliant menus
 
 =head1 SYNOPSIS
 
@@ -49,6 +49,7 @@ use XDG::Menu::Icewm;
 use XDG::Menu::Pekwm;
 use XDG::Menu::Jwm;
 use XDG::Menu::Fvwm;
+use XDG::Menu::WmakerOld;
 use XDG::Menu::Wmaker;
 use XDG::Menu::Ctwm;
 use XDG::Menu::Vtwm;
@@ -60,6 +61,7 @@ use Getopt::Long;
 use Encode;
 use I18N::Langinfo qw(langinfo CODESET);
 use POSIX qw(locale_h);
+use File::Which qw(which);
 use strict;
 use warnings;
 
@@ -149,12 +151,12 @@ my $XDG_ICON_DIRS = join(':',"$HOME/.icons",map{"$_/icons"}@XDG_DATA_DIRS,'/usr/
 my @XDG_ICON_DIRS = split(/:/,$XDG_ICON_DIRS);
 
 my %outputs = (
-    fluxbox     => [ "$HOME/.fluxbox/menu" ],
-    blackbox    => [ "$HOME/.blackbox/menu", "$HOME/.bbmenu" ],
-    openbox     => [ "$HOME/.openbox/menu", "$HOME/.config/openbox/menu" ],
-    icewm       => [ "$HOME/.icewm/menu" ],
-    pekwm       => [ "$HOME/.pekwm/menu" ],
-    jwm         => [ "$HOME/.jwm/menu" ],
+    fluxbox	=> [ "$HOME/.fluxbox/menu" ],
+    blackbox	=> [ "$HOME/.blackbox/menu", "$HOME/.bbmenu" ],
+    openbox	=> [ "$HOME/.openbox/menu", "$HOME/.config/openbox/menu" ],
+    icewm	=> [ "$HOME/.icewm/menu" ],
+    pekwm	=> [ "$HOME/.pekwm/menu" ],
+    jwm		=> [ "$HOME/.jwm/menu" ],
     fvwm	=> [ "$HOME/.fvwm/menu" ],
     wmaker	=> [ "$HOME/GNUstep/Defaults/WMRootMenu" ],
     ctwm	=> [ "$HOME/.ctwm/menu" ],
@@ -166,15 +168,16 @@ my %outputs = (
 );
 
 my %formats = (
-    fluxbox     => [qw(FLUXBOX  XDG::Menu::Fluxbox  )],
-    blackbox    => [qw(BLACKBOX XDG::Menu::Blackbox )],
-    openbox     => [qw(OPENBOX  XDG::Menu::Openbox  )],
-    openbox3    => [qw(OPENBOX  XDG::Menu::Openbox3 )],
-    icewm       => [qw(ICEWM    XDG::Menu::Icewm    )],
-    pekwm       => [qw(PEKWM    XDG::Menu::Pekwm    )],
-    jwm         => [qw(JWM      XDG::Menu::Jwm      )],
+    fluxbox	=> [qw(FLUXBOX	XDG::Menu::Fluxbox  )],
+    blackbox	=> [qw(BLACKBOX	XDG::Menu::Blackbox )],
+    openbox	=> [qw(OPENBOX	XDG::Menu::Openbox  )],
+    openbox3	=> [qw(OPENBOX	XDG::Menu::Openbox3 )],
+    icewm	=> [qw(ICEWM	XDG::Menu::Icewm    )],
+    pekwm	=> [qw(PEKWM	XDG::Menu::Pekwm    )],
+    jwm		=> [qw(JWM	XDG::Menu::Jwm      )],
     fvwm	=> [qw(FVWM	XDG::Menu::Fvwm	    )],
-    wmaker      => [qw(WMAKER   XDG::Menu::Wmaker   )],
+    wmaker	=> [qw(WMAKER	XDG::Menu::Wmaker   )],
+    wmakerold	=> [qw(WMAKER	XDG::Menu::WmakerOld)],
     ctwm	=> [qw(CTWM	XDG::Menu::Ctwm	    )],
     vtwm	=> [qw(VTWM	XDG::Menu::Vtwm	    )],
     twm		=> [qw(TWM	XDG::Menu::Twm	    )],
@@ -184,20 +187,20 @@ my %formats = (
 );
 
 my %desktops = (
-    FLUXBOX     => [qw(fluxbox  XDG::Menu::Fluxbox  )],
-    BLACKBOX    => [qw(blackbox XDG::Menu::Blackbox )],
-    OPENBOX     => [qw(openbox3 XDG::Menu::Openbox3 )],
-    ICEWM       => [qw(icewm    XDG::Menu::Icewm    )],
-    PEKWM       => [qw(pekwm    XDG::Menu::Pekwm    )],
-    JWM         => [qw(jwm      XDG::Menu::Jwm      )],
+    FLUXBOX	=> [qw(fluxbox	XDG::Menu::Fluxbox  )],
+    BLACKBOX	=> [qw(blackbox	XDG::Menu::Blackbox )],
+    OPENBOX	=> [qw(openbox3	XDG::Menu::Openbox3 )],
+    ICEWM	=> [qw(icewm	XDG::Menu::Icewm    )],
+    PEKWM	=> [qw(pekwm	XDG::Menu::Pekwm    )],
+    JWM		=> [qw(jwm	XDG::Menu::Jwm      )],
     FVWM	=> [qw(fvwm	XDG::Menu::Fvwm	    )],
-    WMAKER      => [qw(wmaker   XDG::Menu::Wmaker   )],
+    WMAKER	=> [qw(wmaker	XDG::Menu::Wmaker   )],
     CTWM	=> [qw(ctwm	XDG::Menu::Ctwm	    )],
     VTWM	=> [qw(vtwm	XDG::Menu::Vtwm	    )],
     TWM		=> [qw(twm	XDG::Menu::Twm	    )],
     UWM		=> [qw(uwm	XDG::Menu::Uwm	    )],
     WAIMEA	=> [qw(waimea	XDG::Menu::Waimea   )],
-    LXDE        => [qw(openbox3 XDG::Menu::Openbox3 )],
+    LXDE	=> [qw(openbox3 XDG::Menu::Openbox3 )],
 );
 
 
@@ -288,27 +291,73 @@ generating the menu, but to monitor pertinent directories for changes,
 and regenerate the menu when changes are detected.  This option implies
 the B<--output> option.  This option requires L<Linux::Inotify2(3pm)>.
 
+=item B<--launch>, B<-L>, B<--nolaunch>
+
+Specifies whether to use L<xdg-launch(1)> to launch desktop files directly
+or not.  This option will only be honored when the L<xdg-launch(1)> program
+is available.
+
 =back
 
 =cut
 
+my ($wmname,$format,$output);
+
+# If we can identify a running window manager, use that format before that
+# specified by XDG_CURRENT_DESKTOP.  We cannot use Gtk2 directly here because
+# we want this program to run without Gtk2.
+#
+if (-x "/usr/bin/xde-identify") {
+	my $wm = {};
+	chomp(my $pl = `xde-identify --perl`);
+	eval "\$wm = $pl;";
+	$wmname = "\L$wm->{XDE_WM_NAME}\E";
+	$format = $wmname;
+	$output = $wm->{XDE_WM_MENU};
+}
+
+$wmname = '' unless $wmname;
+$wmname = 'wmaker' if "\L$wmname\E" eq 'windowmaker';
+$wmname = 'ctwm' if "\L$wmname\E" eq 'workspacemanager';
+$output = '' unless $output;
+
+# handle XDG_CURRENT_DESKTOP with multiple values separated by ':'
+#
+if ($wmname) {
+	$format = $wmname;
+} else {
+	$format = "\L$XDG_CURRENT_DESKTOP\E";
+}
+if ($format =~ m{:}) {
+	foreach my $f (keys %formats) {
+		if ($format =~ m{:$f:}i) {
+			$format = $f;
+			last;
+		}
+	}
+	if ($format =~ m{:}) {
+		$format =~ s{.*:}{};
+	}
+}
+
 my %ops = (
     help        => '',
-    format      => "\L$XDG_CURRENT_DESKTOP\E",
+    wmname	=> "\L$wmname\E",
+    format	=> "\L$format\E",
     fullmenu    => '',
-    desktop     => "\U$XDG_CURRENT_DESKTOP\E",
+    desktop	=> "\U$format\E",
     charset     => langinfo(CODESET),
     language    => setlocale(LC_MESSAGES),
     root_menu   => $XDG_ROOT_MENU,
     die_on_error=> '',
     verbose     => '',
-    output      => '',
+    output      => $output,
     icons       => '',
     noicons     => '',
     theme       => $XDG_ICON_THEME,
     monitor     => '',
     style	=> 'fullmenu',
-    launch	=> '',
+    launch	=> which('xdg-launch') ? 1 : '',
 );
 
 my $syntax = GetOptions(
@@ -343,14 +392,8 @@ if ($ops{output} eq '') {
 }
 
 if ($ops{launch}) {
-    $ops{launch} = 0;
-    foreach (split(/:/,$ENV{PATH})) {
-	if (-x "$_/xdg-launch") {
-	    $ops{launch} = 1;
-	    last;
-	}
-    }
-    unless ($ops{launch}) {
+    unless (which('xdg-launch')) {
+	$ops{launch} = 0;
 	print STDERR "missing xdg-launch program";
 	usage(2);
     }
@@ -491,6 +534,9 @@ OPTIONS:
         do not exit after first menu generation, but monitor pertinent
         directories for changes and regenerate the menu when required;
         implies the --output option.
+
+    --launch,-L --nolaunch  [default: $ops{launch}]
+        use xdg-launch program to launch desktop entry directly
 EOF
     exit($retval);
 }
