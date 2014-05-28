@@ -121,6 +121,10 @@ sub wmmenu {
 	my $exec = $wm->{Exec};
 	my $icon = $self->icon($wm->{Icon});
 	$icon = $self->icon('preferences-system-windows') unless $icon;
+	if ($self->{ops}{launch}) {
+	    $exec = "$self->{ops}{launch} -X $wm->{id}";
+	    $exec =~ s{\.desktop$}{};
+	}
 	$text .= sprintf("%s  [restart] (Start %s) {%s}%s\n",$indent,$name,$exec,$icon);
     }
     $text .= sprintf "%s%s\n", $indent, '[end] # (Window Managers)';
@@ -172,6 +176,8 @@ sub rootmenu {
     $text .= sprintf "%s\n", '  [end] # (Fluxbox menu)';
     $text .= sprintf "%s\n", '  [exec] (Lock screen) {xlock}'.$self->icon('gnome-lockscreen');
     $text .= sprintf "%s\n", '  [commanddialog] (Fluxbox Command)'.$self->icon('gtk-execute');
+    $text .= sprintf "%s\n", '  [exec] (Refresh Menu) {xdg-menugen -format perlpanel -launch -o '.$self->{ops}{output}.' }'.$self->icon('gtk-refresh')
+	if $self->{ops}{output};
     $text .= sprintf "%s\n", '  [reconfig] (Reload config)'.$self->icon('gtk-redo-ltr');
     $text .= sprintf "%s\n", '  [restart] (Restart) {}'.$self->icon('gtk-refresh');
     $text .= sprintf "%s\n", '  [exec] (About) {(fluxbox -v; fluxbox -info | sed 1d) | gxmessage -file - -center}'.$self->icon('help-about');
@@ -214,13 +220,11 @@ sub Separator {
 sub Application {
     my ($self,$item,$indent) = @_;
     my $name = $item->Name; $name =~ s/[)]/\\)/g;
-    if ($self->{ops}{launch}) {
-	return sprintf "%s[exec] (%s) {xdg-launch %s} <%s>\n",
-	       $indent, $name, $item->{Entry}->{file}, $item->Icon([qw(png xpm svg jpg)]);
-    } else {
-	return sprintf "%s[exec] (%s) {%s} <%s>\n",
-	       $indent, $name, $item->Exec, $item->Icon([qw(png xpm svg jpg)]);
-    }
+    my $exec = $item->Exec; $exec =~ s/[)]/\\)/g;
+    $exec = "$self->{ops}{launch} ".$item->Id
+	if $self->{ops}{launch};
+    return sprintf "%s[exec] (%s) {%s} <%s>\n",
+	   $indent, $name, $exec, $item->Icon([qw(png xpm svg jpg)]);
 }
 sub Directory {
     my ($self,$item,$indent) = @_;

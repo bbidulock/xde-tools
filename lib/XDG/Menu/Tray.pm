@@ -1,6 +1,7 @@
 package XDG::Menu::Tray;
 use base qw(XDG::Menu::Base);
 use Gtk2;
+use File::Which;
 use strict;
 use warnings;
 
@@ -62,6 +63,19 @@ sub make_transparent {
     my $window = $menu->get_parent_window;
     $window->set_opacity(0.92) if $window;
     return Gtk2::EVENT_PROPAGATE;
+}
+
+sub create_wmmenu {
+    my $self = shift;
+    my $mi;
+    if (File::Which::which('xde-identify')) {
+	my($info,$name);
+	eval "\$info = ".`xde-identify --perl`;
+	if (($name = $info->{XDE_WM_NAME})) {
+	    $name = "XDG::Menu::Tray::\U".substr($name, 1, 1)."\L".substr($name, 2)."\E";
+	}
+    }
+    return $mi;
 }
 
 sub create {
@@ -186,11 +200,10 @@ sub Application {
     my $im = Gtk2::Image->new_from_pixbuf($pb) if $pb;
     $self->apply_style($im) if $im;
     $mi->set_image($im) if $im;
-    if ($self->{ops}{launch}) {
-	$mi->signal_connect(activate=>sub{system "xdg-launch --pointer ".$item->{Entry}{file}.' &'});
-    } else {
-	$mi->signal_connect(activate=>sub{system $item->Exec.' &'});
-    }
+    my $exec = $item->Exec;
+    $exec = "$self->{ops}{launch} ".$item->Id
+	if $self->{ops}{launch};
+    $mi->signal_connect(activate=>sub{system $exec.' &'});
     $mi->show_all;
     $menu->append($mi);
 }

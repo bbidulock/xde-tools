@@ -109,6 +109,10 @@ sub wmmenu {
 	my $exec = $wm->{Exec};
 	$exec =~ s{\\}{\\\\}g;
 	$exec =~ s{"}{\\"}g;
+	if ($self->{ops}{launch}) {
+	    $exec = "$self->{ops}{launch} -X $wm->{id}";
+	    $exec =~ s{\.desktop$}{};
+	}
 	$text .= ",\n";
 	$text .= "$indent  (\"Start $name\", RESTART, \"$exec\")";
     }
@@ -161,6 +165,8 @@ sub rootmenu {
     $text .= "    (\"Info Panel\", INFO_PANEL),\n";
     $text .= "    (\"Legal Panel\", LEGAL_PANEL),\n";
     $text .= "    (\"Preferences\", EXEC, /usr/lib/GNUstep/Applications/WPrefs.app/WPrefs),\n";
+    $text .= "    (\"Refresh Menu\", EXEC, xdg-menugen -format wmaker -desktop WMAKER -launch -o $self->{ops}{output}),\n"
+	if $self->{ops}{output};
     $text .= "    (\"Refresh Screen\", REFRESH),\n";
     $text .= "    (\"Restart\", RESTART)\n";
     $text .= "  )";
@@ -273,6 +279,8 @@ sub Application {
     my $exec = $item->Exec;
     $exec =~ s{\\}{\\\\}g;
     $exec =~ s{"}{\\"}g;
+    $exec = "$self->{ops}{launch} ".$item->Id
+	if $self->{ops}{launch};
     my $text = '';
     $text .= ",\n";
     $text .= "$indent(\"$name\", SHEXEC, \"$exec\")";

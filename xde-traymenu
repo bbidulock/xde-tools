@@ -32,6 +32,7 @@ specific menus for a number of window-managers.
 
 =cut
 
+use File::Which qw(which);
 use Getopt::Long;
 use Encode qw(encode decode);
 use I18N::Langinfo qw(langinfo CODESET);
@@ -193,6 +194,7 @@ my %outputs = (
     echinus	=> [ "$HOME/.echinus/menu" ],
     awesome	=> [ "$HOME/.awesome/menu" ],
     adwm	=> [ "$HOME/.adwm/menu" ],
+    waimea	=> [ "$HOME/.waimea/menu" ],
 );
 
 my %formats = (
@@ -212,6 +214,7 @@ my %formats = (
     awesome	=> [qw(AWESOME	XDG::Menu::Tray::Awesome	)],
     adwm	=> [qw(ADWM	XDG::Menu::Tray::Adwm		)],
     mwm		=> [qw(MWM	XDG::Menu::Tray::Mwm		)],
+    waimea	=> [qw(WAIMEA	XDG::Menu::Tray::Waimea		)],
 );
 
 my %desktops = (
@@ -231,6 +234,7 @@ my %desktops = (
     LXDE	=> [qw(openbox3 XDG::Menu::Tray::Openbox3	)],
     ADWM	=> [qw(adwm	XDG::Menu::Tray::Adwm		)],
     MWM		=> [qw(mwm	XDG::Menu::Tray::Mwm		)],
+    WAIMEA	=> [qw(waimea	XDG::Menu::Tray::Waimea		)],
 );
 
 
@@ -406,13 +410,20 @@ the B<--output> option.  This option requires L<Linux::Inotify2(3pm)>.
 
 my (@SAVEARGS) = (@ARGV);
 
-my ($wmname,$format);
+my ($wmname,$format,$output);
 
 # If we can identify a running window manager, use that format before
 # that specified by XDG_CURRENT_DESKTOP.  I would like to use Gnome2::Wnck
 # for this but it cannot even identify icewm(1).
 #
-{
+if (-x "/usr/bin/xde-identify") {
+	my $wm = {};
+	chomp(my $pl = `xde-identify --perl`);
+	eval "\$wm = $pl;";
+	$wmname = "\L$wm->{XDE_WM_NAME}\E";
+	$format = $wmname;
+	$output = $wm->{XDE_WM_MENU};
+} else {
 	my $screen = Gtk2::Gdk::Screen->get_default;
 	my $root = $screen->get_root_window;
 	my $atom = Gtk2::Gdk::Atom->new('_NET_SUPPORTING_WM_CHECK');
@@ -466,6 +477,7 @@ my ($wmname,$format);
 $wmname = '' unless $wmname;
 $wmname = 'wmaker' if "\L$wmname\E" eq 'windowmaker';
 $wmname = 'ctwm' if "\L$wmname\E" eq 'workspacemanager';
+$output = '' unless $output;
 
 # handle XDG_CURRENT_DESKTOP with multiple values separated by ':'
 #
@@ -486,6 +498,8 @@ if ($format =~ m{:}) {
 	}
 }
 
+my $launcher = which('xdg-launch') ? 'xdg-launch --pointer' : '';
+
 my %ops = (
     help	=> '',
     wmname	=> "\L$wmname\E",
@@ -497,7 +511,7 @@ my %ops = (
     root_menu	=> $XDG_ROOT_MENU,
     die_on_error=> '',
     verbose	=> '',
-    output	=> '',
+    output	=> undef,
     icons	=> '',
     noicons	=> '',
     theme	=> $XDG_ICON_THEME,
@@ -508,6 +522,7 @@ my %ops = (
     refresh	=> '',
     restart	=> '',
     quit	=> '',
+    launch	=> $launcher,
 );
 
 my $syntax = GetOptions(
@@ -533,6 +548,7 @@ my $syntax = GetOptions(
     "refresh|r"	    =>\$ops{refresh},
     "restart|R"	    =>\$ops{restart},
     "quit|q"	    =>\$ops{quit},
+    "launch|L!"	    =>\$ops{launch},
 );
 
 # to support symbolic links to this program
@@ -555,15 +571,32 @@ if ($cmds > 1) {
 
 undef $cmds;
 
-if ($ops{output} eq '') {
-    if (exists $outputs{$ops{format}}) {
-        foreach (@{$outputs{$ops{format}}}) {
-            if (-f $_) {
-                $ops{output} = $_;
-                last;
-            }
-        }
+if (defined $ops{output}) {
+    unless ($output) {
+	if (exists $outputs{$ops{format}}) {
+	    foreach (@{$outputs{$ops{format}}}) {
+		if (-f $_) {
+		    $ops{output} = $_;
+		    last;
+		}
+	    }
+	}
     }
+    $ops{output} = $output unless $ops{output};
+    unless ($ops{output}) {
+	    print STDERR "nowhere to output";
+	    usage(2);
+    }
+}
+
+$ops{launch} = '' unless $ops{launch};
+if ($ops{launch}) {
+    unless ($launcher) {
+	$ops{launch} = 0;
+	print STDERR "missing xdg-launch program";
+	usage(2);
+    }
+    $ops{launch} = $launcher;
 }
 
 if ($ops{root_menu} and not -f $ops{root_menu}) {
@@ -695,6 +728,8 @@ GENERAL OPTIONS:
         do not exit after first menu generation, but monitor pertinent
         directories for changes and regenerate the menu when required;
         implies the --output option.
+  --launch,-L --nolaunch  [default: $ops{launch}]
+        use xdg-launch program to launch desktop entry directly
 EOF
     exit($retval);
 }

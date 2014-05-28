@@ -121,6 +121,10 @@ sub wmmenu {
 	my $exec = $wm->{Exec}; $exec =~ s{"}{\\"}g;
 	my $icon = $self->icon($wm->{Icon});
 	$icon = $self->icon('preferences-system-windows') unless $icon;
+	if ($self->{ops}{launch}) {
+	    $exec = "$self->{ops}{launch} -X $wm->{id}";
+	    $exec =~ s{\.desktop$}{};
+	}
 	$text .= sprintf "%s  [%s text = \"%s\" exit = \"%s\" ]\n",
 	    $indent, $icon, $name, $exec;
     }
@@ -158,6 +162,8 @@ sub rootmenu {
     $text .= $self->wmmenu('      ');
     $text .= sprintf "%s\n", '      ] ; μWM menu';
     $text .= sprintf "%s\n", '    ]';
+    $text .= sprintf "%s\n", '    [ '.$self->icon('gtk-redo-ltr').' text = "Refresh Menu" execute = "xdg-menugen -format uwm -desktop UWM -launch -o '.$self->{ops}{output}.'" ]'
+	if $self->{ops}{output};
     $text .= sprintf "%s\n", '    [ '.$self->icon('gtk-refresh').' text = "Restart" restart = true ]';
     $text .= sprintf "%s\n", '    [ '.$self->icon('gtk-quit').' text = "Exit" exit = true ]';
     $text .= sprintf "%s\n", '    ';
@@ -209,14 +215,11 @@ sub Application {
     my $icon = $item->Icon([qw(png svg xpm)]);
     $icon = "icon = \"$icon\" " if $icon;
     $icon = '' unless $icon;
-    if ($self->{ops}{launch}) {
-	return sprintf "%s[ %stext = \"%s\" execute = \"xdg-launch %s\" ]\n",
-	       $indent, $icon, $name, $item->Id;
-    } else {
-	my $exec = $item->Exec; $exec =~ s{"}{\\"}g;
-	return sprintf "%s[ %stext = \"%s\" execute = \"%s\" ]\n",
-	       $indent, $icon, $name, $exec;
-    }
+    my $exec = $item->Exec; $exec =~ s{"}{\\"}g;
+    $exec = "$self->{ops}{launch} ".$item->Id
+	if $self->{ops}{launch};
+    return sprintf "%s[ %stext = \"%s\" execute = \"%s\" ]\n",
+	   $indent, $icon, $name, $exec;
 }
 
 sub Directory {

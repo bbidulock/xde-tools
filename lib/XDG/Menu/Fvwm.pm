@@ -125,6 +125,10 @@ sub wmmenu {
 	next if $name =~ m{fvwm}i;
 	my $exec = $wm->{Exec};
 	my $icon = $self->icon($wm->{Icon},'preferences-system-windows');
+	if ($self->{ops}{launch}) {
+	    $exec = "$self->{ops}{launch} -X $wm->{id}";
+	    $exec =~ s{\.desktop$}{};
+	}
 	$text .= sprintf "+ \"%s%s\" Restart %s\n", $name, $icon, $exec;
 	$gotone = 1;
     }
@@ -143,6 +147,8 @@ sub fvwmmenu {
     $text .= sprintf "+ \"%s%s\" %s\n", '&Documents',		'%mini.books.xpm%',	'Popup Documents';
     $text .= sprintf "+ \"%s%s\" %s\n", '&Screen Saver',	'%mini.display.xpm%',	'Popup Screen';
     $text .= $self->Separator();
+    $text .= sprintf "+ \"%s%s\" %s\n", 'Refresh &Menu',	'%mini.turn.xpm%',	'Exec exec xdg-menugen -format fvwm -desktop FVWM -o '.$self->{ops}{output}
+	if $self->{ops}{output};
     $text .= sprintf "+ \"%s%s\" %s\n", '&Restart',		'%mini.turn.xpm%',	'Popup Restart';
     $text .= sprintf "+ \"%s%s\" %s\n", '&Quit FVWM',		'%mini.stop.xpm%',	'FvwmForm FvwmForm-QuitVerify';
     $text .= "\n";
@@ -268,6 +274,8 @@ sub Application {
     my $name = $item->Name;
     my $icon = $item->Icon([qw(png xpm)]); $icon = "%$icon%" if $icon;
     my $exec = $item->Exec;
+    $exec = "$self->{ops}{launch} ".$item->Id
+	if $self->{ops}{launch};
     $text .= sprintf "+ \"%s%s\" Exec exec %s\n", $name, $icon, $exec;
     return $text;
 }

@@ -62,6 +62,8 @@ use Encode;
 use I18N::Langinfo qw(langinfo CODESET);
 use POSIX qw(locale_h);
 use File::Which qw(which);
+use File::Temp qw(tempfile);	# part of perl 5.18.2
+use File::Copy qw(copy move);	# part of perl 5.18.2
 use strict;
 use warnings;
 
@@ -340,6 +342,8 @@ if ($format =~ m{:}) {
 	}
 }
 
+my $launcher = which('xdg-launch') ? 'xdg-launch --pointer' : '';
+
 my %ops = (
     help        => '',
     wmname	=> "\L$wmname\E",
@@ -351,13 +355,13 @@ my %ops = (
     root_menu   => $XDG_ROOT_MENU,
     die_on_error=> '',
     verbose     => '',
-    output      => $output,
+    output      => undef,
     icons       => '',
     noicons     => '',
     theme       => $XDG_ICON_THEME,
     monitor     => '',
     style	=> 'fullmenu',
-    launch	=> which('xdg-launch') ? 1 : '',
+    launch	=> $launcher,
 );
 
 my $syntax = GetOptions(
@@ -380,23 +384,32 @@ my $syntax = GetOptions(
     "launch|L!"	    =>\$ops{launch},
 );
 
-if ($ops{output} eq '') {
-    if (exists $outputs{$ops{format}}) {
-        foreach (@{$outputs{$ops{format}}}) {
-            if (-f $_) {
-                $ops{output} = $_;
-                last;
-            }
-        }
+if (defined $ops{output}) {
+    unless ($output) {
+	if (exists $outputs{$ops{format}}) {
+	    foreach (@{$outputs{$ops{format}}}) {
+		if (-f $_) {
+		    $output = $_;
+		    last;
+		}
+	    }
+	}
+    }
+    $ops{output} = $output unless $ops{output};
+    unless ($ops{output}) {
+	print STDERR "nowhere to output";
+	usage(2);
     }
 }
 
+$ops{launch} = '' unless $ops{launch};
 if ($ops{launch}) {
-    unless (which('xdg-launch')) {
+    unless ($launcher) {
 	$ops{launch} = 0;
 	print STDERR "missing xdg-launch program";
 	usage(2);
     }
+    $ops{launch} = $launcher;
 }
 
 if ($ops{root_menu} and not -f $ops{root_menu}) {
@@ -545,7 +558,22 @@ my $parser = new XDG::Menu::Parser;
 my $tree = $parser->parse_menu($ops{root_menu});
 my $builder = $formats{$ops{format}}[1];
 my $wm = $builder->new(%OVERRIDES,ops=>\%ops);
-print $wm->create($tree,$ops{style});
+my $menu = $wm->create($tree,$ops{style});
+if ($ops{output}) {
+    my $base = $ops{output};
+    $base =~ s{//*$}{};
+    $base =~ s{/[^/]*$}{};
+    my $file = $ops{output};
+    $file =~ s{//*$}{};
+    $file =~ s{^.*/}{};
+    my ($oh,$oname) = tempfile(".$file.XXXXXXXXXX", DIR => $base, SUFFIX => '.tmp');
+    print $oh $menu;
+    close($oh);
+    copy($oname,$ops{output});
+    unlink($oname);
+} else {
+    print $menu;
+}
 exit (0);
 
 

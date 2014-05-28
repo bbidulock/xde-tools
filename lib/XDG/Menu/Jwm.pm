@@ -1,5 +1,6 @@
 package XDG::Menu::Jwm;
 use base qw(XDG::Menu::Base);
+use File::Which;
 use strict;
 use warnings;
 
@@ -109,10 +110,6 @@ sub create {
     return $self->makefile($menu);
 }
 
-=back
-
-=cut
-
 sub makefile {
     my($self,$menu) = @_;
     my $text = '';
@@ -140,6 +137,10 @@ sub wmmenu {
 	my $exec = $wm->{Exec};
 	my $icon = $self->icon($wm->{Icon});
 	$icon = $self->icon('preferences-system-windows') unless $icon;
+	if ($self->{ops}{launch}) {
+	    $exec = "$self->{ops}{launch} -X $wm->{id}";
+	    $exec =~ s{\.desktop$}{};
+	}
 	$text .= sprintf "%s%s\n", $indent, q(  <Exit ).$icon.q(label=").escape($name).q(" confirm="false">).$exec.q(</Exit>);
     }
     $text .= sprintf "%s%s\n", $indent, q(</Menu>);
@@ -177,7 +178,8 @@ sub rootmenu {
     $text .= $self->themes('    ');
     $text .= $self->styles('    ');
     $text .= $self->wmmenu('    ');
-    $text .= q(    <Program ).$self->icon('gtk-refresh').q(label="Regenerate Menu">xde-menugen -o /home/brian/.jwm/menu.new</Program>)."\n";
+    $text .= q(    <Program ).$self->icon('gtk-refresh').q(label="Regenerate Menu">xde-menugen -format jwm -desktop JWM -o ).$self->{ops}{output}.q(</Program>)."\n"
+	if $self->{ops}{output};
     $text .= q(  </Menu>)."\n";
     $text .= q(  <Separator/>)."\n";
     $text .= q(  <Restart ).$self->icon('gtk-refresh').q(label="Restart"/>)."\n";
@@ -216,13 +218,11 @@ sub Separator {
 sub Application {
     my ($self,$item,$indent) = @_;
     my $name = $item->Name; $name =~ s/["]/\\"/g;
-    if ($self->{ops}{launch}) {
-	return sprintf "%s<Program icon=\"%s\" label=\"%s\">xdg-launch %s</Program>\n",
-	       $indent, $item->Icon([qw(png svg xpm jpg)]), escape($name), $item->Id;
-    } else {
-	return sprintf "%s<Program icon=\"%s\" label=\"%s\">%s</Program>\n",
-	       $indent, $item->Icon([qw(png svg xpm jpg)]), escape($name), $item->Exec;
-    }
+    my $exec = $item->Exec;
+    $exec = "$self->{ops}{launch} ".$item->Id
+	if $self->{ops}{launch};
+    return sprintf "%s<Program icon=\"%s\" label=\"%s\">%s</Program>\n",
+	   $indent, $item->Icon([qw(png svg xpm jpg)]), escape($name), $exec;
 }
 sub Directory {
     my ($self,$item,$indent) = @_;
@@ -239,7 +239,53 @@ sub Directory {
     return $text;
 }
 
-sub themes {
+=item $jwm->B<themes>(I<$indent>) => I<$text>
+
+Accepts an indent for output, I<$indent>, and generates a themes
+submenu of available XDE themes.  This method will use the L<xde-style(1)>
+program if available; otherwise, it will use the scripts available the
+the XDE styles package.
+
+=cut
+
+sub themes_xde {
+    my($self,$indent) = @_;
+    my $text = '';
+    my $themes;
+    eval "\$themes = ".`xde-style -l -t --perl`;
+    if ($themes) {
+	my(@uthemes,@sthemes,@mthemes);
+	foreach (qw(user system mixed)) {
+	    $themes->{$_} = {} unless $themes->{$_};
+	}
+	@uthemes = keys %{$themes->{user}};
+	@sthemes = keys %{$themes->{system}};
+	@mthemes = keys %{$themes->{mixed}};
+	if (@uthemes or @sthemes or @mthemes) {
+	    my $icon = $self->icon('style');
+	    $text .= "$indent<Menu ${icon}label=\"Themes\">\n";
+	    foreach (sort @mthemes) {
+		$text .= "$indent   <Program ${icon}label=\"".escape($_)."\">xde-style -s -t -r '$_'</Program>\n";
+	    }
+	    if (@mthemes and @sthemes) {
+		$text .= "$indent   <Separator/>\n";
+	    }
+	    foreach (sort @sthemes) {
+		$text .= "$indent   <Program ${icon}label=\"".escape($_)."\">xde-style -s -t -r -y '$_'</Program>\n";
+	    }
+	    if ((@mthemes or @sthemes) and @uthemes) {
+		$text .= "$indent   <Separator/>\n";
+	    }
+	    foreach (sort @uthemes) {
+		$text .= "$indent   <Program ${icon}label=\"".escape($_)."\">xde-style -s -t -r -u '$_'</Program>\n";
+	    }
+	    $text .= "$indent</Menu>\n";
+	}
+    }
+    return $text;
+}
+
+sub themes_old {
     my ($self,$indent) = @_;
     my $base = '/usr/share/jwm';
     my @sthemes = ();
@@ -310,7 +356,56 @@ sub themes {
     return $text;
 }
 
-sub styles {
+sub themes {
+    my $self = shift;
+    if (File::Which::which('xde-style')) {
+	return $self->themes_xde(@_);
+    } else {
+	return $self->themes_old(@_);
+    }
+}
+
+sub styles_xde {
+    my($self,$indent) = @_;
+    my $text = '';
+    my $styles;
+    eval "\$styles = ".`xde-style -l --perl`;
+    my $themes;
+    eval "\$themes = ".`xde-style -l -t --perl`;
+    if ($styles and $themes) {
+	my(@ustyles,@sstyles,@mstyles);
+	foreach (qw(user system mixed)) {
+	    $styles->{$_} = {} unless $styles->{$_};
+	    $themes->{$_} = {} unless $themes->{$_};
+	}
+	@ustyles = map {exists $themes->{user}{$_}   ? () : $_} keys %{$styles->{user}};
+	@sstyles = map {exists $themes->{system}{$_} ? () : $_} keys %{$styles->{system}};
+	@mstyles = map {exists $themes->{mixed}{$_}  ? () : $_} keys %{$styles->{mixed}};
+	if (@ustyles or @sstyles or @mstyles) {
+	    my $icon = $self->icon('style');
+	    $text .= "$indent<Menu ${icon}label=\"Styles\">\n";
+	    foreach (sort @mstyles) {
+		$text .= "$indent   <Program ${icon}label=\"".escape($_)."\">xde-style -s -r '$_'</Program>\n";
+	    }
+	    if (@mstyles and @sstyles) {
+		$text .= "$indent   <Separator/>\n";
+	    }
+	    foreach (sort @sstyles) {
+		$text .= "$indent   <Program ${icon}label=\"".escape($_)."\">xde-style -s -r -y '$_'</Program>\n";
+	    }
+	    if ((@mstyles or @sstyles) and @ustyles) {
+		$text .= "$indent   <Separator/>\n";
+	    }
+	    foreach (sort @ustyles) {
+		$text .= "$indent   <Program ${icon}label=\"".escape($_)."\">xde-style -s -r -u '$_'</Program>\n";
+	    }
+	    $text .= "$indent</Menu>\n";
+	}
+    }
+    return $text;
+}
+
+sub styles_old {
     my ($self,$indent) = @_;
     my $base = '/usr/share/jwm';
     my @sstyles = ();
@@ -380,6 +475,19 @@ sub styles {
     }
     return $text;
 }
+
+sub styles {
+    my $self = shift;
+    if (File::Which::which('xde-style')) {
+	return $self->styles_xde(@_);
+    } else {
+	return $self->styles_old(@_);
+    }
+}
+
+=back
+
+=cut
 
 1;
 

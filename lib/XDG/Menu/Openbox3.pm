@@ -110,61 +110,27 @@ sub wmmenu {
     my $self = shift;
     my $text = '';
     $text .= "<menu id=\"Window Managers Menu\" label=\"Window Managers\" ".$self->icon('gtk-quit').">\n";
-    $text .= "  <item label=\"Blackbox\" ".$self->icon('blackbox').">\n";
-    $text .= "    <action name=\"Restart\">\n";
-    $text .= "      <command>blackbox</command>\n";
-    $text .= "    </action>\n";
-    $text .= "  </item>\n";
-    $text .= "  <item label=\"Fluxbox\" ".$self->icon('fluxbox').">\n";
-    $text .= "    <action name=\"Restart\">\n";
-    $text .= "      <command>fluxbox</command>\n";
-    $text .= "    </action>\n";
-    $text .= "  </item>\n";
-    $text .= "  <item label=\"FVWM\" ".$self->icon('fvwm').">\n";
-    $text .= "    <action name=\"Restart\">\n";
-    $text .= "      <command>fvwm2</command>\n";
-    $text .= "    </action>\n";
-    $text .= "  </item>\n";
-    $text .= "  <item label=\"IceWM\" ".$self->icon('icewm').">\n";
-    $text .= "    <action name=\"Restart\">\n";
-    $text .= "      <command>icewm</command>\n";
-    $text .= "    </action>\n";
-    $text .= "  </item>\n";
-    $text .= "  <item label=\"JWM\" ".$self->icon('archlinux-wm-jwm').">\n";
-    $text .= "    <action name=\"Restart\">\n";
-    $text .= "      <command>jwm</command>\n";
-    $text .= "    </action>\n";
-    $text .= "  </item>\n";
-    $text .= "  <item label=\"Openbox\" ".$self->icon('openbox').">\n";
-    $text .= "    <action name=\"Restart\">\n";
-    $text .= "      <command>openbox</command>\n";
-    $text .= "    </action>\n";
-    $text .= "  </item>\n";
-    $text .= "  <item label=\"TWM\" ".$self->icon('twm').">\n";
-    $text .= "    <action name=\"Restart\">\n";
-    $text .= "      <command>twm</command>\n";
-    $text .= "    </action>\n";
-    $text .= "  </item>\n";
-    $text .= "  <item label=\"WindowMaker\" ".$self->icon('wmaker').">\n";
-    $text .= "    <action name=\"Restart\">\n";
-    $text .= "      <command>wmaker</command>\n";
-    $text .= "    </action>\n";
-    $text .= "  </item>\n";
-    $text .= "  <item label=\"Terminal\" ".$self->icon('terminal').">\n";
-    $text .= "    <action name=\"Restart\">\n";
-    $text .= "      <command>roxterm-</command>\n";
-    $text .= "    </action>\n";
-    $text .= "  </item>\n";
-    $text .= "  <separator />\n";
-    $text .= "  <item label=\"Reload\" ".$self->icon('gtk-redo-ltr').">\n";
-    $text .= "    <action name=\"Reconfigure\" />\n";
-    $text .= "  </item>\n";
-    $text .= "  <item label=\"Restart\" ".$self->icon('gtk-refresh').">\n";
-    $text .= "    <action name=\"Restart\" />\n";
-    $text .= "  </item>\n";
-    $text .= "  <item label=\"Exit\" ".$self->icon('gtk-quit').">\n";
-    $text .= "    <action name=\"Exit\" />\n";
-    $text .= "  </item>\n";
+    $self->getenv();
+    $self->default();
+    my $wms = $self->get_xsesions();
+    foreach (sort keys %$wms) {
+	my $wm = $wms->{$_};
+	my $name = $wm->{Name};
+	$name = $_ unless $name;
+	next if $name =~ m{openbox}i;
+	my $exec = $wm->{Exec};
+	my $icon = $self->icon($wm->{Icon});
+	$icon = $self->icon('preferences-system-windows') if $icon eq '-';
+	if ($self->{ops}{launch}) {
+	    $exec = "$self->{ops}{launch} -X $wm->{id}";
+	    $exec =~ s{\.desktop$}{};
+	}
+	$text .= "  <item label=\"$name\" $icon>\n";
+	$text .= "    <action name=\"Restart\">\n";
+	$text .= "      <command>$exec</command>\n";
+	$text .= "    </action>\n";
+	$text .= "  </item>\n";
+    }
     $text .= "</menu>\n";
     return $text;
 }
@@ -210,6 +176,13 @@ sub rootmenu {
     $text .= $entries;
     $text .= "  <separator />\n";
     $text .= "  <menu id=\"Openbox\" label=\"Openbox\" ".$self->icon('openbox')."/>\n";
+    if ($self->{ops}{output}) {
+	$text .= "  <item label=\"Refresh Menu\" ".$self->icon('gtk-refresh').">\n";
+	$text .= "    <action name=\"Execute\">\n";
+	$text .= "      <command>xdg-menugen -format openbox3 -desktop OPENBOX -launch -o $self->{ops}{output}</command>\n";
+	$text .= "    </action>\n";
+	$text .= "  </item>\n";
+    }
     $text .= "  <item label=\"Reload\" ".$self->icon('gtk-redo-ltr').">\n";
     $text .= "    <action name=\"Reconfigure\" />\n";
     $text .= "  </item>\n";

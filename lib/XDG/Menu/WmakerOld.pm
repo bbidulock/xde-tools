@@ -36,6 +36,29 @@ parsing the XDG menu using XDG::Menu::Parser (see L<XDG::Menu(3pm)>).
 
 =cut
 
+sub wmmenu {
+    my $self = shift;
+    my $text = '';
+    $text .= "\"\N{BLACK CIRCLE} Window Managers\" MENU\n";
+    $self->getenv();
+    $self->default();
+    my $wms = $self->get_xsessions();
+    foreach (sort keys %$wms) {
+	my $wm = $wms->{$_};
+	my $name = $wm->{Name};
+	$name = $_ unless $name;
+	next if $name =~ m{wmaker|windowmaker}i;
+	my $exec = $wm->{Exec};
+	if ($self->{ops}{launch}) {
+	    $exec = "$self->{ops}{launch} -X $wm->{id}";
+	    $exec =~ s{\.desktop$}{};
+	}
+	$text .= "  \"$name\" RESTART $exec\n";
+    }
+    $text .= "\"\N{BLACK CIRCLE} Window Managers\" END\n";
+    return $text;
+}
+
 sub create {
     my ($self,$item) = @_;
     my $text = '';
@@ -72,23 +95,13 @@ sub create {
     $text .= "  \"Info Panel ...\" INFO_PANEL\n";
     $text .= "  \"Legal Panel ...\" LEGAL_PANEL\n";
     $text .= "  \"Preferences\" EXEC WPrefs\n";
+    $text .= "  \"Refresh Menu\" SHEXEC xdg-menugen -format wmakerold -desktop WMAKER -launch -o $self->{ops}{output}\n"
+	if $self->{ops}{output};
     $text .= "  \"Refresh screen\" REFRESH\n";
     $text .= "  \"Restart\" RESTART\n";
     $text .= "\"\N{BLACK CIRCLE} Window Maker\" END\n";
 
-# FIXME: we should get the list of window manager from the .desktop
-# files in /usr/share/xsessions or just plain check for executability.
-
-    $text .= "\"\N{BLACK CIRCLE} Window Managers\" MENU\n";
-    $text .= "  \"Fluxbox\" RESTART /usr/bin/fluxbox\n";
-    $text .= "  \"Blackbox\" RESTART /usr/bin/blackbox\n";
-    $text .= "  \"Openbox\" RESTART /usr/bin/openbox\n";
-    $text .= "  \"IceWM\" RESTART /usr/bin/icewm-session\n";
-    $text .= "  \"Twm\" RESTART /usr/bin/twm\n";
-    $text .= "  \"Window Maker\" RESTART /usr/bin/wmaker\n";
-    $text .= "  \"XFwm\" RESTART /usr/bin/xfwm4\n";
-    $text .= "  \"LXDE\" RESTART /usr/bin/startlxde\n";
-    $text .= "\"\N{BLACK CIRCLE} Window Managers\" END\n";
+    $text .= $self->wmmenu();
 
     $text .= "\"\N{BLACK CIRCLE} WorkSpace\" MENU\n";
     $text .= "  \"Appearance\" OPEN_MENU appearance.menu\n";
@@ -132,8 +145,11 @@ sub Separator {
 }
 sub Application {
     my ($self,$item,$indent) = @_;
+    my $exec = $item->Exec;
+    $exec = "$self->{ops}{launch} ".$item->Id
+	if $self->{ops}{launch};
     return sprintf "%s\"%s\" SHEXEC %s\n",
-        $indent, $item->Name, $item->Exec;
+        $indent, $item->Name, $exec;
 }
 sub Directory {
     my ($self,$item,$indent) = @_;

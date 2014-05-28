@@ -121,6 +121,10 @@ sub wmmenu {
 	my $exec = $wm->{Exec};
 	my $icon = $self->icon($wm->{Icon});
 	$icon = $self->icon('preferences-system-windows') unless $icon;
+	if ($self->{ops}{launch}) {
+	    $exec = "$self->{ops}{launch} -X $wm->{id}";
+	    $exec =~ s{\.desktop$}{};
+	}
 	$text .= sprintf("      [restart] (Start %s) {%s}%s\n",$name,$exec,$icon);
     }
     $text .= sprintf "%s\n", '    [end] # (Window Managers)';
@@ -165,6 +169,8 @@ sub rootmenu {
     $text .= $self->wmmenu();
     $text .= sprintf "%s\n", '  [end] # (Openbox menu)';
     $text .= sprintf "%s\n", '  [exec] (Lock screen) {xlock}'.$self->icon('gnome-lockscreen');
+    $text .= sprintf "%s\n", '  [exec] (Refresh Menu) {xdg-menugen -format openbox -desktop OPENBOX -launch -o '.$self->{ops}{output}.'}'.$self->icon('gtk-refresh')
+	if $self->{ops}{output};
     $text .= sprintf "%s\n", '  [reconfig] (Reload config)'.$self->icon('gtk-redo-ltr');
     $text .= sprintf "%s\n", '  [restart] (Restart) {}'.$self->icon('gtk-refresh');
     $text .= sprintf "%s\n", '  [separator]';
@@ -204,13 +210,11 @@ sub Separator {
 sub Application {
     my ($self,$item,$indent) = @_;
     my $name = $item->Name; $name =~ s/[)]/\\)/g;
-    if ($self->{ops}{launch}) {
-	return sprintf "%s[exec] (%s) {xdg-launch %s} <%s>\n",
-	       $indent, $name, $item->Id, $item->Icon([qw(png svg xpm)]);
-    } else {
-	return sprintf "%s[exec] (%s) {%s} <%s>\n",
-	       $indent, $name, $item->Exec, $item->Icon([qw(png svg xpm)]);
-    }
+    my $exec = $item->Exec;
+    $exec = "$self->{ops}{launch} ".$item->Id
+	if $self->{ops}{launch};
+    return sprintf "%s[exec] (%s) {%s} <%s>\n",
+	   $indent, $name, $exec, $item->Icon([qw(png svg xpm)]);
 }
 sub Directory {
     my ($self,$item,$indent) = @_;

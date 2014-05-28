@@ -1,5 +1,6 @@
 package XDG::Menu::Icewm;
 use base qw(XDG::Menu::Base);
+use File::Which qw(which);
 use strict;
 use warnings;
 
@@ -125,6 +126,10 @@ sub wmmenu {
 	my $exec = $wm->{Exec};
 	my $icon = $self->icon($wm->{Icon});
 	$icon = $self->icon('preferences-system-windows') if $icon eq '-';
+	if ($self->{ops}{launch}) {
+	    $exec = "$self->{ops}{launch} -X $wm->{id}";
+	    $exec =~ s{\.desktop$}{};
+	}
 	$text .= sprintf("    restart \"Start %s\" %s %s\n",$name,$icon,$exec);
     }
     $text .= sprintf "  }\n";
@@ -148,7 +153,8 @@ sub rootmenu {
     my $text = '';
     $text .= $entries;
     $text .= $self->wmmenu();
-    $text .= 'prog "Refresh Menu" '.$self->icon('gtk-refresh').' xdg-menugen -format icewm -launch >'.$ENV{HOME}.'/.icewm/menu'."\n";
+    $text .= 'prog "Refresh Menu" '.$self->icon('gtk-refresh')." xdg-menugen -format icewm -desktop ICEWM -launch -o $self->{ops}{output}\n"
+	if $self->{ops}{output};
     return $text;
 }
 sub build {
@@ -181,13 +187,11 @@ sub Application {
     my ($self,$item,$indent) = @_;
     my $icon = $item->Icon([qw(png svg xpm jpg)]);
     $icon = '-' unless $icon;
-    if ($self->{ops}{launch}) {
-	return sprintf "%sprog \"%s\" %s xdg-launch %s\n",
-	    $indent, $item->Name, $icon, $item->Id;
-    } else {
-	return sprintf "%sprog \"%s\" %s %s\n",
-	    $indent, $item->Name, $icon, $item->Exec;
-    }
+    my $exec = $item->Exec;
+    $exec = "$self->{ops}{launch} ".$item->Id
+	if $self->{ops}{launch};
+    return sprintf "%sprog \"%s\" %s %s\n",
+	$indent, $item->Name, $icon, $exec;
 }
 sub Directory {
     my ($self,$item,$indent) = @_;

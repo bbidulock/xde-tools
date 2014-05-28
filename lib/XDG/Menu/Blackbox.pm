@@ -1,5 +1,6 @@
 package XDG::Menu::Blackbox;
 use base qw(XDG::Menu::Base);
+use File::Which;
 use strict;
 use warnings;
 
@@ -89,10 +90,10 @@ sub create {
 =cut
 
 sub wmmenu {
-    my $self = shift;
+    my($self,$indent) = @_;
     my $text = '';
-    $text .= sprintf "%s\n", '  [submenu] (Window Managers)';
-    $text .= sprintf "%s\n", '    [restart] (Restart)';
+    $text .= sprintf "%s%s\n", $indent, '[submenu] (Window Managers)';
+    $text .= sprintf "%s%s\n", $indent, '  [restart] (Restart)';
     $self->getenv();
     $self->default();
     my $wms = $self->get_xsessions();
@@ -102,9 +103,13 @@ sub wmmenu {
 	$name = $_ unless $name;
 	next if "\L$name\E" eq "blackbox";
 	my $exec = $wm->{Exec};
-	$text .= sprintf("    [restart] (Start %s) {%s}\n",$name,$exec);
+	if ($self->{ops}{launch}) {
+	    $exec = "$self->{ops}{launch} -X $wm->{id}";
+	    $exec =~ s{\.desktop$}{};
+	}
+	$text .= sprintf "%s  [restart] (Start %s) {%s}\n",$indent,$name,$exec;
     }
-    $text .= sprintf "%s\n", '  [end]';
+    $text .= sprintf "%s%s\n", $indent, '[end]';
     return $text;
 }
 
@@ -120,23 +125,17 @@ sub rootmenu {
 	my ($self,$entries) = @_;
 	my $text = '';
 	$text .= sprintf "%s\n", '[begin] (Blackbox)';
-	$text .= "\n";
 	$text .= $entries;
-	$text .= "\n";
 	$text .= sprintf "%s\n", '  [nop] ('. "\N{EM DASH}" x 12 .') {}';
-	$text .= "\n";
 	$text .= sprintf "%s\n", '  [workspaces] (Workspace List)';
 	$text .= sprintf "%s\n", '  [config] (Configuration)';
-	$text .= sprintf "%s\n", '  [submenu] (Styles) {Choose a style...}';
-	$text .= sprintf "%s\n", '    [stylesdir] (/usr/share/blackbox/styles)';
-	$text .= sprintf "%s\n", '    [stylesdir] (~/.blackbox/styles)';
-	$text .= sprintf "%s\n", '    [stylesdir] (~/.config/blackbox/styles)';
-	$text .= sprintf "%s\n", '  [end]';
-	$text .= $self->wmmenu();
+	$text .= $self->themes('  ');
+	$text .= $self->styles('  ');
+	$text .= $self->wmmenu('  ');
 	$text .= sprintf "%s\n", '  [reconfig] (Reconfigure)';
-	$text .= "\n";
+	$text .= sprintf "%s\n", '  [exec] (Refresh Menu) {xdg-menugen -format blackbox -desktop BLACKBOX -launch -o '.$self->{ops}{output}
+	    if $self->{ops}{output} and which('xdg-menugen');
 	$text .= sprintf "%s\n", '  [nop] ('. "\N{EM DASH}" x 12 .') {}';
-	$text .= "\n";
 	$text .= sprintf "%s\n", '  [exit] (Exit)';
 	$text .= sprintf "%s\n", '[end]';
 	return $text;
@@ -162,24 +161,22 @@ sub Menu {
 sub Header {
 	my ($self,$item,$indent) = @_;
 	my $name = $item->Name; $name =~ s/[)]/\\)/g;
-	return sprintf "\n%s[nop] (%s)\n\n",
+	return sprintf "%s[nop] (%s)\n",
 	       $indent, $name;
 }
 sub Separator {
 	my ($self,$item,$indent) = @_;
-	return sprintf "\n%s[nop] (". "\N{EM DASH}" x 12 .") {}\n\n",
+	return sprintf "%s[nop] (". "\N{EM DASH}" x 12 .") {}\n",
 	       $indent;
 }
 sub Application {
 	my ($self,$item,$indent) = @_;
 	my $name = $item->Name; $name =~ s/[)]/\\)/g;
-	if ($self->{ops}{launch}) {
-	    return sprintf "\n%s[exec] (%s) {xdg-launch %s}\n\n",
-		   $indent, $name, $item->Id;
-	} else {
-	    return sprintf "\n%s[exec] (%s) {%s}\n\n",
-		   $indent, $name, $item->Exec;
-	}
+	my $exec = $item->Exec;
+	$exec = "$self->{ops}{launch} ".$item->Id
+	    if $self->{ops}{launch};
+	return sprintf "%s[exec] (%s) {%s}\n",
+	       $indent, $name, $exec;
 }
 sub Directory {
 	my ($self,$item,$indent) = @_;
@@ -188,12 +185,120 @@ sub Directory {
 	# no empty menus...
 	return $text unless @{$menu->{Elements}};
 	my $name = $item->Name; $name =~ s/[)]/\\)/g;
-	$text .= sprintf "\n%s[submenu] (%s) {%s}\n",
+	$text .= sprintf "%s[submenu] (%s) {%s}\n",
 		$indent, $name, $item->Name." Menu";
 	$text .= $self->build($menu,$indent.'  ');
-	$text .= sprintf "%s[end]\n\n",
+	$text .= sprintf "%s[end]\n",
 		$indent;
 	return $text;
+}
+
+sub themes_xde {
+    my($self,$indent) = @_;
+    my $text = '';
+    my $themes;
+    eval "\$themes = ".`xde-style -l -t --perl`;
+    if ($themes) {
+	my(@uthemes,@sthemes,@mthemes);
+	foreach (qw(user system mixed)) {
+	    $themes->{$_} = {} unless $themes->{$_};
+	}
+	@uthemes = keys %{$themes->{user}};
+	@sthemes = keys %{$themes->{system}};
+	@mthemes = keys %{$themes->{mixed}};
+	if (@uthemes or @sthemes or @mthemes) {
+	    $text .= sprintf "%s%s\n", $indent, '[submenu] (Themes) {Choose a theme...}';
+	    foreach (sort @mthemes) {
+		$text .= sprintf "%s  [exec] (%s) {xde-style -s -t -r '%s'}\n", $indent, $_, $_;
+	    }
+	    if (@mthemes and @sthemes) {
+		$text .= sprintf "%s  [nop] (". "\N{EM DASH}" x 12 .") {}\n", $indent;
+	    }
+	    foreach (sort @sthemes) {
+		$text .= sprintf "%s  [exec] (%s) {xde-style -s -t -r -y '%s'}\n", $indent, $_, $_;
+	    }
+	    if ((@mthemes or @sthemes) and @uthemes) {
+		$text .= sprintf "%s  [nop] (". "\N{EM DASH}" x 12 .") {}\n", $indent;
+	    }
+	    foreach (sort @uthemes) {
+		$text .= sprintf "%s  [exec] (%s) {xde-style -s -t -r -u '%s'}\n", $indent, $_, $_;
+	    }
+	    $text .= sprintf "%s%s\n", $indent, '[end]';
+	}
+    }
+    return $text;
+}
+
+sub themes_old {
+    my($self,$indent) = @_;
+    my $text = '';
+    return $text;
+}
+
+sub themes {
+    my $self = shift;
+    if (File::Which::which('xde-style')) {
+	return $self->themes_xde(@_);
+    } else {
+	return $self->themes_old(@_);
+    }
+}
+
+sub styles_xde {
+    my($self,$indent) = @_;
+    my $text = '';
+    my($styles,$themes);
+    eval "\$styles = ".`xde-style -l --perl`;
+    eval "\$themes = ".`xde-style -l -t --perl`;
+    if ($styles and $themes) {
+	my(@ustyles,@sstyles,@mstyles);
+	foreach (qw(user system mixed)) {
+	    $styles->{$_} = {} unless $styles->{$_};
+	    $themes->{$_} = {} unless $themes->{$_};
+	}
+	@ustyles = map {exists $themes->{user}{$_}   ? () : $_} keys %{$styles->{user}};
+	@sstyles = map {exists $themes->{system}{$_} ? () : $_} keys %{$styles->{system}};
+	@mstyles = map {exists $themes->{mixed}{$_}  ? () : $_} keys %{$styles->{mixed}};
+	if (@ustyles or @sstyles or @mstyles) {
+	    $text .= sprintf "%s%s\n", $indent, '[submenu] (Styles) {Choose a style...}';
+	    foreach (sort @mstyles) {
+		$text .= sprintf "%s  [exec] (%s) {xde-style -s -r '%s'}\n", $indent, $_, $_;
+	    }
+	    if (@mstyles and @sstyles) {
+		$text .= sprintf "%s  [nop] (". "\N{EM DASH}" x 12 .") {}\n", $indent;
+	    }
+	    foreach (sort @sstyles) {
+		$text .= sprintf "%s  [exec] (%s) {xde-style -s -r -y '%s'}\n", $indent, $_, $_;
+	    }
+	    if ((@mstyles or @sstyles) and @ustyles) {
+		$text .= sprintf "%s  [nop] (". "\N{EM DASH}" x 12 .") {}\n", $indent;
+	    }
+	    foreach (sort @ustyles) {
+		$text .= sprintf "%s  [exec] (%s) {xde-style -s -r -u '%s'}\n", $indent, $_, $_;
+	    }
+	    $text .= sprintf "%s%s\n", $indent, '[end]';
+	}
+    }
+    return $text;
+}
+sub styles_old {
+    my($self,$indent) = @_;
+    my $text = '';
+    $text .= sprintf "%s%s\n", $indent, '[submenu] (Styles) {Choose a style...}';
+    $text .= sprintf "%s%s\n", $indent, '  [stylesdir] (/usr/share/blackbox/styles)';
+    $text .= sprintf "%s%s\n", $indent, '  [stylesdir] (~/.blackbox/styles)';
+    $text .= sprintf "%s%s\n", $indent, '  [stylesdir] (~/.config/blackbox/styles)';
+    $text .= sprintf "%s%s\n", $indent, '[end]';
+    return $text;
+}
+
+sub styles {
+    my $self = shift;
+    if (File::Which::which('xde-style')) {
+	return $self->styles_xde(@_);
+    } else {
+	return $self->styles_old(@_);
+    }
 }
 
 1;

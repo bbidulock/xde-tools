@@ -114,6 +114,10 @@ sub wmmenu {
 	next if "\L$name\E" eq 'pekwm';
 	my $exec = $wm->{Exec};
 	my $icon = $self->icon($wm->{Icon}, 'preferences-system-windows');
+	if ($self->{ops}{launch}) {
+	    $exec = "$self->{ops}{launch} -X $wm->{id}";
+	    $exec =~ s{\.desktop$}{};
+	}
 	$text .= $indent.q(    Entry = "Start ).$name.q(" { ).$icon.q(Actions = "RestartOther ).$exec.q(" })."\n";
     }
     $text .= $indent.q(    Separator {})."\n";
@@ -177,6 +181,8 @@ sub rootmenu {
     $text .= q(        })."\n";
     $text .= $self->wmmenu('        ');
     $text .= q(    })."\n";
+    $text .= q(    Entry = "Refresh Menu" {).$self->icon('gtk-refresh').q(Actions = "Exec xdg-menugen -format pekwm -desktop PEKWM -launch -o ).$self->{ops}{output}.q(" })."\n"
+	if $self->{ops}{output};
     $text .= q(    Entry = "Reload" { ).$self->icon('gtk-redo-ltr.png').q(Actions = "Reload" })."\n";
     $text .= q(    Entry = "Restart" { ).$self->icon('gtk-refresh.png').q(Actions = "Restart" })."\n";
     $text .= q(    Separator {})."\n";
@@ -224,8 +230,11 @@ sub Separator {
 sub Application {
     my ($self,$item,$indent) = @_;
     my $name = $item->Name; $name =~ s/["]/\\"/g;
+    my $exec = $item->Exec;
+    $exec = "$self->{ops}{launch} ".$item->Id
+	if $self->{ops}{launch};
     return sprintf "%sEntry = \"%s\" { Icon = \"%s\"; Actions = \"Exec %s\" }\n",
-	   $indent, $name, $item->Icon([qw(png xpm jpg)]), $item->Exec;
+	   $indent, $name, $item->Icon([qw(png xpm jpg)]), $exec;
 }
 sub Directory {
     my ($self,$item,$indent) = @_;

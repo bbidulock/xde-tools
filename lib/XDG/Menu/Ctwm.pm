@@ -125,6 +125,10 @@ sub wmmenu {
 	$icon = $self->icon('preferences-system-windows') unless $icon;
 	$name =~ s/["]/\\"/g;
 	$exec =~ s/["]/\\"/g;
+	if ($self->{ops}{launch}) {
+	    $exec = "$self->{ops}{launch} -X $wm->{id}";
+	    $exec =~ s{\.desktop$}{};
+	}
 	$text .= sprintf "    %-32s  %s\n",'"'.$name.'"','f.exec "exec '.$exec.' &"';
 	$gotone = 1;
     }
@@ -159,6 +163,7 @@ sub twmmenu {
     }
     $text .= sprintf("    %-32s  %s\n",'"Refresh"',		    'f.refresh');
     $text .= sprintf("    %-32s  %s\n",'"Restart"',		    'f.restart');
+    $text .= sprintf("    %-32s  %s\n",'"Refresh Menu"',	    'f.exec "exec xdg-menugen -format ctwm -desktop CTWM -o '.$self->{ops}{output}.' &"') if $self->{ops}{output};
     $text .= "}\n";
     return $text;
 }
@@ -235,15 +240,13 @@ sub Pin {
 sub Application {
     my($self,$item) = @_;
     my $name = $item->Name; $name =~ s/["]/\\"/g;
+    my $exec = $item->Exec; $exec =~ s/["]/\\"/g;
     if ($self->{ops}{launch}) {
 	my $id = $item->Id; $id =~ s/["]/\\"/g;
-	return sprintf "    %-32s  f.exec \"exec xdg-launch %s &\"\n",
-	       '"'.$name.'"', $id;
-    } else {
-	my $exec = $item->Exec; $exec =~ s/["]/\\"/g;
-	return sprintf "    %-32s  f.exec \"exec %s &\"\n",
-	       '"'.$name.'"', $exec;
+	$exec = "xdg-launch $id";
     }
+    return sprintf "    %-32s  f.exec \"exec %s &\"\n",
+	   '"'.$name.'"', $exec;
 }
 sub Directory {
     my($self,$item) = @_;
