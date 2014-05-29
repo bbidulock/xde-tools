@@ -21,7 +21,7 @@ use warnings;
 my %OVERRIDES = ();
 my $here = $0; $here =~ s{/[^/]*$}{};
 if ($here =~ s{^\.}{}) {
-    chomp(my $cwd = `pwd`);
+    chomp(my $cwd = qx(pwd));
     $here = "/$here" if $here;
     $here = "$cwd$here";
 }
@@ -44,7 +44,7 @@ my $program = $0; $program =~ s{^.*/}{};
 my %dargs;
 
 if (-x "/usr/bin/dbus-launch") {
-	foreach (`/usr/bin/dbus-launch --sh-syntax --exit-with-session`) {
+	foreach (qx(/usr/bin/dbus-launch --sh-syntax --exit-with-session)) {
 	    if (/(DBUS_SESSION_BUS_ADDRESS)='(.*)';/) {
 		$dargs{$1} = $ENV{$1} = $2;
 	    }
@@ -58,11 +58,11 @@ if (-x "/usr/bin/dbus-launch") {
 # first process necessary environment variables
 
 my $HOSTNAME=$ENV{HOSTNAME} if exists $ENV{HOSTNAME};
-unless ($HOSTNAME) { $HOSTNAME=`hostname`; chomp $HOSTNAME }
+unless ($HOSTNAME) { chomp($HOSTNAME=qx(hostname -f)); }
 $ENV{HOSTNAME}="$HOSTNAME";
 
 my $USER=$ENV{USER} if exists $ENV{USER};
-unless ($USER) { $USER=`whoami`; chomp $USER }
+unless ($USER) { chomp($USER=qx(whoami)); }
 $ENV{USER}="$USER";
 
 my $HOME=$ENV{HOME} if exists $ENV{HOME};
@@ -98,7 +98,9 @@ my %ops = (
 	desktop	    => '',
 	session	    => '',
 	startwm	    => '',
+	wmname	    => '',
 	file	    => '',
+	setup	    => [],
 	exec	    => [],
 	autostart   => 1,
 	wait	    => 1,
@@ -116,7 +118,9 @@ my $syntax = GetOptions(
 	"desktop|e=s"	=>\$ops{desktop},
 	"session|s=s"	=>\$ops{session},
 	"startwm|m=s"	=>\$ops{startwm},
+	"wmname=s"	=>\$ops{wmname},
 	"file|f=s"	=>\$ops{file},
+	"setup=s"	=>$ops{setup},
 	"exec|x=s"	=>$ops{exec},
 	"autostart!"	=>\$ops{autostart},
 	"a"		=>sub{ $ops{autostart} = 0 },
@@ -136,6 +140,9 @@ usage:
 options:
     --help
         print this usage info and exit
+    --wmname NAME
+        execute window manager named NAME
+	(default: none)
     --startwm|-m EXECUTE
         execute EXECUTE to start window manager
         (default: startfluxbox)
@@ -147,6 +154,9 @@ options:
     --wait|-w, --nowait
         wait (or not) for a window manager to appear before
         executing or autostarting tasks (default: wait)
+    --setup COMMAND
+        execute COMMAND before starting window manager (default: '')
+        this option may be repeated
     --exec|-x COMMAND
         execute COMMAND before autostarting tasks (default: '')
         this option may be repeated
@@ -217,6 +227,7 @@ $XDG_DESKTOP_DIR = "$HOME/Desktop" unless $XDG_DESKTOP_DIR;
 $ENV{XDG_DESKTOP_DIR}="$XDG_DESKTOP_DIR" unless exists $ENV{XDG_DESKTOP_DIR};
 mkpath "$XDG_DESKTOP_DIR" unless -d "$XDG_DESKTOP_DIR";
 
+$ops{desktop} = "\U$ops{wmname}" if $ops{wmname} and not $ops{desktop};
 $ops{desktop} = $ENV{FBXDG_DE} if $ENV{FBXDG_DE} and not $ops{desktop};
 $ops{desktop} = $ENV{XDG_CURRENT_DESKTOP} if $ENV{XDG_CURRENT_DESKTOP} and not $ops{desktop};
 $ops{desktop} = 'FLUXBOX' unless $ops{desktop};
@@ -224,8 +235,11 @@ $ENV{XDG_CURRENT_DESKTOP} = $ops{desktop};
 $ENV{FBXDG_DE} = $ops{desktop};
 
 $ops{session} = $ENV{DESKTOP_SESSION} if $ENV{DESKTOP_SESSION} and not $ops{session};
+$ops{session} = "\U$ops{wmname}" if $ops{wmname} and not $ops{session};
 $ops{session} = 'FLUXBOX' unless $ops{session};
 $ENV{DESKTOP_SESSION} = $ops{session};
+
+$ops{wmname} = "\L$ops{desktop}" if $ops{desktop} and not $ops{wmname};
 
 # set up the XDG menu prefix
 my $XDG_MENU_PREFIX = $ENV{XDG_MENU_PREFIX} if exists $ENV{XDG_MENU_PREFIX};
@@ -390,10 +404,14 @@ my $cols = 7;
 
 my @XDG_AUTO_DIRS = (reverse split(/:/,$XDG_CONFIG_DIRS), $XDG_CONFIG_HOME);
 
+sub relax {
+	Gtk2->main_iteration while Gtk2->events_pending;
+}
+
 my %dirs;
 my @dirs;
 foreach (@XDG_AUTO_DIRS) {
-	Gtk2->main_iteration while Gtk2->events_pending;
+	relax();
 	s/\/*$//;
 	next if $dirs{$_};
 	next unless -d "$_/autostart";
@@ -410,7 +428,7 @@ my %files;
 # by filename.
 #
 foreach my $d (@dirs) {
-	Gtk2->main_iteration while Gtk2->events_pending;
+	relax();
 	opendir(my $dir, "$d") or next;
 	foreach my $f (readdir($dir)) {
 		next unless -f "$d/$f" and $f =~ /\.desktop$/;
@@ -448,7 +466,7 @@ my $col = 0;
 my $row = 0;
 
 foreach my $f (sort keys %files) {
-	Gtk2->main_iteration while Gtk2->events_pending;
+	relax();
 	my $e = $files{$f};
 	my $name = $e->{Icon};
 	$name =~ s/\.(xpm|png)$// if $name;
@@ -491,7 +509,7 @@ foreach my $f (sort keys %files) {
 	$but->show_now;
 	push @autostart, $e;
 }
-Gtk2->main_iteration while Gtk2->events_pending;
+relax();
 
 # This is basically to daemonize ourselves, make sure we are a
 # process group leader and a session leader.
@@ -506,7 +524,7 @@ $sid = $pid if $sid == -1;
 
 # The following is mostly for lxpanel(1), which we like to use on a number
 # of window managers becuase it supports a system tray as well as an XDG
-# compliant menu.  lxpanel(1) takes three comands in its config file:
+# compliant menu.  lxpanel(1) takes three commands in its config file:
 #
 # $XDG_CONFIG_HOME/lxpanel/${XDG_CURRENT_DESKTOP:-default}/config
 #
@@ -538,6 +556,8 @@ print STDERR "session id $sid\n";
 my %children;
 my %restarts;
 my %watchers;
+my %commands;
+
 
 my $wmpid = 0;
 
@@ -548,7 +568,7 @@ sub childexit {
 	my $cmd = delete $restarts{$pid};
 	if (WIFEXITED($waitstatus)) {
 		my $status = WEXITSTATUS($waitstatus);
-		warn "child $pid exited with status $status" if $status;
+		warn "child $pid exited with status $status ($commands{$pid})" if $status;
 		unless ($status) {
 			if ($data) {
 				if (-x "/usr/bin/lxsession-logout") {
@@ -565,10 +585,10 @@ sub childexit {
 	}
 	elsif (WIFSIGNALED($waitstatus)) {
 		my $signal = WTERMSIG($waitstatus);
-		warn "child $pid exited on signal $signal" if $signal;
+		warn "child $pid exited on signal $signal ($commands{$pid})" if $signal;
 	}
 	elsif (WIFSTOPPED($waitstatus)) {
-		warn "child $pid stopped";
+		warn "child $pid stopped ($commands{$pid})";
 		kill -TERM $pid;
 	}
 	if ($cmd) {
@@ -577,7 +597,7 @@ sub childexit {
 		$wmpid = $pid if $data;
 	}
 	else {
-		print STDERR "there goes our last female...\n";
+		print STDERR "there goes our last female... ($commands{$pid})\n";
 		Gtk2->main_quit if (scalar(keys %children) == 0);
 	}
 }
@@ -589,7 +609,8 @@ sub startup {
 	next unless defined $child;
 	if ($child) {
 		# we are the parent
-		print STDERR "Child $child started...\n";
+		print STDERR "Child $child started...($cmd)\n";
+		$commands{$child} = $cmd;
 		$restarts{$child} = $cmd if $restart;
 		$children{$child} = 1;
 		$watchers{$child} = Glib::Child->watch_add($child,\&childexit,$data);
@@ -600,8 +621,48 @@ sub startup {
 	return $child;
 }
 
+sub execorfail {
+	my $cmd = shift;
+	print STDERR "Executing $cmd...\n";
+	system($cmd);
+	return if $? == 0;
+	if ($? == -1) {
+		die "system call failed: $!";
+	}
+	elsif (WIFEXITED($?)) {
+		my $rval = WEXITSTATUS($?);
+		return if $rval == 0;
+		die "command \"$cmd\" exited with status $rval";
+	}
+	elsif (WIFSIGNALED($?)) {
+		my $signal = WTERMSIG($?);
+		die "command \"$cmd\" exited on signal $signal";
+	}
+	elsif (WIFSTOPPED($?)) {
+		die "command \"$cmd\" stopped";
+	}
+	return;
+}
+
+if (@{$ops{setup}} == 0) {
+	foreach my $s (map{"$_/$ops{wmname}/setup.sh"}@XDG_DATA_DIRS) {
+		if (-x "$s") { execorfail($s); last; }
+	}
+}
+
+foreach my $s (@{$ops{setup}}) {
+	execorfail($s);
+}
+
+unless ($ops{startwm}) {
+	foreach my $s (map{"$_/$ops{wmname}/start.sh"}@XDG_DATA_DIRS) {
+		if (-x "$s") { $ops{startwm} = $s; last; }
+	}
+	$ops{startwm} = $ops{wmname} unless $ops{startwm};
+}
+
 if ($ops{startwm}) {
-	Gtk2->main_iteration while Gtk2->events_pending;
+	relax();
 	# we need to start the window manager
 	$wmpid = startup("\@$ops{startwm}",TRUE);
 }
@@ -612,7 +673,7 @@ while ($ops{wait}) {
 	my $property = $atoms{_NET_SUPPORTING_WM_CHECK};
 	my ($prop_type,$format,@data) = $root->property_get($property,undef,0,1,FALSE);
 	last if defined $prop_type;
-	Gtk2->main_iteration while Gtk2->events_pending;
+	relax();
 	$count = $count + 1;
 	last if $count > 3;
 	sleep(1);
@@ -644,13 +705,13 @@ if ($ops{pause}) {
 }
 
 foreach my $e (@{$ops{exec}}) {
-	Gtk2->main_iteration while Gtk2->events_pending;
+	relax();
 	startup($e,FALSE);
 }
 
 if ($ops{autostart}) {
 	foreach my $a (@autostart) {
-		Gtk2->main_iteration while Gtk2->events_pending;
+		relax();
 		startup($a->{Exec},FALSE);
 	}
 }
@@ -671,7 +732,7 @@ exit 0;
 
 =head1 NAME
 
- xde-session - start a fluxbox session
+ xde-session - start a window-manager session
 
 =head1 SYNOPSIS
 
@@ -804,6 +865,17 @@ In L<lxsession(1)> compatablity mode, this option will default to the
 F<autostart> file in the F<SESSION> subdirectory under
 F<$XDG_CONFIG_HOME/lxsession>, where F<SESSION> is specified with the
 B<-s> option.
+
+=item B<--setup>, I<COMMAND>
+
+Execute the command string, I<COMMAND>, to setup the window manager
+before it is invoked.  This option defaults to executing the shell setup
+program in F<$XDG_DATA_{HOME,DIRS}/\LDESKTOP\E/setup.sh> if such a shell
+exists.  The option may be repeated to execute a number of commands in the
+order specified.  These commands are executed in the foreground, one after
+the other, before the window manager or any other task is started.  The
+session will die if any of these commands exit with a non-zero exit status
+or terminal on a signal.
 
 =item B<--exec>, B<-x> I<COMMAND>
 
