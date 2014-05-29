@@ -138,6 +138,7 @@
 
 #  Support mouse wheel
 # UseMouseWheel=0 # 0/1
+UseMouseWheel=1
 
 #  Show popup menus above mouse pointer
 # ShowPopupsAbovePointer=0 # 0/1
@@ -295,6 +296,7 @@ HorizontalEdgeSwitch=1
 
 #  Show a button to collapse the taskbar
 # TaskBarShowCollapseButton=0 # 0/1
+TaskBarShowCollapseButton=1
 
 #  Use double-height task bar
 # TaskBarDoubleHeight=0 # 0/1
@@ -304,18 +306,23 @@ HorizontalEdgeSwitch=1
 
 #  Show a mini desktop preview on each workspace button
 # PagerShowPreview=0 # 0/1
+PagerShowPreview=1
 
 #  Draw window icons inside large enough preview windows on pager (if PagerShowPreview=1)
 # PagerShowWindowIcons=1 # 0/1
+PagerShowWindowIcons=0
 
 #  Draw even minimized windows as unfilled rectangles (if PagerShowPreview=1)
 # PagerShowMinimized=1 # 0/1
+PagerShowMinimized=0
 
 #  Draw border around workspace buttons (if PagerShowPreview=1)
 # PagerShowBorders=1 # 0/1
+PagerShowBorders=1
 
 #  Show number of workspace on workspace button (if PagerShowPreview=1)
 # PagerShowNumbers=1 # 0/1
+PagerShowNumbers=1
 
 #  Execute taskbar applet commands (like MailCommand,     ClockCommand,   ...) on single click
 # TaskBarLaunchOnSingleClick=1 # 0/1
@@ -325,33 +332,43 @@ HorizontalEdgeSwitch=1
 
 #  Show programs submenu
 # ShowProgramsMenu=0 # 0/1
+ShowProgramsMenu=1
 
 #  Show settings submenu
 # ShowSettingsMenu=1 # 0/1
+ShowSettingsMenu=1
 
 #  Show focus mode submenu
 # ShowFocusModeMenu=1 # 0/1
+ShowFocusModeMenu=1
 
 #  Show themes submenu
 # ShowThemesMenu=1 # 0/1
+ShowThemesMenu=1
 
 #  Show logout submenu
 # ShowLogoutMenu=1 # 0/1
+ShowLogoutMenu=1
 
 #  Show the help menu item
 # ShowHelp=1 # 0/1
+ShowHelp=1
 
 #  Show logout submenu
 # ShowLogoutSubMenu=1 # 0/1
+ShowLogoutSubMenu=1
 
 #  Show the about menu item
 # ShowAbout=1 # 0/1
+ShowAbout=1
 
 #  Show the run menu item
 # ShowRun=1 # 0/1
+ShowRun=1
 
 #  Show the window menu item
 # ShowWindowList=1 # 0/1
+ShowWindowList=1
 
 #  Allow to switch a window to fullscreen
 # AllowFullscreen=1 # 0/1
@@ -361,6 +378,7 @@ HorizontalEdgeSwitch=1
 
 #  Show address bar in task bar
 # ShowAddressBar=1 # 0/1
+ShowAddressBar=1
 
 #  Overrides automatic multiple byte detection
 # MultiByte=1 # 0/1
@@ -439,6 +457,7 @@ HorizontalEdgeSwitch=1
 
 #  Bitmask of root window button click to use in window manager
 # UseRootButtons=255 # [0-255]
+UseRootButtons=255
 
 #  Bitmask of buttons that raise the window when pressed
 # ButtonRaiseMask=1 # [0-255]
@@ -505,54 +524,68 @@ HorizontalEdgeSwitch=1
 
 #  Command to run on mailbox
 # MailCommand="xterm -name pine -title PINE -e pine"
+MailCommand="xterm -name mutt -title MUTT -e mutt"
 
 #  WM_CLASS to allow runonce for MailCommand
 # MailClassHint="pine.XTerm"
+MailClassHint="mutt.XTerm"
 
 #  Command to run when new mail arrives
 # NewMailCommand=""
 
 #  Command to lock display/screensaver
 # LockCommand=""
+LockCommand="xlock"
 
 #  Command to run on clock
 # ClockCommand="xclock -name icewm -title Clock"
+ClockCommand="tkremind"
 
 #  WM_CLASS to allow runonce for ClockCommand
 # ClockClassHint="icewm.XClock"
 
 #  Command to select and run a program
 # RunCommand=""
+RunCommand="xde-run"
 
 #  
 # OpenCommand=""
+OpenCommand="xdg-open"
 
 #  Terminal emulator must accept -e option.
 # TerminalCommand="xterm"
+TerminalCommand="xterm"
 
 #  Command to start logout
 # LogoutCommand=""
+LogoutCommand="xde-logout"
 
 #  Command to cancel logout
 # LogoutCancelCommand=""
 
 #  Command to shutdown the system
 # ShutdownCommand=""
+ShutdownCommand="xde-logout"
 
 #  Command to reboot the system
 # RebootCommand=""
+RebootCommand="xde-logout"
 
 #  Command to run on CPU status
 # CPUStatusCommand="xterm -name top -title Process\ Status -e top"
+CPUStatusCommand="xterm -name htop -title Process\ Status -e htop"
 
 #  WM_CLASS to allow runonce for CPUStatusCommand
 # CPUStatusClassHint="top.XTerm"
+CPUStatusClassHint="htop.XTerm"
 
 #  Command to run on Net status
 # NetStatusCommand="xterm -name netstat -title 'Network Status' -e netstat -c"
+NetStatusCommand="xterm -name iftop -title 'Network Status' -e iftop"
 
 #  WM_CLASS to allow runonce for NetStatusCommand
 # NetStatusClassHint="netstat.XTerm"
+NetStatusClassHint="iftop.XTerm"
 
 #  Command to run for address bar entries
 # AddressBarCommand=""
@@ -816,6 +849,7 @@ HorizontalEdgeSwitch=1
 
 #  Items supported in menu window (rmsnxfhualytickw)
 # WinMenuItems="rmsnxfhualyticw"
+WinMenuItems="rmsnxfhualytickw"
 
 # -----------------------------------------------------------
 # Themable preferences. Themes will override these.
@@ -1274,7 +1308,7 @@ HorizontalEdgeSwitch=1
 
 #  
 
-WorkspaceNames=" 1 ", " 2 ", " 3 ", " 4 "
+WorkspaceNames=" A ", " B ", " C ", " D ", " E ", " F ", " G ", " H "
 
 #
 # icewmbg preferences

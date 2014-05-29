@@ -1,5 +1,5 @@
-[app] (name=fbrun)
-  [Position]	(WINCENTER)	{0 0}
+[app] (name=fbrun) (class=FbRun)
+  [Position]	(CENTER)	{0 0}
   [Layer]	{2}
 [end]
 [app] (name=cairo-clock) (class=Cairo-clock)
@@ -19,6 +19,12 @@
   [Layer]	{4}
   [Close]	{yes}
   [Alpha]	{255 220}
+[end]
+[app] (name=xde-panel) (class=Xde-panel)
+  [Hidden]	{yes}
+  [Layer]	{2}
+  [Close]	{yes}
+  [Alpha]	{255 237}
 [end]
 [app] (name=xlogo) (class=XLogo)
   [Dimensions]	{29% 40%}
