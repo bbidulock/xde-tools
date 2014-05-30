@@ -21,7 +21,7 @@ if ! which $prog >/dev/null 2>&1; then
 	echo "ERROR: cannot find usable $prog program" >&2
 	exit 1
 fi
-vers=${2:-${XDE_WM_VERSION:-$(LANG= $prog -version 2>/dev/null|awk '/Fluxbox/{print$2;exit}')}} || vers="0.70.2"
+vers=${2:-${XDE_WM_VERSION:-$(LANG= $prog -version 2>/dev/null|awk '/Fluxbox/{print$2;exit}')}} || vers="1.3.5"
 sdir=${XDE_WM_CONFIG_SDIR:-/usr/share/$name}
 home="$HOME/.$name"
 priv="$XDG_CONFIG_HOME/$name"

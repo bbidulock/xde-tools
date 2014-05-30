@@ -77,6 +77,7 @@ mkpath "$XDG_CONFIG_HOME" unless -d $XDG_CONFIG_HOME;
 my $XDG_CONFIG_DIRS=$ENV{XDG_CONFIG_DIRS} if exists $ENV{XDG_CONFIG_DIRS};
 $XDG_CONFIG_DIRS='/etc/xdg' unless $XDG_CONFIG_DIRS;
 $ENV{XDG_CONFIG_DIRS}=$XDG_CONFIG_DIRS if $XDG_CONFIG_DIRS;
+$XDG_CONFIG_DIRS=join(':',$OVERRIDES{XDG_CONFIG_PREPEND},$XDG_CONFIG_DIRS) if $OVERRIDES{XDG_CONFIG_PREPEND};
 
 my @XDG_CONFIG_DIRS = (split(/:/,join(':',$XDG_CONFIG_HOME,$XDG_CONFIG_DIRS)));
 
@@ -87,6 +88,7 @@ mkpath "$XDG_DATA_HOME" unless -d $XDG_DATA_HOME;
 
 my $XDG_DATA_DIRS=$ENV{XDG_DATA_DIRS} if exists $ENV{XDG_DATA_DIRS};
 $XDG_DATA_DIRS='/usr/local/share:/usr/share' unless $XDG_DATA_DIRS;
+$XDG_DATA_DIRS=join(':',$OVERRIDES{XDG_DATA_PREPEND},$XDG_DATA_DIRS) if $OVERRIDES{XDG_DATA_PREPEND};
 $ENV{XDG_DATA_DIRS}=$XDG_DATA_DIRS if $XDG_DATA_DIRS;
 
 my @XDG_DATA_DIRS = (split(/:/,join(':',$XDG_DATA_HOME,$XDG_DATA_DIRS)));
@@ -227,7 +229,7 @@ $XDG_DESKTOP_DIR = "$HOME/Desktop" unless $XDG_DESKTOP_DIR;
 $ENV{XDG_DESKTOP_DIR}="$XDG_DESKTOP_DIR" unless exists $ENV{XDG_DESKTOP_DIR};
 mkpath "$XDG_DESKTOP_DIR" unless -d "$XDG_DESKTOP_DIR";
 
-$ops{desktop} = "\U$ops{wmname}" if $ops{wmname} and not $ops{desktop};
+$ops{desktop} = "\U$ops{wmname}\E" if $ops{wmname} and not $ops{desktop};
 $ops{desktop} = $ENV{FBXDG_DE} if $ENV{FBXDG_DE} and not $ops{desktop};
 $ops{desktop} = $ENV{XDG_CURRENT_DESKTOP} if $ENV{XDG_CURRENT_DESKTOP} and not $ops{desktop};
 $ops{desktop} = 'FLUXBOX' unless $ops{desktop};
@@ -235,11 +237,11 @@ $ENV{XDG_CURRENT_DESKTOP} = $ops{desktop};
 $ENV{FBXDG_DE} = $ops{desktop};
 
 $ops{session} = $ENV{DESKTOP_SESSION} if $ENV{DESKTOP_SESSION} and not $ops{session};
-$ops{session} = "\U$ops{wmname}" if $ops{wmname} and not $ops{session};
+$ops{session} = "\U$ops{wmname}\E" if $ops{wmname} and not $ops{session};
 $ops{session} = 'FLUXBOX' unless $ops{session};
 $ENV{DESKTOP_SESSION} = $ops{session};
 
-$ops{wmname} = "\L$ops{desktop}" if $ops{desktop} and not $ops{wmname};
+$ops{wmname} = "\L$ops{desktop}\E" if $ops{desktop} and not $ops{wmname};
 
 # set up the XDG menu prefix
 my $XDG_MENU_PREFIX = $ENV{XDG_MENU_PREFIX} if exists $ENV{XDG_MENU_PREFIX};
@@ -645,8 +647,10 @@ sub execorfail {
 }
 
 if (@{$ops{setup}} == 0) {
+	warn "executing default setup";
 	foreach my $s (map{"$_/$ops{wmname}/setup.sh"}@XDG_DATA_DIRS) {
 		if (-x "$s") { execorfail($s); last; }
+		warn "cannot execute '$s'";
 	}
 }
 
@@ -655,10 +659,15 @@ foreach my $s (@{$ops{setup}}) {
 }
 
 unless ($ops{startwm}) {
+	warn "executing default start";
 	foreach my $s (map{"$_/$ops{wmname}/start.sh"}@XDG_DATA_DIRS) {
 		if (-x "$s") { $ops{startwm} = $s; last; }
+		warn "cannot execute '$s'";
 	}
-	$ops{startwm} = $ops{wmname} unless $ops{startwm};
+	unless ($ops{startwm}) {
+		warn "will simply execute '$ops{wmname}'";
+		$ops{startwm} = $ops{wmname};
+	}
 }
 
 if ($ops{startwm}) {
