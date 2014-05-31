@@ -50,7 +50,7 @@ editfile() {
 	local fname=$1
 	temp=$(mktemp -t)
 	echo "sed: filtering $fname -> $temp" >&2
-	sed -e "s,~/\.$name,$priv,g;s,\$HOME/\.$name,$priv,g;s,~/,$HOME,g" "$fname" >"$temp"
+	sed -e "s,~/\.$name,$priv,g;s,\$HOME/\.$name,$priv,g;s,~/,$HOME/,g" "$fname" >"$temp"
 	echo "$temp"
 }
 
