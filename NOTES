@@ -330,6 +330,8 @@ _NET_WM_ACTION_MOVE			Y	Y	Y	Y	N	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
 _NET_WM_ACTION_RESIZE			Y	Y	Y	Y	N	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
 _NET_WM_ACTION_SHADE			Y	Y	N	Y	N	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
 _NET_WM_ACTION_STICK			Y	Y	N	Y	-	Y	-	Y	Y	Y	Y	Y	Y	-	Y	N	Y
+_NET_WM_ACTION_FILL			-	Y	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	(27)
+_NET_WM_ACTION_FLOAT			-	Y	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	(28)
 _NET_WM_ALLOWED_ACTIONS			Y	Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
 _NET_WM_BYPASS_COMPOSITOR		Y	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-
 _NET_WM_DESKTOP_MASK			-	Y	-	-	-	x	-	-	-	-	-	-	-	-	-	-	-
@@ -354,7 +356,10 @@ _NET_WM_STATE_DECOR_HANDLE		-	-	-	-	-	x	-	-	-	-	-	-	-	-	-	-	-
 _NET_WM_STATE_DECOR_TITLE		-	-	-	-	-	x	-	-	-	-	-	-	-	-	-	-	-
 _NET_WM_STATE_DECOR			-	-	-	-	-	x	-	-	-	-	-	-	-	-	-	-	-
 _NET_WM_STATE_DEMANDS_ATTENTION		Y	Y	N	Y	Y	N	N	Y	Y	Y	Y	Y	N	Y	N	N	Y	(19)
-_NET_WM_STATE_FOCUSED			Y	Y	N	N	N	N	N	N	N	N	-	Y	N	N	N	N	N
+_NET_WM_STATE_FILLED			-	Y	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	(29)
+_NET_WM_STATE_FIXED			-	Y	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	(30)
+_NET_WM_STATE_FLOATING			-	Y	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	(31)
+_NET_WM_STATE_FOCUSED			Y	Y	N	N	N	N	N	N	N	N	Y	Y	N	N	N	N	N
 _NET_WM_STATE_FULLSCREEN		Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
 _NET_WM_STATE_HIDDEN			Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	N	Y
 _NET_WM_STATE_MAXIMIZED_HORZ		Y	Y	Y	Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	Y*	Y	Y	(20)
@@ -395,12 +400,12 @@ _NET_WM_WINDOW_TYPE			Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y	Y
 _NET_WORKAREA				Y	Y	Y	Y	N	Y	Y	Y	Y	Y	Y	Y	N	Y	Y	N	Y
 ---------------------------------------	---	---	---	---	---	---	---	---	---	---	---	---	---	---	---	---	---
 Total N					 6N	 0N	32N	17N	31N	25N	42N	13N	22N	22N	 6N	 6N	27N	 9N	25N	48N	11N
-Total Y					74Y	91Y	42Y	60Y	48Y	52Y	31Y	64Y	54Y	55Y	74Y	71Y	50Y	73Y	53Y	29Y	69Y
+Total Y					74Y	91Y	42Y	60Y	48Y	52Y	31Y	64Y	54Y	55Y	75Y	71Y	50Y	73Y	53Y	29Y	69Y
 ---------------------------------------	---	---	---	---	---	---	---	---	---	---	---	---	---	---	---	---	---
 Total					80	80	80	80	80	80	80	80	80	80	80	80	80	80	80	80	80
 
-ADWM	    91 Y     0 N	(http://github.com/bbidulock/adwm)
-IceWM	    74 Y     6 N	(http://github.com/bbidulock/icewm)
+ADWM	    96 Y     0 N	(http://github.com/bbidulock/adwm)
+IceWM	    75 Y     6 N	(http://github.com/bbidulock/icewm)
 Mutter	    74 Y     6 N
 Blackbox    71 Y     6 N	(http://github.com/bbidulock/blackboxwm)
 Openbox	    73 Y     9 N
@@ -517,12 +522,25 @@ Notes:
      multi-head screen.  The first 4-tuple corresponds to RANDR/Xinerama screen
      0 and so on.
 
+(27) _NET_WM_ACTION_FILL
+
+(28) _NET_WM_ACTION_FLOAT
+
+(29) _NET_WM_STATE_FILLED
+
+(30) _NET_WM_STATE_FIXED
+
+(31) _NET_WM_STATE_FLOATING is a non-standard property that which placed in the
+     state of a window signifies that the window is to float above tiled windows
+     in a tiled dynamic layout.  Windows without this property in its state are
+     specified to tile in a dynamic layout.
+
 
 Current WMH support is as follows:
 
 Note that support for WMH has been removed from maintained window managers and
-its use is largely deprecated.  The only active window manager still supporting
-WMH is FVWM.
+its use is largely deprecated.  The only active window managers still supporting
+WMH are ADWM, ETWM, IceWM and FVWM.
 
 Item				ADWM	ETWM	JWM	Fluxbox	PeKWM	IceWM	Bbox	Wmaker	Openbox	FVWM
 ----				-------	----	---	-------	-----	-----	----	------	-------	----
@@ -555,5 +573,61 @@ Total Y				19 Y	19 Y	-	-	-	14 Y	-	-	-	12 Y
 Total				20	20	-	-	-	20	-	-	-	20
 
 * => supported but not included in _WIN_PROTOCOLS().
+
+Current OSF/MOTIF MWM/DTWM support is as follows:
+
+Item				ADWM	MWM(LT)	MWM(OC)	DTWM	Notes
+----				----	-------	-------	----	-----
+WM_DESKTOP			Y	N	N	N	(1)
+_MOTIF_BINDINGS			N	Y	Y	Y
+_MOTIF_DEFAULT_BINDINGS		N	Y	Y	Y
+_MOTIF_WM_MESSAGES		N	Y	Y	Y
+_MOTIF_WM_OFFSET		N	Y	Y	Y
+_MOTIF_WM_HINTS			Y	Y	Y	Y	(2)
+_MOTIF_WM_MENU			N	Y	Y	Y
+_MOTIF_WM_INFO			Y	Y	Y	Y	(3)
+_DT_WORKSPACE_HINTS		Y	N	N	Y	(4)
+_DT_WORKSPACE_PRESENCE		Y	N	N	Y	(5)
+_DT_WORKSPACE_LIST		Y	N	N	Y	(6)
+_DT_WORKSPACE_CURRENT		Y	N	N	Y	(7)
+_DT_WORKSPACE_INFO		N	N	N	Y	(8)
+_DT_WM_HINTS			N	N	N	Y
+_DT_WM_REQUEST			N	N	N	Y
+_DT_WORKSPACE_EMBEDDED_CLIENTS	N	N	N	Y
+_DT_WMSAVE_HINT			N	N	N	Y
+----				----	-------	-------	----	-----
+Total N				10 N	10 N	10 N	 1 N
+Total Y				 7 Y	 7 Y	 7 Y	16 Y
+----				----	-------	-------	----	-----
+Total				17	17	17	17
+
+Notes:
+
+(1) WM_DESKTOP is treated like NET_WM_DESKTOP.  It is placed on a window to
+    indicate upon which workspaces a window is shown.
+
+(2) _MOTIF_WM_HINTS is actually supported by many desktops that support (or
+    have previously suipported) GNOME/WinWM hints.  The reason is that the
+    wm-spec describing the WinWM hints prescribes the use of MOTIF window
+    manager hints.
+
+(3) _MOTIF_WM_INFO provides information placed on the MOTIF check window to
+    indicate the level and flavor of MOTIF support.
+
+(4) _DT_WORKSPACE_HINTS is placed on a client window and specifies the
+    desktops upon which a window is to appear (including whether the window
+    is to appear on all workspaces).
+
+(5) _DT_WORKSPACE_PRESENCE is placed on a client window and lists the atoms
+    associated with each workspace upon which the client window is to appear.
+
+(6) _DT_WORKSPACE_LIST lists the atoms associated with each workspace.
+
+(7) _DT_WORKSPACE_CURRENT specifies the atom associated with the current
+    workspace.
+
+(8) _DT_WORKSPACE_INFO provides information about each workspace.  Interestingly
+    enough, this include background images, something that EWMH/NetWM does not
+    do to this day.
 
 vim: ft=README tw=80
