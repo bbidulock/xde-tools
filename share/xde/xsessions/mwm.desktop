@@ -1,20 +1,34 @@
 [Desktop Entry]
+Version=1.0
 Encoding=UTF-8
 Type=XSession
 Name=MWM
-Icon=mwm
-Exec=mwm
 GenericName=Window Manager
 GenericName[fr]=Gestionnaire de Fenêtres
 GenericName[pt]=Gestor de Janelas
 Comment=Motif Window Manager
+Icon=mwm
+TryExec=/usr/bin/mwm
+Exec=mwm
+Terminal=false
+NoDisplay=true
 Categories=WindowManager;Application;System;
 StartupNotify=false
-NoDisplay=true
-X-GNOME-WMName=MWM
+X-GNOME-Autostart-Notify=false
 X-GNOME-Autostart-Phase=WindowManager
 X-GNOME-Provides=windowmanager
-X-GNOME-Autostart-Notify=false
+X-GNOME-WMName=MWM
+X-AppInstall-Package=lesstif
+X-AppInstall-Popcon=0
+X-AppInstall-Section=extra
+X-Arch-Package=lesstif 0.95.2-6
+X-Arch-Package-Repository=extra
+X-Arch-Package-Name=lesstif
+X-Arch-Package-Version=0.95.2-6
+X-Arch-Package-Description=LGPL'd re-implementation of Motif
+X-Arch-Package-Groups=None
+X-Arch-Package-URL=http://sourceforge.net/projects/lesstif/
+DesktopNames=MWM
 Actions=XDE;
 
 [Desktop Action XDE]
@@ -22,8 +36,10 @@ Name=XDE
 Icon=xde
 Exec=xde-session -desktop MWM -startwm mwm
 Comment=MWM under an XDE session
+DesktopNames=XDE:MWM
 
 [Window Manager]
+Name=mwm
 SessionManaged=false
 StartupNotification=false
 X-XDE-Managed=true

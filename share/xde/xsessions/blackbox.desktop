@@ -1,30 +1,45 @@
 [Desktop Entry]
+Version=1.0
 Encoding=UTF-8
 Type=XSession
 Name=Blackbox
-Icon=blackbox
-Exec=blackbox
 GenericName=Window Manager
 GenericName[fr]=Gestionnaire de Fenêtres
 GenericName[pt]=Gestor de Janelas
 Comment=Highly configurable and low resource X11 Window manager
+Icon=blackbox
+TryExec=/usr/bin/blackbox
+Exec=blackbox
+Terminal=false
+NoDisplay=true
 Categories=WindowManager;Application;System;
 StartupNotify=false
-NoDisplay=true
-X-GNOME-WMName=blackbox
+X-GNOME-Autostart-Notify=false
 X-GNOME-Autostart-Phase=WindowManager
 X-GNOME-Provides=windowmanager
-X-GNOME-Autostart-Notify=false
+X-GNOME-WMName=blackbox
+X-AppInstall-Package=blackboxwm
+X-AppInstall-Popcon=0
+X-AppInstall-Section=custom
+X-Arch-Package=blackboxwm 0.71.1-1
+X-Arch-Package-Repository=custom
+X-Arch-Package-Name=blackboxwm
+X-Arch-Package-Version=0.71.1-1
+X-Arch-Package-Description=A window manager for X11 (maintained fork of blackbox)
+X-Arch-Package-Groups=None
+X-Arch-Package-URL=http://github.com/bbidulock/blackboxwm
+DesktopNames=BLACKBOX
 Actions=XDE;
 
 [Desktop Action XDE]
 Name=XDE
 Icon=xde
-Exec=xde-session -desktop BLACKBOX -startwm "blackbox -rc ${XDG_CONFIG_HOME:-~/.config}/blackbox/rc"
+Exec=xde-session -desktop BLACKBOX -startwm start-blackbox
 Comment=Blackbox in an XDE session
+DesktopNames=XDE:BLACKBOX
 
 [Window Manager]
+Name=blackbox
 SessionManaged=true
 StartupNotification=false
 X-XDE-Managed=true
-SessionSetup=/u2/code/xde-tools/working/share/xde/blackbox/setup.sh

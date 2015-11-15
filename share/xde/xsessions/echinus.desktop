@@ -1,20 +1,34 @@
 [Desktop Entry]
+Version=1.0
 Encoding=UTF-8
 Type=XSession
 Name=echinus
-Icon=echinus
-Exec=echinus
 GenericName=Window Manager
 GenericName[fr]=Gestionnaire de Fenêtres
 GenericName[pt]=Gestor de Janelas
 Comment=Simple and lightweight tiling and floating window manager for X11
+Icon=echinus
+TryExec=/usr/bin/echinus
+Exec=echinus
+Terminal=false
+NoDisplay=true
 Categories=WindowManager;Application;System;
 StartupNotify=false
-NoDisplay=true
-X-GNOME-WMName=echinus
+X-GNOME-Autostart-Notify=false
 X-GNOME-Autostart-Phase=WindowManager
 X-GNOME-Provides=windowmanager
-X-GNOME-Autostart-Notify=false
+X-GNOME-WMName=echinus
+X-AppInstall-Package=echinus-git
+X-AppInstall-Popcon=0
+X-AppInstall-Section=custom
+X-Arch-Package=echinus-git 0.4.9.r31.g2acd233-1
+X-Arch-Package-Repository=custom
+X-Arch-Package-Name=echinus-git
+X-Arch-Package-Version=0.4.9.r31.g2acd233-1
+X-Arch-Package-Description=A window manager for X in the spirit of dwm
+X-Arch-Package-Groups=None
+X-Arch-Package-URL=http://plhk.ru/echinus
+DesktopNames=ECHINUS
 Actions=XDE;
 
 [Desktop Action XDE]
@@ -22,8 +36,10 @@ Name=XDE
 Icon=xde
 Exec=xde-session -desktop ECHINUS -startwm start-echinus
 Comment=echinus in an XDE session
+DesktopNames=XDE:ECHINUS
 
 [Window Manager]
+Name=echinus
 SessionManaged=true
 StartupNotification=false
 X-XDE-Managed=true

@@ -1,20 +1,34 @@
 [Desktop Entry]
+Version=1.0
 Encoding=UTF-8
 Type=XSession
 Name=adwm
-Icon=adwm
-Exec=adwm
 GenericName=Window Manager
 GenericName[fr]=Gestionnaire de Fenêtres
 GenericName[pt]=Gestor de Janelas
 Comment=An advanced dynamic window manager for X
+Icon=adwm
+TryExec=/usr/bin/adwm
+Exec=adwm
+Terminal=false
+NoDisplay=true
 Categories=WindowManager;Application;System;
 StartupNotify=true
-NoDisplay=true
-X-GNOME-WMName=ADWM
+X-GNOME-Autostart-Notify=true
 X-GNOME-Autostart-Phase=WindowManager
 X-GNOME-Provides=windowmanager
-X-GNOME-Autostart-Notify=true
+X-GNOME-WMName=ADWM
+X-AppInstall-Package=adwm-git
+X-AppInstall-Popcon=0
+X-AppInstall-Section=custom
+X-Arch-Package=adwm-git 0.5.3.r0.g04c1484-1
+X-Arch-Package-Repository=custom
+X-Arch-Package-Name=adwm-git
+X-Arch-Package-Version=0.5.3.r0.g04c1484-1
+X-Arch-Package-Description=Advanced dynamic window manager for X
+X-Arch-Package-Groups=None
+X-Arch-Package-URL=http://github.com/bbidulock/adwm
+DesktopNames=ADWM
 Actions=XDE;
 
 [Desktop Action XDE]
@@ -22,8 +36,10 @@ Name=XDE
 Icon=xde
 Exec=xde-session -desktop ADWM -startwm start-adwm
 Comment=adwm in an XDE session
+DesktopNames=XDE:ADWM
 
 [Window Manager]
+Name=adwm
 SessionManaged=false
 StartupNotification=true
 X-XDE-Managed=true

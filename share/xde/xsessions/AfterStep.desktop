@@ -1,22 +1,35 @@
 [Desktop Entry]
+Version=1.0
 Encoding=UTF-8
 Type=XSession
 Name=AfterStep
-Icon=AfterStep
-Exec=afterstep
 GenericName=Window Manager
 GenericName[fr]=Gestionnaire de Fenêtres
 GenericName[pt]=Gestor de Janelas
 Comment=AfterStep is feature rich NeXTish window manager.
+Icon=AfterStep
+TryExec=/usr/bin/afterstep
+Exec=afterstep
+Terminal=false
+NoDisplay=true
 Categories=WindowManager;Application;System;
 StartupNotify=true
-NoDisplay=true
-# name we put on the WM spec check window
-X-GNOME-WMName=AfterStep
-# back compat only
+X-GNOME-Autostart-Notify=true
 X-GNOME-Autostart-Phase=WindowManager
 X-GNOME-Provides=windowmanager
-X-GNOME-Autostart-Notify=true
+X-GNOME-WMName=AfterStep
+X-AppInstall-Package=afterstep-git
+X-AppInstall-Popcon=0
+X-AppInstall-Section=custom
+X-Arch-Package=afterstep-git 2.2.12.r18.g4f62e0d-1
+X-Arch-Package-Repository=custom
+X-Arch-Package-Name=afterstep-git
+X-Arch-Package-Version=2.2.12.r18.g4f62e0d-1
+X-Arch-Package-Description=A Window Manager based on NextStep Interface
+X-Arch-Package-Groups=None
+X-Arch-Package-URL=http://www.afterstep.org
+DesktopNames=AFTERSTEP
+X-Ubuntu-Gettext-Domain=gnome-session-3.0
 Actions=XDE;
 
 [Desktop Action XDE]
@@ -24,8 +37,10 @@ Name=XDE
 Icon=xde
 Exec=xde-session -desktop AFTERSTEP -startwm afterstep
 Comment=AfterStep in an XDE session
+DesktopNames=XDE:AFTERSTEP
 
 [Window Manager]
+Name=AfterStep
 SessionManaged=false
 StartupNotification=false
 X-XDE-Managed=false
