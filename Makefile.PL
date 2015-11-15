@@ -24,13 +24,13 @@ WriteMakefile(
 		xde-input
 		xde-keys
 		xde-launch
-		xde-logout
+		xde-logout.pl
 		xde-menu
 		xde-menugen
 		xde-monitor
-		xde-pager
+		xde-pager.pl
 		xde-panel
-		xde-run
+		xde-run.pl
 		xde-session
 		xde-session.conf.pod
 		xde-session-ctrl
@@ -38,7 +38,7 @@ WriteMakefile(
 		xde-session-logout
 		xde-session-menu
 		xde-session-run
-		xde-setbg
+		xde-setbg.pl
 		xde-setbg2
 		xde-setbg-edit
 		xde-settings
