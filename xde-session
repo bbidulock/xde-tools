@@ -648,7 +648,7 @@ sub execorfail {
 
 if (@{$ops{setup}} == 0) {
 	warn "executing default setup";
-	foreach my $s (map{"$_/$ops{wmname}/setup.sh"}@XDG_DATA_DIRS) {
+	foreach my $s (map{"$_/$ops{wmname}/setup.sh"}@XDG_CONFIG_DIRS) {
 		if (-x "$s") { execorfail($s); last; }
 		warn "cannot execute '$s'";
 	}
@@ -660,7 +660,7 @@ foreach my $s (@{$ops{setup}}) {
 
 unless ($ops{startwm}) {
 	warn "executing default start";
-	foreach my $s (map{"$_/$ops{wmname}/start.sh"}@XDG_DATA_DIRS) {
+	foreach my $s (map{"$_/$ops{wmname}/start.sh"}@XDG_CONFIG_DIRS) {
 		if (-x "$s") { $ops{startwm} = $s; last; }
 		warn "cannot execute '$s'";
 	}
