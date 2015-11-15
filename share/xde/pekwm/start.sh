@@ -4,7 +4,7 @@ XDE_USE_XDG_HOME=1
 
 here=$(cd `dirname $0`;pwd)
 
-name=jwm
+name=pekwm
 
 XDG_CONFIG_HOME=${XDG_CONFIG_HOME:-$HOME/.config}
 XDG_DATA_HOME=${XDG_DATA_HOME:-$HOME/.local/share}
@@ -17,8 +17,8 @@ if ! which $prog >/dev/null 2>&1; then
 	echo "ERROR: cannot find usable $prog program" >&2
 	exit 1
 fi
-vers=${2:-${XDE_WM_VERSION:-$($XDE_WM_TYPE -v|awk '/JWM/{print$2;exit}'|sed 's,v,,' 2>/dev/null)}}
-[ -n "$vers" ] || vers="2.2.2"
+vers=${2:-${XDE_WM_VERSION:-$(LANG= $prog --version 2>/dev/null|awk '/pekwm/{print$3;exit}')}}
+[ -n "$vers" -o "$vers" = "GIT" ] || vers="0.1.17"
 rdir=${XDE_WM_CONFIG_RDIR:-$XDG_RUNTIME_DIR/$name}
 xdir=${XDE_WM_CONFIG_XDIR:-$XDG_CONFIG_HOME/$name}
 sdir=${XDE_WM_CONFIG_SDIR:-/usr/share/$name}
@@ -41,15 +41,18 @@ for v in PID TYPE VERSION CONFIG_PRIV CONFIG_RDIR CONFIG_XDIR CONFIG_HOME CONFIG
 	eval "echo \"XDE_WM_$v => \$XDE_WM_$v\" >&2"
 done
 
+# pekwm: version GIT Built on Wed Jun 18 03:44:38 MDT 2014
+# pekwm: version GIT Built on Wed Jun 18 03:44:38 MDT 2014
+#  --help       show this info.
+#  --version    show version info
+#  --info       extended info. Use for bug reports.
+#  --display    display to connect to
+#  --config     alternative config file
+#  --replace    replace running window manager
 
-xde-setwm -N $name -p $$ -r $vers -c $prog -rc "$priv/init" || :
+xde-setwm -N $name -p $$ -r $vers -c $prog --replace --config "$priv/config" || :
 
-# older versions did not accept -f flag
-if [ -n "$($prog -h 2>&1|awk '/ -f /{print\"1\";exit}')" ]; then
-	exec $prog -f "$priv/init"
-else
-	exec $prog
-fi
+exec $prog --replace --config "$priv/config"
 
 exit 127
 
