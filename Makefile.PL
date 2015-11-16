@@ -25,8 +25,8 @@ WriteMakefile(
 		xde-keys
 		xde-launch
 		xde-logout.pl
-		xde-menu
-		xde-menugen
+		xde-menu.pl
+		xde-menugen.pl
 		xde-monitor
 		xde-pager.pl
 		xde-panel
@@ -55,7 +55,7 @@ WriteMakefile(
 		xde_theme
 		xde-theme2
 		xde-theme3
-		xde-traymenu
+		xde-traymenu.pl
 		xde-xset
 		xdg_launch
 		xlib-test

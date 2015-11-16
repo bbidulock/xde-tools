@@ -238,8 +238,8 @@ xde-input
 xde-keys
 xde-launch
 xde-logout.pl
-xde-menu
-xde-menugen
+xde-menu.pl
+xde-menugen.pl
 xde-monitor
 xde-pager.pl
 xde-panel
@@ -268,7 +268,7 @@ xde-test8
 xde_theme
 xde-theme2
 xde-theme3
-xde-traymenu
+xde-traymenu.pl
 xde-xset
 xde-winlist
 xde-winmenu
