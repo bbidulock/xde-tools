@@ -481,7 +481,7 @@ Initialization method that uses XDE::Desktop::read_gvfsapps() and
 XDG::Context::get_applications() to get all of the applications known to
 L<Gnome2::VFS(3pm)> and those specified according to the XDG desktop
 specification.  These applications are placed into the package global
-hash C<%XDE::Desktop::MIME_APPLICATIONS> keyed by application id.  This
+hash C<%XDE::Desktop::MIME_APPLICATIONS> keyed by mime type.  This
 is later used by get_apps_and_subs() to retrieve applications and
 subclass applications associated with a mime type.
 
