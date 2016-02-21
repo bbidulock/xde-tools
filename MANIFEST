@@ -225,8 +225,8 @@ share/xde/images/unexicon-banner.png
 icccm-test
 sn-launch
 sn-monitor
-xde-autostart
-xde-chooser
+xde-autostart.pl
+xde-chooser.pl
 xde-clock
 xde-desktop
 xde-dock
