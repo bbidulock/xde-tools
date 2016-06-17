@@ -6,7 +6,7 @@ if (-d ".git") {
 	$VERSION =~ s/\.g[0-9a-f]{7,}$//;
 }
 WriteMakefile(
-	NAME => 'XDE',
+	NAME => 'XDE::Tools',
 	VERSION => $VERSION,
 	EXE_FILES => [qw(
 		icccm-test
