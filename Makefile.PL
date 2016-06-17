@@ -6,14 +6,14 @@ if (-d ".git") {
 	$VERSION =~ s/\.g[0-9a-f]{7,}$//;
 }
 WriteMakefile(
-	NAME => 'xde-tools',
+	NAME => 'XDE',
 	VERSION => $VERSION,
 	EXE_FILES => [qw(
 		icccm-test
 		sn-launch
 		sn-monitor
-		xde-autostart
-		xde-chooser
+		xde-autostart.pl
+		xde-chooser.pl
 		xde-clock
 		xde-desktop
 		xde-dock
