@@ -1,31 +1,31 @@
 -- TODO file for XDE.  2013-10-21
 
-- get xde-setbg to change and notify of gtkrc-2.0.xde changes.
+* [ ] get xde-setbg to change and notify of gtkrc-2.0.xde changes.
 
-- add startup notification to xde-session when launching autostart
+* [ ] add startup notification to xde-session when launching autostart
   files.
 
-- full X11 Session Management Protocol support for xde-session.
+* [ ] full X11 Session Management Protocol support for xde-session.
 
-- add menu from xde-traymenu to xde-desktop.
+* [ ] add menu from xde-traymenu to xde-desktop.
 
-- add menu from xde-traymenu to xde-panel.
+* [ ] add menu from xde-traymenu to xde-panel.
 
-- remove dependence on startup variables to determine window manager in
+* [ ] remove dependence on startup variables to determine window manager in
   all XDE tools
 
-- provide mechanism (using Gtk2::Unique) to launch xde-traymenu menu
+* [ ] provide mechanism (using Gtk2::Unique) to launch xde-traymenu menu
   from external program
 
-- add window manager specific items to xde-traymenu.
+* [ ] add window manager specific items to xde-traymenu.
 
-- split off xde-setup as a bash script and have it perform setup
+* [ ] split off xde-setup as a bash script and have it perform setup
   of window manager user directories (preferrably in XDG_CONFIG_HOME)
   just before launching the window manager.  Split all setup directories
   into the separate package.
 
-- provide a session management proxy for EWMH compliant window managers
+* [ ] provide a session management proxy for EWMH compliant window managers
   but with fallbacks that support non-EWMH/WMH compliant window
   managers.
 
-# vim: set ft=asciidoc tw=72 nocin nosi fo+=tcqlorn:
+// vim: set ft=asciidoc tw=72 nocin nosi fo+=tcqlorn spell:
